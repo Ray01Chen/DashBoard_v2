@@ -736,21 +736,7 @@ function monitorContext() {
     groupId: state.view === 'details' ? state.detailGroupId : state.groupId,
     board: document.body.classList.contains('fullscreen-board'),
     boardPage: state.boardPage,
-    boardSize: Math.min(
-      7,
-      Math.max(
-        1,
-        Math.floor(
-          (innerHeight -
-            (innerWidth <= 750 ? 320 : 280) -
-            (stored('bp-board-trend') === 'true' || stored('bp-board-share') === 'true'
-              ? 190
-              : 0)) /
-            // Budget space for six metrics and wrapped model/status labels.
-            (innerWidth <= 750 ? 190 : 150),
-        ),
-      ),
-    ),
+    boardSize: 7,
     chartLine: state.view === 'details' ? state.line : state.chartLine,
     t,
     esc,

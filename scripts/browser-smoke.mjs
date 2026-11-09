@@ -1678,12 +1678,121 @@ try {
   record(
     'Independent page URLs support direct loading, refresh, Back/Forward and shared settings drafts with guarded navigation',
   );
+  const beforeScheduleChange = await readConfig();
+  const changedDate = '2026-11-22';
+  // Earlier no-output checks leave one station read-only. Enable both only in
+  // this isolated fixture, then restore the complete configuration below.
+  const scheduleFixture = structuredClone(beforeScheduleChange);
+  const scheduleRows = scheduleFixture.rows
+    .filter((row) =>
+      row.active && !row.deleted && row.line === 'DEMO-A' && row.model === model)
+    .slice(0, 2);
+  assert.equal(scheduleRows.length, 2);
+  scheduleRows.forEach((row) => row.hasOutput = true);
+  response = await context.request.put(baseURL + '/api/config', { data: scheduleFixture });
+  assert.equal(response.status(), 200, await response.text());
+  const scheduleConfig = await response.json();
+  const originalSlot = beforeScheduleChange.schedules.day.find(
+    (slot) => slot.kind === 'production',
+  );
+  for (const { id: rowId } of scheduleRows) {
+    response = await context.request.put(baseURL + `/api/entry/records/${rowId}`, {
+      data: {
+        date: changedDate,
+        shift: 'day',
+        stationEntry: true,
+        configVersion: scheduleConfig.version,
+        version: 0,
+        slots: [
+          { id: originalSlot.id, target: 11, actual: 7, issue: 'Saved before CONFIG change' },
+        ],
+      },
+    });
+    assert.equal(response.status(), 200, await response.text());
+  }
+  const changedSchedule = structuredClone(scheduleConfig);
+  changedSchedule.schedules.day[0].start = '07:50';
+  response = await context.request.put(baseURL + '/api/config', { data: changedSchedule });
+  assert.equal(response.status(), 200, await response.text());
+  const newScheduleConfig = await response.json();
+  const newSlot = newScheduleConfig.schedules.day[0];
+  assert.notEqual(newSlot.id, originalSlot.id);
+  await page.goto(baseURL + '/entry');
+  await page.locator('#report-date').fill(changedDate);
+  await page.locator('#report-date').dispatchEvent('change');
+  await page.locator('[data-entry-line]').selectOption('DEMO-A');
+  await page.locator('[data-entry-model-filter]').selectOption(model);
+  await bulkOpen();
+  await page
+    .locator('[data-bulk-slot]')
+    .selectOption(JSON.stringify(['day', newSlot.start, newSlot.end]));
+  await page.waitForFunction(
+    () => !document.querySelector('[data-entry-action="bulk-save"]').disabled,
+  );
+  assert.equal(await page.locator('[data-bulk-error]').innerText(), '');
+  const batchOptions = await page
+    .locator('[data-bulk-slot] option')
+    .evaluateAll((options) => options.map((option) => option.value));
+  assert.equal(
+    batchOptions.includes(JSON.stringify(['day', originalSlot.start, originalSlot.end])),
+    false,
+  );
+  await page.locator('[data-bulk-field="target"]').fill('65');
+  await page.locator('[data-bulk-field="actual"]').fill('43');
+  await bulkApply();
+  const afterScheduleChange = await readReport(changedDate);
+  for (const { id: rowId } of scheduleRows) {
+    const slots = afterScheduleChange.records.find((row) => row.rowId === rowId).slots;
+    assert.equal(slots.find((slot) => slot.id === originalSlot.id).target, 11);
+    assert.equal(slots.find((slot) => slot.id === originalSlot.id).actual, 7);
+    assert.equal(
+      slots.find((slot) => slot.id === originalSlot.id).issue,
+      'Saved before CONFIG change',
+    );
+    assert.equal(slots.find((slot) => slot.id === newSlot.id).actual, 43);
+    assert.equal(slots.find((slot) => slot.id === newSlot.id).target, 65);
+  }
+  response = await context.request.put(baseURL + '/api/config', {
+    data: { ...beforeScheduleChange, version: newScheduleConfig.version },
+  });
+  assert.equal(response.status(), 200, await response.text());
+  record(
+    'Batch entry uses current CONFIG after schedule changes and saves new slot IDs while preserving every original historical value',
+  );
+
   // Exercise a realistic 24-hour schedule in the actual renderer and browser.
   // Configuration and data live only in this script's disposable database.
   const beforeDenseChart = await readConfig();
   const denseChartConfig = structuredClone(beforeDenseChart);
-  const clockTime = (minutes) => `${String(Math.floor(minutes / 60) % 24).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
-  for (const [shift, firstMinute] of [['day', 480], ['night', 1200]]) {
+  const testLines = Array.from({ length: 7 }, (_, index) => `DEMO-${index + 1}`);
+  denseChartConfig.lines = [...new Set([...denseChartConfig.lines, ...testLines])];
+  denseChartConfig.rows.forEach((row) => (row.active = false));
+  denseChartConfig.productionUnits = testLines.map((line) => ({
+    line,
+    model,
+    dailyTarget: 1000,
+    staffing: { day: [], night: [], owners: [] },
+  }));
+  for (const line of testLines)
+    denseChartConfig.rows.push({
+      id: `new-seven-line-${line}`,
+      line,
+      model,
+      job: 'PD',
+      station: 'Pack',
+      active: true,
+      hasOutput: true,
+    });
+  denseChartConfig.monitoring.groups = [];
+  denseChartConfig.monitoring.outputSources = {};
+  denseChartConfig.monitoring.unitOutputSources = {};
+
+  const clockTime = (minutes) =>
+    `${String(Math.floor(minutes / 60) % 24).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+  for (const [shift, firstMinute] of [
+    ['day', 480],
+    ['night', 1200],
+  ]) {
     denseChartConfig.schedules[shift] = Array.from({ length: 36 }, (_, index) => ({
       start: clockTime(firstMinute + index * 20),
       end: clockTime(firstMinute + (index + 1) * 20),
@@ -1698,15 +1807,18 @@ try {
   await page.locator('[data-report-scope="all"]').click();
   const assertDenseTrend = async () => {
     await page.locator('#group-trend').waitFor({ state: 'visible' });
-    await page.waitForFunction(() =>
-      document.querySelectorAll('#group-trend .trend-time-label').length === 72);
+    await page.waitForFunction(
+      () => document.querySelectorAll('#group-trend .trend-time-label').length === 72,
+    );
     const geometry = await page.locator('#group-trend').evaluate((chart) => {
-      const labels = [...chart.querySelectorAll('.trend-time-label')]
-        .map((label) => label.getBoundingClientRect());
+      const labels = [...chart.querySelectorAll('.trend-time-label')].map((label) =>
+        label.getBoundingClientRect(),
+      );
       return {
         count: labels.length,
-        separated: labels.every((label, index) =>
-          !index || label.left >= labels[index - 1].right + 8),
+        separated: labels.every(
+          (label, index) => !index || label.left >= labels[index - 1].right + 8,
+        ),
         readable: labels.every((label) => label.height >= 9),
         scrollable: chart.scrollWidth > chart.clientWidth,
         pageOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -1737,14 +1849,17 @@ try {
   await assertDenseTrend();
   const beforeRefreshScroll = await page.locator('#group-trend').evaluate((chart) => chart.scrollLeft);
   await Promise.all([
-    page.waitForResponse((response) => response.url().includes('/api/records?') && response.url().includes('shift=night')),
+    page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/records?') && response.url().includes('shift=night'),
+    ),
     page.locator('#refresh-now').click(),
   ]);
   await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
   const afterRefreshScroll = await page.locator('#group-trend').evaluate((chart) => chart.scrollLeft);
   assert.ok(beforeRefreshScroll > 100);
   assert.ok(Math.abs(afterRefreshScroll - beforeRefreshScroll) <= 1);
-  await page.locator('#group-trend').evaluate((chart) => chart.scrollLeft = 0);
+  await page.locator('#group-trend').evaluate((chart) => (chart.scrollLeft = 0));
   await screenshot('.group-trend-panel', 'group-trend-dense');
   await page.locator('#enter-fullscreen').click();
   await page.locator('.board-display-options summary').click();
@@ -1754,6 +1869,65 @@ try {
     await page.setViewportSize({ width, height: 1000 });
     await assertDenseTrend();
   }
+  await page.locator('.board-display-options summary').click();
+  await page.locator('#board-show-share').check();
+  await page.locator('.board-display-options summary').click();
+  await page.locator('#exit-fullscreen').click();
+  for (const language of ['en', 'zh', 'th']) {
+    await page.locator('#language-select').selectOption(language);
+    await page.locator('#enter-fullscreen').click();
+    for (const [width, height] of [
+      [1920, 1080],
+      [1440, 900],
+      [1366, 768],
+      [1024, 768],
+    ]) {
+      await page.setViewportSize({ width, height });
+      await page.waitForFunction(
+        () => document.querySelectorAll('#line-cards .line-card').length === 7,
+      );
+      const compact = await page.locator('#line-cards').evaluate((list) => {
+        const cards = [...list.children].map((card) => card.getBoundingClientRect());
+        const box = list.getBoundingClientRect();
+        return {
+          count: cards.length,
+          listHeight: box.height,
+          rowHeight: cards[0].height,
+          visible: cards.every(
+            (card) => card.top >= box.top - 1 && card.bottom <= box.bottom + 1,
+          ),
+        };
+      });
+      assert.deepEqual(
+        await page
+          .locator('#line-cards .line-card')
+          .first()
+          .locator('.production-metric')
+          .evaluateAll((metrics) => metrics.map((item) => item.dataset.metric)),
+        [
+          'dailyTarget',
+          'currentTarget',
+          'currentActual',
+          'cumulativeTarget',
+          'cumulativeActual',
+          'cumulativeGap',
+        ],
+      );
+      assert.equal(compact.count, 7);
+      assert.equal(compact.visible, true, JSON.stringify({ width, height, ...compact }));
+    }
+    await page.locator('#exit-fullscreen').click();
+  }
+  await page.locator('#language-select').selectOption('en');
+  await page.locator('#enter-fullscreen').click();
+  if (screenshots) {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.locator('#group-trend').evaluate((chart) => (chart.scrollLeft = 0));
+    await page.screenshot({ path: path.join(root, 'docs/images/seven-line-board.png') });
+  }
+  record(
+    'The compact fullscreen board keeps seven configured lines visible together on desktop, with daily, interval and cumulative metrics in order',
+  );
   await page.locator('#exit-fullscreen').click();
   const latestDenseConfig = await readConfig();
   response = await context.request.put(baseURL + '/api/config', {
@@ -1762,7 +1936,9 @@ try {
   assert.equal(response.status(), 200, await response.text());
   await page.goto(baseURL + '/overview');
   await page.setViewportSize({ width: 1440, height: 1000 });
-  record('Dense 72-interval group trends keep every label readable and separated, scroll locally, support keyboard access and preserve refresh position in three languages and four widths, including fullscreen');
+  record(
+    'Dense 72-interval group trends keep every label readable and separated, scroll locally, support keyboard access and preserve refresh position in three languages and four widths, including fullscreen',
+  );
   await page.locator('[data-view="help"]').click();
   assert.match(await page.locator('#help-content').innerText(), /station/i);
   assert.equal(await page.locator('#help-content .help-topic').count(), 7);

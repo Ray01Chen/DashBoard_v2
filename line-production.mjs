@@ -10,7 +10,7 @@ export function matchingInterval(slots, interval) {
 /** Explicit interval fill is a one-time atomic replacement, not shared state.
  * Individual edits made before this preview may differ and are overwritten.
  * Revisions protect changes made after preview; all checks precede all writes. */
-export function planStationInterval(data, config, records, defaults, versions, fail) {
+export function planStationInterval(data, config, versions, fail) {
   if (!unitFor(config, data)) fail(400, 'errMapping');
   const rows = config.rows.filter(
     (row) => row.active && !row.deleted && stationHasOutput(row) && sameProduction(row, data),
@@ -31,12 +31,18 @@ export function planStationInterval(data, config, records, defaults, versions, f
     if (!change.values || typeof change.values !== 'object' || Array.isArray(change.values))
       fail(400, 'errCount');
     const fields = Object.keys(change.values);
-    if (!fields.length || fields.some((field) => !['target', 'actual', 'issue'].includes(field)))
+    if (
+      !fields.length ||
+      fields.some((field) => !['target', 'actual', 'issue'].includes(field))
+    )
       fail(400, 'errCount');
     for (const [field, value] of Object.entries(change.values)) {
       if (field === 'issue') {
         if (typeof value !== 'string' || value.length > 2000) fail(400, 'errSlotData');
-      } else if (value !== null && (!Number.isSafeInteger(value) || value < 0 || value > 99999999))
+      } else if (
+        value !== null &&
+        (!Number.isSafeInteger(value) || value < 0 || value > 99999999)
+      )
         fail(400, 'errCount');
     }
   }
@@ -50,17 +56,20 @@ export function planStationInterval(data, config, records, defaults, versions, f
     fail(409, 'errConflict');
   const expected = new Map(data.expectedVersions.map((item) => [item?.rowId, item?.version]));
   if (expected.size !== changes.length) fail(409, 'errConflict');
-  const saved = new Map(records.map((record) => [record.rowId, record]));
+  // Batch entry always addresses the configured interval. Saved history is
+  // preserved by writeRecord; it is neither a prerequisite nor a mapping source.
+  const configured = (config.schedules?.[data.shift] || []).filter(
+    (slot) =>
+      slot.kind === 'production' &&
+      slot.start === data.interval.start &&
+      slot.end === data.interval.end,
+  );
+  if (configured.length !== 1) fail(400, 'errSlotData');
   return changes.map(({ rowId, values }) => {
     const version = expected.get(rowId);
     if (!Number.isSafeInteger(version) || version < 0 || version !== (versions.get(rowId) || 0))
       fail(409, 'errConflict');
-    const slots = (saved.get(rowId) || defaults[rowId])?.slots || [];
-    const matches = slots.filter(
-      (slot) => slot.start === data.interval.start && slot.end === data.interval.end,
-    );
-    if (matches.length !== 1) fail(400, 'errSlotData');
-    return { rowId, version, slots: [{ id: matches[0].id, ...values }] };
+    return { rowId, version, slots: [{ id: configured[0].id, ...values }] };
   });
 }
 

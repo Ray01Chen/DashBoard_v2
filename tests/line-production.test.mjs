@@ -16,8 +16,11 @@ import { buildLineMonitor } from '../public/monitor.js';
 import { readSpreadsheet } from '../spreadsheet.mjs';
 import { pagePaths, settingsPaths } from '../public/pages.js';
 
-test('interval fill targets only active stations of the exact model and rejects ambiguous boundaries', () => {
+test('interval fill uses CONFIG slot IDs and only active stations of the exact model', () => {
   const config = {
+    schedules: {
+      day: [{ id: 'configured', start: '08:00', end: '09:00', kind: 'production' }],
+    },
     productionUnits: [
       { line: 'L', model: 'A' },
       { line: 'L', model: 'B' },
@@ -29,13 +32,10 @@ test('interval fill targets only active stations of the exact model and rejects 
       { id: 4, line: 'L', model: 'B', active: true },
     ],
   };
-  const defaults = {
-    1: { slots: [{ id: 'a', start: '08:00', end: '09:00', target: 10, actual: 3 }] },
-    2: { slots: [{ id: 'b', start: '08:00', end: '09:00', target: 20, actual: 9 }] },
-  };
   const data = {
     line: 'L',
     model: 'A',
+    shift: 'day',
     interval: { start: '08:00', end: '09:00' },
     values: { target: 30, actual: 0 },
     expectedVersions: [
@@ -46,12 +46,12 @@ test('interval fill targets only active stations of the exact model and rejects 
   const fail = (status, code) => {
     throw Object.assign(new Error(code), { status });
   };
-  assert.deepEqual(planStationInterval(data, config, [], defaults, new Map(), fail), [
-    { rowId: 1, version: 0, slots: [{ id: 'a', target: 30, actual: 0 }] },
-    { rowId: 2, version: 0, slots: [{ id: 'b', target: 30, actual: 0 }] },
+  assert.deepEqual(planStationInterval(data, config, new Map(), fail), [
+    { rowId: 1, version: 0, slots: [{ id: 'configured', target: 30, actual: 0 }] },
+    { rowId: 2, version: 0, slots: [{ id: 'configured', target: 30, actual: 0 }] },
   ]);
-  defaults[2].slots.push({ ...defaults[2].slots[0], id: 'duplicate' });
-  assert.throws(() => planStationInterval(data, config, [], defaults, new Map(), fail), {
+  data.interval = { start: '07:00', end: '08:00' };
+  assert.throws(() => planStationInterval(data, config, new Map(), fail), {
     message: 'errSlotData',
   });
 });

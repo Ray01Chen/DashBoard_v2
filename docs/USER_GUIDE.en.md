@@ -43,7 +43,7 @@ Click **Add issue** or its preview, or press **F2** in a numeric cell. The edito
 
 Overview defaults to **Whole day**, with Target, Actual and Gap combined across both shifts. Whole day / Day / Night is available in both Overview and Production details. In fullscreen details, the header follows the active colour theme and groups Line, Model, Owner and the six interval/daily/cumulative metrics; each station labels Day and Night personnel separately. The hourly chart fills the dialog width at a larger height.
 
-Overview cards, group totals and fullscreen details show **Interval target, Interval actual, Daily target, Target to now, Actual to now and Cumulative gap**. Daily target always covers both shifts, including report edits. Cumulative values cover intervals already started in the selected scope, including the active interval's full target; future intervals are excluded. Gap is Actual to now minus Target to now. Missing values stay — and explicit zero stays 0. Breaks and inactive shifts have no current interval values; historical reports accumulate the full selected scope, and future reports have no cumulative values. Bangkok production dates continue through overnight shifts. Shortfall alerts use the same cumulative comparison, and open cards/details update at interval boundaries.
+Overview cards, group totals and fullscreen details show **Daily target, Interval target, Interval actual, Target to now, Actual to now and Cumulative gap**. Daily target always covers both shifts, including report edits. Cumulative values cover intervals already started in the selected scope, including the active interval's full target; future intervals are excluded. Gap is Actual to now minus Target to now. Missing values stay — and explicit zero stays 0. Breaks and inactive shifts have no current interval values; historical reports accumulate the full selected scope, and future reports have no cumulative values. Bangkok production dates continue through overnight shifts. Shortfall alerts use the same cumulative comparison, and open cards/details update at interval boundaries.
 
 Output share uses the same cumulative actuals as the cards. Trend charts retain the complete selected interval series for reference.
 
@@ -60,6 +60,8 @@ Managers drag the grip in the far-left Order column to place a station before or
 ## Fill an interval across all stations
 
 ![Interval fill](./images/interval-batch.png)
+
+Fill interval uses the current CONFIG schedule directly, without matching saved historical intervals. Schedule changes do not block entry: new slots are saved on the selected date, while original slots, values and issues remain in SQLite and can be viewed on their original dates.
 
 Click **Fill interval** at the left of the entry command bar. Select production date, Line, Model and interval. Edit Target, Actual and Issue for each station, or enter a shared value above and use its Apply button. Applying stays in the window for further edits. **Restore default targets** restores this interval from the daily preset allocation. English issue quick text configured in Master data is also available. Applying a blank shared field clears that field; zero writes zero.
 
@@ -99,6 +101,8 @@ CSV uses Row ID + Time slot, or an unambiguous Line + Model + Job/Station + Time
 
 Each enabled line/model uses its selected **Output station** for dashboard target, output, gap, trends and alerts. Group totals add units, not every station traversed by the same products. Changing that source updates the active unit’s view immediately. Retired line/model combinations retain their captured historical source; saved station values remain intact.
 
-Normal line clicks open details; full-screen clicks open a station-detail dialog. Closing retains the board group/page. Trend and share charts can be toggled independently. The board shows up to seven units per page, reserving space for long model names and charts. Names wrap, and phone daily-target cards retain field labels.
+Normal line clicks open details; full-screen clicks open a station-detail dialog. Closing retains the board group/page. Trend and share charts can be toggled independently. The fullscreen board uses seven units per page with compact single-row desktop cards, even with both charts enabled. Smaller screens scroll the list; additional units use pagination. Open details for the full model name. Phone daily-target cards retain field labels.
+
+![Compact seven-line fullscreen board](./images/seven-line-board.png)
 
 This pilot requires manual reporting; automatic data integration is planned for a future version. See the [manager walkthrough](./MANAGER_GUIDE.md), [member walkthrough](./MEMBER_GUIDE.md) and [validation record](./VALIDATION.md).

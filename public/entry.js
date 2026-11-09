@@ -41,8 +41,6 @@ const messages = {
     bulkReview:
       'Unable to confirm the result. Refresh preview to check saved values before applying again.',
     bulkPending: 'Save or resolve pending station edits first.',
-    bulkNoInterval:
-      'These stations do not all share this interval. Choose another interval or edit individually.',
     configurationRequired:
       'This line/model has no enabled station configuration yet. Targets, actuals and station issues can be saved after a manager enables its job/station pairs.',
     configureStations: 'Configure stations for this line/model',
@@ -155,7 +153,6 @@ const messages = {
     bulkConflict: '本次未變更資料。請更新預覽，核對最新值後再套用。',
     bulkReview: '無法確認結果。請先更新預覽，確認已存數值後再套用。',
     bulkPending: '請先儲存或處理尚未完成的站點修改。',
-    bulkNoInterval: '部分站點沒有相同時段，請選其他時段或個別填寫。',
     configurationRequired:
       '這組產線／Model 尚無啟用的站點配置。管理員啟用職務／站點並儲存後，即可填寫目標、實績與各站異常。',
     configureStations: '設定這組產線／Model 的站點',
@@ -265,7 +262,6 @@ const messages = {
     bulkConflict: 'ยังไม่เปลี่ยนข้อมูล โหลดตัวอย่างใหม่ ตรวจค่าปัจจุบันแล้วใช้ค่าอีกครั้ง',
     bulkReview: 'ยังยืนยันผลไม่ได้ โหลดตัวอย่างเพื่อตรวจค่าที่บันทึกก่อนลองอีกครั้ง',
     bulkPending: 'บันทึกหรือแก้ไขรายการสถานีที่ค้างอยู่ก่อน',
-    bulkNoInterval: 'บางสถานีไม่มีช่วงเวลาเดียวกัน เลือกช่วงอื่นหรือกรอกรายสถานี',
     configurationRequired:
       'คู่สาย/Model นี้ยังไม่มีสถานีที่เปิดใช้งาน ผู้ดูแลต้องเปิดใช้คู่หน้าที่/สถานีและบันทึกก่อนกรอกเป้าหมาย ผลจริง และปัญหา',
     configureStations: 'ตั้งค่าสถานีของสาย/Model นี้',
@@ -1224,25 +1220,12 @@ export function createEntryController({
     refresh.hidden = !editor.needsRefresh;
   }
 
-  function bulkIntervals(unit, reports) {
-    const config = getContext().config;
-    return ['day', 'night']
-      .flatMap((shift) => {
-        const slots = config.schedules[shift].filter((slot) => slot.kind === 'production');
-        for (const record of reports?.[shift]?.records || []) {
-          const row = record.rowSnapshot || config.rows.find((row) => row.id === record.rowId);
-          if (!row || !sameProduction(row, unit) || !stationHasOutput(row, config)) continue;
-          slots.push(...record.slots.filter((slot) => slot.kind !== 'break'));
-        }
-        return slots.map((slot) => ({ ...slot, shift }));
-      })
-      .filter(
-        (slot, index, all) =>
-          all.findIndex(
-            (other) =>
-              other.shift === slot.shift && other.start === slot.start && other.end === slot.end,
-          ) === index,
-      );
+  function bulkIntervals() {
+    return ['day', 'night'].flatMap((shift) =>
+      getContext()
+        .config.schedules[shift].filter((slot) => slot.kind === 'production')
+        .map((slot) => ({ ...slot, shift })),
+    );
   }
 
   function bulkScopeControls() {
@@ -1295,7 +1278,7 @@ export function createEntryController({
         if (responses.some(([, data]) => data.configVersion !== config.version))
           throw new Error(text('configChanged'));
         editor.configVersion = config.version;
-        const options = bulkIntervals(editor.unit, reports);
+        const options = bulkIntervals();
         const selected =
           options.find(
             (slot) =>
@@ -1324,17 +1307,22 @@ export function createEntryController({
         if (!rows.length) throw new Error(text('bulkNoOutput'));
         const next = rows.map((row) => {
           const record = saved.get(row.id) || data.defaults?.[row.id];
-          const matches = (record?.slots || []).filter(
-            (slot) => slot.start === editor.interval.start && slot.end === editor.interval.end,
-          );
-          const defaultMatches = (data.defaults?.[row.id]?.slots || []).filter(
-            (slot) => slot.start === editor.interval.start && slot.end === editor.interval.end,
-          );
-          const slot = matches.length === 1 ? matches[0] : null;
+          // The batch editor addresses only the current CONFIG slot ID.
+          // Historical slots remain in the saved report and are never remapped.
+          const slot = record?.slots.find((slot) => slot.id === selected.id) || {
+            ...selected,
+            target: null,
+            actual: null,
+            issue: '',
+          };
+          const defaultSlot = allocateDailyTarget(
+            config,
+            lineDailyTarget(config, row.line, modelOf(row)),
+          ).find((slot) => slot.id === selected.id);
           return {
             row,
             slot,
-            defaultTarget: defaultMatches.length === 1 ? defaultMatches[0].target : null,
+            defaultTarget: defaultSlot?.target ?? null,
             version: saved.get(row.id)?.version ?? data.rowVersions?.[row.id] ?? 0,
             draft: {
               target: String(slot?.target ?? ''),
@@ -1344,7 +1332,6 @@ export function createEntryController({
             },
           };
         });
-        if (next.some((item) => !item.slot)) throw new Error(text('bulkNoInterval'));
         editor.rows = next;
         editor.needsRefresh = false;
         renderBulkRows();

@@ -17,9 +17,9 @@ export function aggregateMonitorSeries(lines, scheduledSlots) {
 }
 
 const overviewMetricKeys = [
+  'dailyTarget',
   'currentTarget',
   'currentActual',
-  'dailyTarget',
   'cumulativeTarget',
   'cumulativeActual',
   'cumulativeGap',
@@ -192,7 +192,14 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
           parseFloat(trendStyle.paddingRight),
       ),
     ),
-    height: ctx.board ? (innerWidth <= 750 ? 95 : 130) : 230,
+    // Match the CSS plot height so short desktop boards retain readable SVG text.
+    height: ctx.board
+      ? innerWidth <= 750
+        ? 95
+        : innerWidth >= 1000 && innerHeight <= 820
+          ? 90
+          : 130
+      : 230,
   };
   const scrollLeft = trend.scrollLeft;
   trend.innerHTML = trendSvg(aggregateMonitorSeries(lines, production), { ...ctx, trendSize });

@@ -826,6 +826,7 @@ const files = {
       'excel-preview',
       'line-details',
       'production-overview',
+      'seven-line-board',
       'group-trend-dense',
     ].map((name) => [`/guide-images/${name}.png`, [`../docs/images/${name}.png`, 'image/png']]),
   ),
@@ -1178,7 +1179,6 @@ const server = http.createServer(async (req, res) => {
         refreshConfig();
         scope(data.date, data.shift);
         if (data.configVersion !== config.version) fail(409, 'errConfigConflict');
-        const records = selectAll.all(data.date, data.shift).map(unpack);
         const versions = new Map(
           config.rows.map((row) => [
             row.id,
@@ -1188,8 +1188,6 @@ const server = http.createServer(async (req, res) => {
         const patches = planStationInterval(
           data,
           config,
-          records,
-          productionDayDefaults(data.date, data.shift),
           versions,
           fail,
         );

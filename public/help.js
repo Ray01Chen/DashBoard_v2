@@ -53,6 +53,7 @@ const guides = {
           'If a configured combination has no enabled stations, the page retains its Line/Model choices and shows the daily-target allocation preview. Managers can open the exact Line configuration; members are told to contact a manager. Preview fields do not save production. Enable stations and Save settings before entering results.',
           'Whole-day spreadsheet shows both shifts. Each station has adjacent Target/Actual inputs and a one-line issue preview. The fixed left column includes station, job and day/night/whole-day totals; personnel are in production details.',
           'Use Fill interval at the left of the command bar. Choose date, Line, Model and interval. Apply Target, Actual or Issue to all stations, then edit individual cells; Apply keeps the window open. Applying a blank clears that field for every station; 0 writes zero.',
+          'Fill interval uses the current CONFIG schedule directly, without matching saved historical intervals. Schedule changes do not block entry: new slots are saved on the selected date, while original slots, values and issues remain in SQLite and can be viewed on their original dates.',
           'Changing date, Line, Model or interval saves the current scope before loading the destination. Save now keeps the window open. X, Esc or clicking outside saves and closes, then returns entry to the selected destination.',
           'Invalid values or version conflicts keep drafts open; no part of a conflicting batch is saved. Refresh preview, review changed fields and save again.',
           'Click Add issue or its one-line preview to open the note editor for the displayed station/date/interval. English quick text comes from the Master data list; edit freely, use Enter for new lines, or Clear note to remove text. Done, Esc, a click outside or Ctrl+Enter closes and saves. Opening a note without changes does not write data; long notes never enlarge the table row.',
@@ -72,9 +73,9 @@ const guides = {
       {
         title: 'Overview, details and full-screen board',
         paragraphs: [
-          'Overview defaults to Whole day. Cards and group totals show Interval target/actual, Daily target, Target/Actual to now and Cumulative gap. Daily target always covers both shifts; cumulative values include the full target of intervals started by now, excluding future intervals. Missing values stay —, and shortfall alerts use the same cumulative comparison. Whole day / Day / Night is available above both Overview and Production details. Each line/model uses its selected output station; group totals never double-count every station.',
+          'Overview defaults to Whole day. Cards and group totals show Daily target, Interval target/actual, Target/Actual to now and Cumulative gap. Daily target always covers both shifts; cumulative values include the full target of intervals started by now, excluding future intervals. Missing values stay —, and shortfall alerts use the same cumulative comparison. Whole day / Day / Night is available above both Overview and Production details. Each line/model uses its selected output station; group totals never double-count every station.',
           'Normal line clicks open details. Full screen clicks open a station-detail dialog; X or Esc returns to the same group/page. Its header follows the active colour theme and keeps line, model, owner and the six interval/daily/cumulative metrics together. Each station labels Day and Night personnel separately.',
-          'The group trend keeps every time label readable; dense schedules scroll horizontally inside the chart, including fullscreen. Hover or Tab to an interval to see its values. Refresh keeps the scroll position. Display options independently toggle group trend and output share. Missing output remains blank. The board shows at most seven units per page.',
+          'The group trend keeps every time label readable; dense schedules scroll horizontally inside the chart, including fullscreen. Hover or Tab to an interval to see its values. Refresh keeps the scroll position. Display options independently toggle group trend and output share. Missing output remains blank. The fullscreen board uses seven compact desktop rows per page, including with both charts enabled. Smaller screens scroll the list; additional units use pagination.',
         ],
       },
       {
@@ -150,6 +151,7 @@ const guides = {
           '若配對沒有啟用站點，產線／Model 選項仍保留，並顯示日目標分配預覽。管理員可直接前往該組配置，member 會看到聯繫管理員提示；預覽欄位不建立填報。先啟用站點並儲存設定，再填寫結果。',
           '整日雙班試算表、單班與單時段表格皆將 Target、Actual 並排，異常只顯示一行。固定左欄包含站點、職務及早晚班與整日合計；人員可到生產明細查看。',
           '工具列最左側「同時段批次填寫」可選日期、產線、Model 與時段，分別套用目標、實績、異常，再逐站修改；套用後視窗保持開啟。空白可清除所有站的該欄，「恢復預設目標」依日目標配置還原該時段；0 寫入零。',
+          '批次時段直接使用目前 CONFIG 的班表，不比對各站舊時段。改班表後也可直接填報；新時段寫入所選日期，既有時段、數值與異常保留在 SQLite，查看原日期仍可查閱。',
           '切換日期、產線、Model 或時段前先儲存原範圍。立即儲存保留視窗；X、Esc 或點外面儲存後關閉，填報表回到所選日期與配對。',
           '無效值或版本衝突時保留視窗與修改，衝突整批不寫入。更新預覽後核對修改，再儲存。',
           '點「新增異常」或一行摘要，編輯窗會標明站點、日期、班別及時段。英文快捷文字來自基礎資料清單，可選取後再補充；Enter 換行，清除說明可清空。完成、Esc、點視窗外或 Ctrl+Enter 關閉並自動儲存；只開啟不改字不會寫入資料，長異常不會撐高表格。',
@@ -169,9 +171,9 @@ const guides = {
       {
         title: '總覽、細節與全螢幕看板',
         paragraphs: [
-          '總覽預設「全天」。卡片與合計顯示時段目標／實績、每日目標、累計目標／實績／差額；每日目標固定涵蓋雙班，累計只計到目前已開始時段（含目前時段完整目標），不扣未來目標；缺值顯示 —，缺口警示採相同累計比較。生產總覽與生產細節上方都可切換全天／早班／晚班。每組產線／Model 仍只使用所選來源站，避免重複計產量。',
+          '總覽預設「全天」。卡片與合計依序顯示每日目標、時段目標／實績、累計目標／實績／差額；每日目標固定涵蓋雙班，累計只計到目前已開始時段（含目前時段完整目標），不扣未來目標；缺值顯示 —，缺口警示採相同累計比較。生產總覽與生產細節上方都可切換全天／早班／晚班。每組產線／Model 仍只使用所選來源站，避免重複計產量。',
           '全螢幕明細頂部沿用目前主題配色，集中產線、機種、負責人及六項時段／全日／累計數字；各站人員分早班、晚班標示。X 或 Esc 關閉後保留分組與頁次。',
-          '分組總產量趨勢保留每個時段名稱與間距；時段較多時在圖表內左右捲動，全螢幕也適用。滑鼠停留或 Tab 聚焦查看數值，刷新保留捲動位置。顯示選項可分別控制趨勢與占比；未填報保持空白。每頁最多七組。',
+          '分組總產量趨勢保留每個時段名稱與間距；時段較多時在圖表內左右捲動，全螢幕也適用。滑鼠停留或 Tab 聚焦查看數值，刷新保留捲動位置。顯示選項可分別控制趨勢與占比；未填報保持空白。全螢幕固定每頁七組，桌面以單列精簡卡片顯示；較小螢幕可捲動，超過七組用頁次切換。',
         ],
       },
       {
@@ -248,6 +250,7 @@ const guides = {
           'หากคู่ยังไม่มีสถานีที่เปิดใช้ รายการสาย/Model ยังอยู่และแสดงตัวอย่างการแบ่งเป้าหมาย manager เปิดหน้าตั้งค่าคู่นั้นได้ member ติดต่อ manager ช่องตัวอย่างไม่บันทึก ต้องเปิดสถานีและบันทึกการตั้งค่าก่อน',
           'ตารางทั้งสองกะตลอดวันมีช่อง Target และ Actual อยู่คู่กัน ปัญหาแสดงบรรทัดเดียว ด้านซ้ายตรึงชื่อสถานี หน้าที่ และยอดรวมกะเช้า กะกลางคืน และทั้งวัน ดูบุคลากรในรายละเอียดการผลิต',
           'ปุ่มกรอกช่วงเวลาอยู่ซ้ายสุด เลือกวันที่ สาย Model และช่วงเวลา ใช้เป้าหมาย ผลจริง หรือปัญหากับทุกสถานี แล้วแก้ไขรายสถานีได้ หน้าต่างยังเปิดอยู่ ใช้ช่องว่างเพื่อล้างช่องนั้น หรือคืนค่า Target จากเป้ารายวัน 0 คือศูนย์',
+          'ช่วงเวลากรอกเป็นชุดใช้ตาราง CONFIG ปัจจุบันโดยตรง ไม่จับคู่กับช่วงเวลาเก่า เปลี่ยนตารางแล้วยังกรอกได้ ช่วงเวลา ค่าและปัญหาเดิมเก็บใน SQLite และดูย้อนหลังตามวันที่ได้',
           'เปลี่ยนวันที่ สาย Model หรือช่วงเวลาจะบันทึกขอบเขตเดิมก่อน ปุ่มบันทึกยังเปิดหน้าต่างไว้ X, Esc หรือคลิกด้านนอกจะบันทึกแล้วปิด กลับไปยังวันที่และคู่ที่เลือก',
           'ค่าผิดหรือข้อมูลขัดแย้งจะเก็บฉบับร่างและหน้าต่างไว้ ชุดที่ขัดแย้งไม่บันทึก ให้รีเฟรช ตรวจสอบ แล้วบันทึกอีกครั้ง',
           'คลิกเพิ่มปัญหาหรือข้อความย่อเพื่อเปิดหน้าต่างที่ระบุสถานี วันที่ กะและช่วงเวลา ข้อความด่วนภาษาอังกฤษมาจากรายการข้อมูลหลักและแก้ไขต่อได้ Enter ขึ้นบรรทัดใหม่ ล้างข้อความเพื่อลบ กดเสร็จสิ้น Esc คลิกนอกหน้าต่างหรือ Ctrl+Enter เพื่อปิดและบันทึก เปิดโดยไม่แก้ไขจะไม่เขียนข้อมูล ข้อความยาวไม่เพิ่มความสูงของแถว',
@@ -267,9 +270,9 @@ const guides = {
       {
         title: 'ภาพรวม รายละเอียด และกระดานเต็มหน้าจอ',
         paragraphs: [
-          'ภาพรวมเริ่มต้นที่ทั้งวัน แสดงเป้า/ผลจริงช่วงปัจจุบัน เป้ารายวัน เป้า/ผลจริงสะสม และผลต่างสะสม เป้ารายวันรวมสองกะ ส่วนสะสมรวมเฉพาะช่วงที่เริ่มแล้วโดยใช้เป้าเต็มช่วง ไม่รวมอนาคต ไม่มีข้อมูลแสดง — และแจ้งเตือนใช้ผลต่างสะสมเดียวกัน ทั้งหน้าภาพรวมและรายละเอียดเลือกทั้งวัน/กะเช้า/กะกลางคืนได้ แต่ละสาย/Model ยังใช้สถานีแหล่งผลผลิตเดียวเพื่อไม่ให้นับซ้ำ',
+          'ภาพรวมเริ่มต้นที่ทั้งวัน แสดงเป้ารายวัน เป้า/ผลจริงช่วงปัจจุบัน เป้า/ผลจริงสะสม และผลต่างสะสม เป้ารายวันรวมสองกะ ส่วนสะสมรวมเฉพาะช่วงที่เริ่มแล้วโดยใช้เป้าเต็มช่วง ไม่รวมอนาคต ไม่มีข้อมูลแสดง — และแจ้งเตือนใช้ผลต่างสะสมเดียวกัน ทั้งหน้าภาพรวมและรายละเอียดเลือกทั้งวัน/กะเช้า/กะกลางคืนได้ แต่ละสาย/Model ยังใช้สถานีแหล่งผลผลิตเดียวเพื่อไม่ให้นับซ้ำ',
           'หน้าต่างเต็มหน้าจอใช้สีตามธีมและรวมสาย Model ผู้รับผิดชอบ และหกค่าของช่วงปัจจุบัน รายวัน และสะสมไว้ด้านบน การ์ดแต่ละสถานีแยกบุคลากรกะเช้าและกะกลางคืน X หรือ Esc กลับกลุ่ม/หน้าเดิม',
-          'กราฟรวมรักษาระยะห่างของป้ายเวลาทุกช่วง หากมีหลายช่วงให้เลื่อนแนวนอนในกราฟ รวมถึงเต็มหน้าจอ ชี้เมาส์หรือกด Tab เพื่อดูค่า รีเฟรชเก็บตำแหน่งเลื่อนเดิม ตัวเลือกเปิดแนวโน้มและสัดส่วนแยกกัน ไม่กรอกไม่ถือเป็นศูนย์ สูงสุดเจ็ดคู่ต่อหน้า',
+          'กราฟรวมรักษาระยะห่างของป้ายเวลาทุกช่วง หากมีหลายช่วงให้เลื่อนแนวนอนในกราฟ รวมถึงเต็มหน้าจอ ชี้เมาส์หรือกด Tab เพื่อดูค่า รีเฟรชเก็บตำแหน่งเลื่อนเดิม ตัวเลือกเปิดแนวโน้มและสัดส่วนแยกกัน ไม่กรอกไม่ถือเป็นศูนย์ เต็มหน้าจอแสดงเจ็ดคู่ต่อหน้าด้วยการ์ดแถวเดียวบนเดสก์ท็อป หน้าจอเล็กเลื่อนรายการได้ ใช้ปุ่มเปลี่ยนหน้าเมื่อเกินเจ็ดคู่',
         ],
       },
       {
@@ -315,7 +318,7 @@ const exampleScreens = [
     'no-output-station',
   ],
   ['excel-preview'],
-  ['production-overview', 'group-trend-dense', 'line-details'],
+  ['production-overview', 'seven-line-board', 'group-trend-dense', 'line-details'],
   [],
   [],
 ];
@@ -337,8 +340,10 @@ const exampleLabels = {
       'interval-batch': 'One-time interval fill with editable station values',
       'no-output-station': 'No-output stations stay visible with read-only history',
       'excel-preview': 'Excel import preview',
-      'line-details': 'Theme-aware fullscreen details with owner, totals and day/night personnel',
+      'line-details':
+        'Theme-aware fullscreen details with owner, totals and day/night personnel',
       'production-overview': 'Production overview with DELTA branding and theme controls',
+      'seven-line-board': 'Compact fullscreen board with seven lines per page',
       'group-trend-dense': 'Dense whole-day trend: scroll horizontally to view every interval',
     },
   },
@@ -361,6 +366,7 @@ const exampleLabels = {
       'excel-preview': 'Excel 匯入預覽',
       'line-details': '跟隨主題的全螢幕明細與各站早晚班人員',
       'production-overview': '台達品牌與主題配色的生產總覽',
+      'seven-line-board': '全螢幕每頁七條線的精簡看板',
       'group-trend-dense': '全天多時段趨勢：左右捲動查看所有時段',
     },
   },
@@ -383,6 +389,7 @@ const exampleLabels = {
       'excel-preview': 'ตัวอย่างนำเข้า Excel',
       'line-details': 'รายละเอียดเต็มจอตามธีม พร้อมยอดรวมและบุคลากรแยกกะ',
       'production-overview': 'ภาพรวมการผลิตพร้อมสัญลักษณ์ DELTA และธีมสี',
+      'seven-line-board': 'กระดานเต็มจอแบบกะทัดรัด เจ็ดสายต่อหน้า',
       'group-trend-dense': 'กราฟทั้งวันหลายช่วงเวลา เลื่อนแนวนอนเพื่อดูทุกช่วง',
     },
   },
