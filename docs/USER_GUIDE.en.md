@@ -21,11 +21,11 @@ Save settings at top/bottom publishes the draft. Save draft stays in this browse
 
 ![Station production entry](./images/production-entry.png)
 
-Choose production date, Line and Model. All stations appear automatically; there is no station selector. The fixed left column shows only Job/Station. Each interval has adjacent **Target / Actual** inputs and a one-line issue button. Individual edits affect only that station. People and owners remain automatically captured and can be viewed in production details.
+Choose production date, Line and Model. All stations appear automatically; there is no station selector. The fixed left column shows Job/Station and day/night/whole-day totals. Each interval has adjacent **Target / Actual** inputs and a one-line issue button. Individual edits affect only that station. People and owners remain automatically captured and can be viewed in production details.
 
 Interval target = daily preset × interval production minutes ÷ total production minutes across both shifts. Breaks are excluded and rounding preserves the daily total for each station. A preset of 1,000 over 500 minutes gives a 20-minute interval 40. Changing one station’s Target to 50 changes only that station’s report-day total to 1,010, leaving other stations and the 1,000 preset unchanged.
 
-Whole-day spreadsheet shows both shifts; Whole-shift spreadsheet shows the selected shift; Single-interval spreadsheet shows one slot. All modes keep Target/Actual and issue buttons. Day/night totals and the whole-day target are on the right. Blank means not entered/unknown; 0 is explicit zero. Counts must be integers from 0 to 99,999,999.
+Whole-day spreadsheet shows both shifts; Whole-shift spreadsheet shows the selected shift; Single-interval spreadsheet shows one slot. All modes keep Target/Actual and issue buttons. Day/night and whole-day Target/Actual totals stay with Job/Station in the fixed left column. Blank means not entered/unknown; 0 is explicit zero. Counts must be integers from 0 to 99,999,999.
 
 Click another numeric cell to autosave and confirm Saved. Tab moves across intervals within the same field; Enter moves down stations. Paste a numeric rectangle into the same Target or Actual field across stations/intervals. Failed saves retain input. Review a station version conflict before Use latest data or Save my changed cells; only changed cells are merged and other stations stay independent.
 
@@ -41,11 +41,11 @@ Managers drag the grip in the far-left Order column to place a station before or
 
 ![Interval fill](./images/interval-batch.png)
 
-Managers and members can click the highlighted **Fill interval** at the top right or to the right of a centered line heading. Confirm the date, select Line, Model, shift and interval, and review station values. Enter Target, Actual or both, then **Apply to all stations**. Entered columns overwrite individual values at enabled output-producing stations for this interval. Blank keeps the column unchanged; 0 writes zero. Issues, other intervals, other models and the daily preset stay unchanged. Report-day target totals recalculate.
+Click **Fill interval** at the left of the entry command bar. Select production date, Line, Model and interval. Edit Target, Actual and Issue for each station, or enter a shared value above and use its Apply button. Applying stays in the window for further edits. Confirmed multilingual issue quick text is also available. Blank shared fields preserve existing values; zero writes zero. Individual fields can be cleared.
 
-Line and Model can be changed inside the window; numeric drafts remain while a new preview loads. Check the destination before applying. Applying or closing returns entry to the selected Line/Model and interval. Closing without applying discards unsent numeric values. Units without output-producing stations cannot receive a batch.
+**Save now** saves without closing. X, Esc or clicking outside saves before closing; invalid values or conflicts keep the window and drafts open. Changing date/unit/interval saves the original scope before loading the destination. Closing returns entry to that destination. A conflicting batch saves nothing; Refresh preview retains changed fields for review before retrying.
 
-This is a one-time operation: each station remains individually editable afterward. A later interval fill replaces those individual values again. Closing before Apply discards the unsent draft. If a station changed after preview, the conflicting batch saves nothing. **Refresh preview** retains your typed values so you can check the latest data and apply again. Different captured historical intervals must be edited individually unless a shared interval exists.
+Paste adjacent Target/Actual columns into the batch sheet, or a single column alternating Target then Actual for each station. The main grid accepts paired rows across intervals: odd rows Target, even rows Actual, then the next station. Invalid or out-of-range rectangles are rejected in full. Other intervals and daily presets stay unchanged.
 
 ## Stations without output
 
@@ -65,7 +65,7 @@ A configured line/model with no enabled stations remains selectable and shows it
 
 ## Excel import
 
-Expand **Excel import & templates**, download the production-date/shift template and retain identifiers. Enter Target, Actual and Issue on each station’s own rows; different counts at different stations are valid. Blank cells preserve saved values; 0 writes zero. Import each shift separately.
+Expand **Excel import & templates**, download the production-date/shift template and retain identifiers. Enter Target, Actual and Issue on each station’s own rows; different counts at different stations are valid. Blank cells preserve saved values; 0 writes zero. The Excel menu offers whole-day, day-shift and night-shift templates and imports. A whole-day file contains both shifts.
 
 CSV uses Row ID + Time slot, or an unambiguous Line + Model + Job/Station + Time slot. Line/model alone is rejected if it matches several stations. Preview all affected station rows before importing. Any stale station/configuration version rejects the entire batch. Historical station/model/interval identifiers remain supported.
 

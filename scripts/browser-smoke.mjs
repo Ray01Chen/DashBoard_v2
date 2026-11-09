@@ -585,7 +585,9 @@ try {
   assert.equal(await field(pack.id, 'target').inputValue(), '125');
   assert.equal(await field(test.id, 'target').inputValue(), '125');
   assert.equal(await field(pack.id, 'target', 2).inputValue(), '500');
-  assert.deepEqual(await station(pack.id).locator('th').allTextContents(), ['PackPD']);
+  assert.equal(await station(pack.id).locator('th > strong').innerText(), 'Pack');
+  assert.equal(await station(pack.id).locator('th > small').innerText(), 'PD');
+  assert.equal(await station(pack.id).locator('.entry-station-totals').count(), 1);
   assert.doesNotMatch(await station(pack.id).innerText(), /Alex Day|Bea Day|Morgan Owner/);
   assert.equal(await page.locator('.entry-matrix textarea, .entry-matrix-people').count(), 0);
   const compactHeight = await station(pack.id).evaluate(
@@ -624,8 +626,8 @@ try {
   report = await readReport(reportDate);
   assert.equal(report.records.find((row) => row.rowId === pack.id).slots[0].actual, 11);
   assert.equal(report.records.find((row) => row.rowId === test.id).slots[0].actual, 7);
-  assert.match(await station(pack.id).locator('[data-entry-day-total]').innerText(), /1,?005/);
-  assert.match(await station(test.id).locator('[data-entry-day-total]').innerText(), /1,?015/);
+  assert.match(await station(pack.id).locator('[data-entry-day-field="target"]').innerText(), /1,?005/);
+  assert.match(await station(test.id).locator('[data-entry-day-field="target"]').innerText(), /1,?015/);
   assert.equal(
     (await readConfig()).productionUnits.find(
       (unit) => unit.line === 'DEMO-A' && unit.model === model,
@@ -736,7 +738,7 @@ try {
   await field(pack.id, 'actual').focus();
   await field(pack.id, 'actual').evaluate((input) => {
     const transfer = new DataTransfer();
-    transfer.setData('text/plain', '21\t22\n31\t32');
+    transfer.setData('text/plain', '121\t122\n21\t22\n131\t132\n31\t32');
     input.dispatchEvent(
       new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer }),
     );
@@ -995,15 +997,18 @@ try {
     );
   };
   const bulkApply = async () => {
-    await page.locator('[data-entry-action="bulk-apply"]').click();
+    await page.locator('[data-entry-action="bulk-save"]').click();
+    await page.waitForFunction(() => document.querySelector('[data-bulk-status]').textContent === 'Saved');
+    assert.equal(await page.locator('.entry-bulk-dialog').isVisible(), true);
+    await page.locator('[data-entry-action="bulk-close"]').click();
     await page.locator('.entry-bulk-dialog').waitFor({ state: 'hidden' });
     await saved();
   };
   await bulkOpen();
   assert.equal(await page.locator('[data-bulk-line]').inputValue(), 'DEMO-A');
   assert.equal(await page.locator('[data-bulk-model]').inputValue(), model);
-  assert.match(await page.locator('[data-bulk-count]').innerText(), /2/);
-  assert.equal(await page.locator('[data-entry-action="bulk-apply"]').isDisabled(), true);
+  assert.equal(await page.locator('[data-bulk-row]').count(), 2);
+  assert.equal(await page.locator('[data-bulk-apply-field="target"]').isDisabled(), true);
   await page.locator('[data-bulk-field="target"]').fill('33');
   await page.locator('[data-bulk-field="actual"]').fill('44');
   await screenshot('.entry-bulk-dialog', 'interval-batch');
@@ -1058,7 +1063,7 @@ try {
   );
   await bulkOpen();
   await page.locator('[data-bulk-field="target"]').fill('-1');
-  assert.equal(await page.locator('[data-entry-action="bulk-apply"]').isDisabled(), true);
+  assert.equal(await page.locator('[data-bulk-apply-field="target"]').isDisabled(), true);
   await page.locator('[data-bulk-field="target"]').fill('500');
   await page.locator('[data-bulk-field="actual"]').fill('500');
   batchReport = await readReport(batchDate);
@@ -1076,13 +1081,13 @@ try {
   });
   assert.equal(response.status(), 200);
   const afterRemote = (await readReport(batchDate)).records;
-  await page.locator('[data-entry-action="bulk-apply"]').click();
+  await page.locator('[data-entry-action="bulk-save"]').click();
   await page.locator('[data-bulk-error]').filter({ hasText: 'Nothing was changed' }).waitFor();
   assert.deepEqual((await readReport(batchDate)).records, afterRemote);
-  assert.equal(await page.locator('[data-bulk-field="actual"]').inputValue(), '500');
+  assert.equal(await page.locator('[data-bulk-cell="actual"]').first().inputValue(), '500');
   await page.locator('[data-entry-action="bulk-refresh"]').click();
   await page.waitForFunction(
-    () => !document.querySelector('[data-entry-action="bulk-apply"]').disabled,
+    () => !document.querySelector('[data-entry-action="bulk-save"]').disabled,
   );
   await bulkApply();
   batchReport = await readReport(batchDate);
@@ -1122,15 +1127,14 @@ try {
     (row) => row.rowSnapshot.model === model,
   );
   await bulkOpen();
-  await page.locator('[data-bulk-field="target"]').fill('70');
-  await page.locator('[data-bulk-field="actual"]').fill('80');
   await page.locator('[data-bulk-model]').selectOption(otherModel);
   await page.waitForFunction(
     () =>
       document.querySelectorAll('[data-bulk-row]').length === 1 &&
       !document.querySelector('[data-entry-action="bulk-refresh"]').disabled,
   );
-  assert.equal(await page.locator('[data-bulk-field="target"]').inputValue(), '70');
+  await page.locator('[data-bulk-field="target"]').fill('70');
+  await page.locator('[data-bulk-field="actual"]').fill('80');
   await bulkApply();
   assert.equal(await page.locator('[data-entry-model-filter]').inputValue(), otherModel);
   assert.equal(await page.locator('[data-entry-line]').inputValue(), 'DEMO-A');
@@ -1150,7 +1154,7 @@ try {
       !document.querySelector('[data-entry-action="bulk-refresh"]').disabled &&
       document.querySelector('[data-bulk-error]').textContent.length > 0,
   );
-  assert.equal(await page.locator('[data-entry-action="bulk-apply"]').isDisabled(), true);
+  assert.equal(await page.locator('[data-bulk-apply-field="target"]').isDisabled(), true);
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('[data-entry-line]').inputValue(), 'DEMO-B');
   await page.locator('[data-bulk-global]').click();
@@ -1166,6 +1170,37 @@ try {
   record(
     'Batch Line/Model switching preserves drafts, validates the destination and returns entry to the chosen unit, including cancel',
   );
+
+  await bulkOpen();
+  await page.locator('[data-bulk-date]').fill('2026-11-15');
+  await page.locator('[data-bulk-date]').dispatchEvent('change');
+  await page.waitForFunction(() => !document.querySelector('[data-entry-action="bulk-save"]').disabled);
+  await page.locator('[data-bulk-field="target"]').fill('41');
+  await page.locator('[data-bulk-apply-field="target"]').click();
+  assert.equal(await page.locator('.entry-bulk-dialog').isVisible(), true);
+  await page.locator('[data-entry-action="bulk-issue-preset"]').first().click();
+  await page.locator('[data-bulk-apply-field="issue"]').click();
+  const firstBulkActual = page.locator('[data-bulk-cell="actual"]').first();
+  await firstBulkActual.evaluate((input) => {
+    const clipboardData = new DataTransfer();
+    clipboardData.setData('text/plain', '51\n61\n52\n62');
+    input.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, clipboardData }));
+  });
+  assert.deepEqual(await page.locator('[data-bulk-cell="target"]').evaluateAll((inputs) => inputs.map((input) => input.value)), ['51', '52']);
+  assert.deepEqual(await page.locator('[data-bulk-cell="actual"]').evaluateAll((inputs) => inputs.map((input) => input.value)), ['61', '62']);
+  await page.locator('[data-bulk-cell="issue"]').last().fill('Individual issue');
+  // Click the backdrop: save before closing and navigate to the edited date.
+  await page.mouse.click(2, 2);
+  await page.locator('.entry-bulk-dialog').waitFor({ state: 'hidden' });
+  await page.waitForFunction(() => document.querySelector('#report-date').value === '2026-11-15');
+  const dated = (await readReport('2026-11-15')).records;
+  assert.deepEqual(dated.map((row) => [row.slots[0].target, row.slots[0].actual]).sort(), [[51, 61], [52, 62]]);
+  assert.ok(dated.some((row) => row.slots[0].issue === 'Individual issue'));
+  assert.ok(dated.some((row) => row.slots[0].issue === 'Equipment downtime'));
+  await page.locator('#report-date').fill(batchDate);
+  await page.locator('#report-date').dispatchEvent('change');
+  await page.waitForFunction(() => document.querySelectorAll('[data-entry-field="actual"]').length === 6);
+  record('Batch applies stay open; paired paste, quick text, individual issues, editable dates and backdrop autosave persist exact station values');
 
   const retainedTest = (await readReport(batchDate)).records.find((row) => row.rowId === test.id);
   await page.locator('[data-view="settings"]').click();
@@ -1207,7 +1242,7 @@ try {
       document.querySelectorAll('[data-bulk-row]').length === 1 &&
       !document.querySelector('[data-entry-action="bulk-refresh"]').disabled,
   );
-  assert.match(await page.locator('[data-bulk-skipped]').innerText(), /1/);
+  assert.equal(await page.locator('[data-bulk-row]').count(), 1);
   await page.locator('[data-bulk-field="target"]').fill('123');
   await page.locator('[data-bulk-field="actual"]').fill('234');
   await bulkApply();
@@ -1282,6 +1317,7 @@ try {
   const member = await memberContext.newPage();
   await member.goto(baseURL + '/settings/line-configuration');
   await member.locator('[data-view="overview"].active').waitFor();
+  await member.waitForURL(baseURL + '/overview');
   assert.equal(new URL(member.url()).pathname, '/overview');
   await member.locator('[data-view="help"]').click();
   assert.equal(await member.locator('#help-content .help-topic').count(), 5);

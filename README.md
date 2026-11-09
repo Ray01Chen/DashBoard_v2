@@ -44,9 +44,9 @@ XLSX／CSV 依站點識別預覽後整批匯入，允許各站不同值；空格
 
 看板使用該組所選來源站，不加總產品經過的所有站。缺少配置時仍可選 Line／Model 並看目標預覽；manager 可直接前往該組配置，新增啟用站點並儲存再填。配置只列目前配對，不再推薦舊 Model。取消 Active 保留列供再啟用；Delete 從目前配置刪除，Save settings 後重整也不回來。重新新增使用新 ID，不帶回舊數值；歷史姓名、時段與填報保留。
 
-填報採精簡表格：左欄只顯示職務／站點，Target、Actual 並排，合計在右側。異常只佔一行摘要，點開或 F2 編輯，支援快捷原因、多行、清除與自動儲存；關閉不撐高表格。人員與 OWNER 仍自動保存並於明細查看。Excel 工具預設收合，需要時再展開。
+填報採精簡表格：左欄只顯示職務／站點，Target、Actual 並排，早晚班與整日目標／實績合計固定在左側職務／站點旁。異常只佔一行摘要，點開或 F2 編輯，支援快捷原因、多行、清除與自動儲存；關閉不撐高表格。人員與 OWNER 仍自動保存並於明細查看。Excel 與班別切換放在同一工具列，可下載及匯入整日雙班或單班範本，皆含 Target、Actual、Issue。
 
-產線配置可拖曳職務旁把手或用上下按鈕排序，儲存後填報、站點明細與匯出沿用同組 Line／Model 的順序，來源站不變。填報標題旁的「同時段批次填寫」可一起套用 Target／Actual，覆蓋該時段原有個別值，之後仍可逐站修改。批次空白保留原值、0 寫入零，異常及日目標預設不變；版本衝突整批取消。
+產線配置可拖曳職務旁把手或用上下按鈕排序，儲存後填報、站點明細與匯出沿用同組 Line／Model 的順序，來源站不變。工具列最左的「同時段批次填寫」可選日期、產線、機種與時段，分別套用 Target／Actual／Issue，再逐站修改與矩形貼上。套用及立即儲存保留視窗；X、Esc 或點外面儲存後關閉。切換範圍先儲存原資料；空白批次欄保留原值、0 寫入零，日目標預設不變，版本衝突整批取消並保留修改。異常快捷清單可設定三種語言，核對並確認翻譯後發布。
 
 ## 資料與維護
 
@@ -75,7 +75,7 @@ npm install --no-save --prefix .runtime/browser-audit playwright-core@1.56.1
 
 The browser and HTTP server share the route catalog in [public/pages.js](./public/pages.js). `/overview`, `/details`, `/entry`, `/guide` and the eight `/settings/...` pages support direct requests and browser history. Unknown paths remain 404; assets use absolute paths. The server currently serves the app shell for known pages, and each page loads data through the authenticated `/api/...` endpoints. This prepares stable page addresses and API contracts for later backend rendering or external production integration; automatic collection is not connected yet.
 
-Station mappings support optional `hasOutput` (default `true` for existing data). A false value keeps enabled stations visible with read-only history, prevents production writes and excludes them from batch fill and Excel templates. Current configuration governs editability without rewriting saved snapshots. The batch dialog can change line/model and returns entry to that destination after applying or closing. Display-only model formatting splits the first hyphen and never changes IDs or import values.
+Station mappings support optional `hasOutput` (default `true` for existing data). A false value keeps enabled stations visible with read-only history, prevents production writes and excludes them from batch fill and Excel templates. Current configuration governs editability without rewriting saved snapshots. The batch dialog edits the production date, line/model and interval, saving the original scope before switching. Apply and Save stay open; closing saves and returns entry to the destination. Display-only model formatting splits the first hyphen and never changes IDs or import values.
 
 Settings now use enabled `productionUnits` (`line`, `model`, `dailyTarget`, `staffing`) and a `models` catalog. Every active mapping references an enabled line/model. Station targets, actuals and issues are independent within each enabled line/model. Personnel defaults and imports respect both unit and station identities. Monitoring uses one selected output station per unit. Legacy settings migrate into `Default`; saved production snapshots remain unchanged. `lineTargets` and `lineStaffing` are compatibility views of Default for older clients.
 

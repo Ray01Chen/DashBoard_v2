@@ -780,6 +780,37 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
         assert.equal(record.dayTeam, before.dayTeam);
       },
     );
+    await t.test('whole-day XLSX imports Target and Actual for both shifts', async () => {
+      const wholeDate = '2026-12-01';
+      const response = await member(base + `/api/import/template?date=${wholeDate}&shift=all`);
+      assert.equal(response.status, 200);
+      const rows = readSpreadsheet('whole.xlsx', Buffer.from(await response.arrayBuffer()).toString('base64'))
+        .map((row) => row.map((cell) => cell.value));
+      const header = rows[0];
+      const shiftColumn = header.indexOf('Shift');
+      const targetColumn = header.indexOf('Target');
+      const actualColumn = header.indexOf('Actual');
+      assert.ok(targetColumn >= 0 && actualColumn >= 0);
+      const day = [...rows.find((row, i) => i && row[shiftColumn] === 'day')];
+      const night = [...rows.find((row, i) => i && row[shiftColumn] === 'night' && row[0] === day[0])];
+      day[targetColumn] = 123; day[actualColumn] = 0;
+      night[targetColumn] = 456; night[actualColumn] = 78;
+      const preview = await send(member, 'POST', '/api/import/preview', {
+        date: wholeDate, shift: 'all', fileName: 'whole.xlsx',
+        base64: writeSpreadsheet([header, day, night]).toString('base64'),
+      });
+      assert.equal(preview.status, 200);
+      const plan = await preview.json();
+      assert.deepEqual(plan.errors, []);
+      assert.equal(plan.rows.length, 2);
+      const applied = await send(member, 'POST', '/api/import/apply', { token: plan.token });
+      assert.equal(applied.status, 200);
+      const saved = (await applied.json()).records;
+      assert.deepEqual(saved.map((record) => [record.shift,
+        record.slots.find((slot) => slot.actual !== null)?.target,
+        record.slots.find((slot) => slot.actual !== null)?.actual]).sort(),
+        [['day', 123, 0], ['night', 456, 78]]);
+    });
   } finally {
     if (child.exitCode === null) {
       const closed = once(child, 'exit');

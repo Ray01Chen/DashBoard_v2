@@ -132,7 +132,7 @@ const messages = {
     total: 'Total',
     productionDate: 'Production date',
     importScope:
-      'Each template/import covers only the named shift on this production date. Import both shifts separately; night intervals after midnight belong to this date.',
+      'Choose a whole-day or single-shift file. Night intervals after midnight belong to the selected production date.',
     pastePending: 'Pasted cells are pending autosave.',
     invalidPaste:
       'Nothing was pasted. Use a rectangle of valid whole numbers or blanks within Target or Actual cells.',
@@ -244,7 +244,7 @@ const messages = {
     total: '合計',
     productionDate: '生產日期',
     importScope:
-      '每個範本／匯入僅處理標示生產日期的一個班別，兩班請分開匯入；午夜後的晚班時段仍屬於此生產日期。',
+      '可選整日雙班或單班範本／匯入；午夜後的晚班時段仍屬於所選生產日期。',
     pastePending: '已貼上，等待自動儲存。',
     invalidPaste:
       '未貼上資料。請使用合法整數或空白的矩形範圍，且不得超出 Target 或 Actual 可填區。',
@@ -361,7 +361,7 @@ const messages = {
     total: 'รวม',
     productionDate: 'วันที่ผลิต',
     importScope:
-      'แต่ละแบบฟอร์ม/การนำเข้าครอบคลุมเฉพาะกะที่ระบุในวันที่ผลิตนี้ โปรดนำเข้าสองกะแยกกัน ช่วงกะดึกหลังเที่ยงคืนยังเป็นวันที่ผลิตนี้',
+      'เลือกแม่แบบและนำเข้าทั้งวันหรือแยกกะได้ ช่วงกะดึกหลังเที่ยงคืนยังเป็นวันที่ผลิตที่เลือก',
     pastePending: 'วางแล้ว รอการบันทึกอัตโนมัติ',
     invalidPaste:
       'ไม่ได้วางข้อมูล ใช้สี่เหลี่ยมจำนวนเต็มหรือค่าว่างภายในช่อง Target หรือ Actual ที่กรอกได้',
@@ -1584,6 +1584,7 @@ export function createEntryController({
     bulkDialog.innerHTML = `<div class="entry-issue-heading"><h2 id="entry-bulk-title">${esc(text('bulkTitle'))}</h2><button type="button" class="icon-button" data-entry-action="bulk-close" aria-label="${esc(text('close'))}">×</button></div>
       <div class="entry-bulk-selectors"><label>${esc(text('productionDate'))}<input type="date" data-bulk-date value="${esc(context.date)}"></label><label>${esc(text('line'))}<select data-bulk-line>${lines.map((value) => `<option value="${esc(value)}">${esc(value)}</option>`).join('')}</select></label><label>${esc(text('bulkProduct'))}<select data-bulk-model></select></label><label>${esc(text('interval'))}<select data-bulk-slot></select></label></div>
       <div class="entry-bulk-values">${bulkFields.map((field) => `<div><label>${esc(text(field))}<input type="text" ${field === 'issue' ? '' : 'inputmode="numeric"'} maxlength="${field === 'issue' ? 2000 : 12}" autocomplete="off" data-bulk-field="${field}" aria-label="${esc(text(field))}"></label><button type="button" class="button" data-entry-action="bulk-apply" data-bulk-apply-field="${field}">${esc(text(field === 'target' ? 'bulkApplyTarget' : field === 'actual' ? 'bulkApplyActual' : 'bulkApplyIssue'))}</button></div>`).join('')}</div>
+      <div class="entry-bulk-quick-text">${issuePresets(context.config).filter((item) => item.active && item.confirmed).map((item) => `<button type="button" class="button" data-entry-action="bulk-issue-preset" data-issue-preset="${esc(item.id)}">${esc(issueLabel(item, language()))}</button>`).join('')}</div>
       <div class="entry-bulk-preview" data-bulk-preview></div><p class="entry-error" data-bulk-error role="alert"></p><div class="entry-bulk-actions"><span data-bulk-status role="status"></span><div><button type="button" class="button" data-entry-action="bulk-refresh" hidden>${esc(text('bulkRefresh'))}</button><button type="button" class="button primary" data-entry-action="bulk-save">${esc(text('saveNow'))}</button></div></div>`;
     bulkScopeControls();
     bulkDialog.showModal();
@@ -2073,7 +2074,7 @@ export function createEntryController({
       productionUnits(context.config).find(
         (unit) => (!line || unit.line === line) && (!model || modelOf(unit) === model),
       ) || productionUnits(context.config)[0];
-    mount.innerHTML = `<div class="entry-view"><div class="entry-filters panel"><label>${esc(text('line'))}<select data-entry-line><option value="">${esc(text('allLines'))}</option>${lines.map((value) => `<option value="${esc(value)}" ${value === line ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label><label>${esc(text('bulkProduct'))}<select data-entry-model-filter><option value="">${esc(text('allModels'))}</option>${models.map((value) => `<option value="${esc(value)}" ${value === model ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label><label>${esc(text('inputMode'))}<select data-entry-mode><option value="sheet" ${mode === 'sheet' ? 'selected' : ''}>${esc(text('sheetMode'))}</option><option value="shift" ${mode === 'shift' ? 'selected' : ''}>${esc(text('shiftMode'))}</option><option value="day" ${mode === 'day' ? 'selected' : ''}>${esc(text('dayMode'))}</option></select></label></div><div class="entry-banner" role="alert" ${banner ? '' : 'hidden'}>${esc(banner)}</div><div class="entry-rows">${visible.length ? '' : sheetTools(context, bulkUnit)}${content}<div class="entry-reviews">${queue
+    mount.innerHTML = `<div class="entry-view"><div class="entry-filters panel"><label>${esc(text('line'))}<select data-entry-line><option value="">${esc(text('allLines'))}</option>${lines.map((value) => `<option value="${esc(value)}" ${value === line ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label><label>${esc(text('bulkProduct'))}<select data-entry-model-filter><option value="">${esc(text('allModels'))}</option>${models.map((value) => `<option value="${esc(value)}" ${value === model ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label><label>${esc(text('inputMode'))}<select data-entry-mode><option value="sheet" ${mode === 'sheet' ? 'selected' : ''}>${esc(text('sheetMode'))}</option><option value="shift" ${mode === 'shift' ? 'selected' : ''}>${esc(text('shiftMode'))}</option><option value="day" ${mode === 'day' ? 'selected' : ''}>${esc(text('dayMode'))}</option></select></label></div><div class="entry-banner" role="alert" ${banner ? '' : 'hidden'}>${esc(banner)}</div><div class="entry-rows">${visible.length && !context.loading ? '' : sheetTools(context, bulkUnit)}${content}<div class="entry-reviews">${queue
       .values()
       .filter((entry) => reviewed.has(entry.key))
       .map((entry) => reviewMarkup(entry.key))
@@ -2462,6 +2463,18 @@ export function createEntryController({
     if (action === 'bulk-refresh') return loadBulkPreview();
     if (action === 'bulk-apply') return applyBulk(button.dataset.bulkApplyField);
     if (action === 'bulk-save') return saveBulk();
+    if (action === 'bulk-issue-preset') {
+      if (!bulkEditor || bulkEditor.busy || bulkEditor.loading) return;
+      const preset = issuePresets(getContext().config).find((item) =>
+        item.id === button.dataset.issuePreset && item.active && item.confirmed);
+      if (preset) {
+        const input = bulkDialog.querySelector('[data-bulk-field="issue"]');
+        input.value = issueLabel(preset, language());
+        updateBulkControls();
+        input.focus();
+      }
+      return;
+    }
     if (action === 'edit-issue') return openIssue(button);
     if (action === 'close-issue') return closeIssue();
     if (action === 'clear-issue' || action === 'issue-preset')
