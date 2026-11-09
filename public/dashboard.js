@@ -17,7 +17,8 @@ export function aggregateMonitorSeries(lines, scheduledSlots) {
 }
 
 export function renderMonitoring(ctx, { chart = true } = {}) {
-  const { config, records, date, shift, activity, now, groupId, chartLine, t, esc, number } = ctx;
+  const { config, records, date, shift, activity, now, groupId, chartLine, t, esc, number } =
+    ctx;
   const all = buildLineMonitor(config, records, date, shift, activity, now),
     group = config.monitoring.groups.find((g) => g.id === groupId),
     lines = all.filter((l) => !group || group.lines.includes(l.line));
@@ -41,10 +42,14 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
           monitor =
             t('monitoringStatus') +
             ': ' +
-            (period === 'activeMonitoring' ? t('idleFor', { seconds: l.idleSeconds }) : t(period));
+            (period === 'activeMonitoring'
+              ? t('idleFor', { seconds: l.idleSeconds })
+              : t(period));
 
         if (!chart) {
-          const card = [...cards.children].find((c) => c.dataset.monitorLine === (l.key || l.line));
+          const card = [...cards.children].find(
+            (c) => c.dataset.monitorLine === (l.key || l.line),
+          );
           if (card) {
             const classes =
               'line-card alarm-' +
@@ -129,22 +134,22 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
   const production = config.schedules[shift].filter((s) => s.kind === 'production');
   const trend = document.querySelector('#group-trend');
   const trendStyle = getComputedStyle(trend);
-  // Match the SVG coordinate system to its rendered size. A fixed 700 × 230
-  // viewBox letterboxes a wide, short fullscreen chart and shrinks its labels.
-  const trendSize = ctx.board
-    ? {
-        width: Math.max(
-          240,
-          Math.round(
-            trend.clientWidth -
-              parseFloat(trendStyle.paddingLeft) -
-              parseFloat(trendStyle.paddingRight),
-          ),
-        ),
-        height: innerWidth <= 750 ? 95 : 130,
-      }
-    : undefined;
+  // Measure normal and fullscreen charts alike. Dense schedules can extend
+  // inside the chart's own scroll area without shrinking their time labels.
+  const trendSize = {
+    width: Math.max(
+      240,
+      Math.round(
+        trend.clientWidth -
+          parseFloat(trendStyle.paddingLeft) -
+          parseFloat(trendStyle.paddingRight),
+      ),
+    ),
+    height: ctx.board ? (innerWidth <= 750 ? 95 : 130) : 230,
+  };
+  const scrollLeft = trend.scrollLeft;
   trend.innerHTML = trendSvg(aggregateMonitorSeries(lines, production), { ...ctx, trendSize });
+  trend.scrollLeft = scrollLeft;
   document.querySelector('#output-share').innerHTML = shareMarkup(lines, ctx);
   document.querySelector('#refresh-interval').textContent = t('refreshEvery', {
     seconds: config.monitoring.refreshSeconds,
@@ -367,13 +372,15 @@ function shareMarkup(lines, { t, esc, number }) {
   );
 }
 export function trendSvg(values, { t, esc, number, trendSize }, mini = false) {
-  const w = mini ? 310 : trendSize?.width || 700,
-    h = mini ? 82 : trendSize?.height || 230,
-    left = mini ? 14 : 48,
+  const left = mini ? 14 : 48,
     right = mini ? 14 : 24,
+    // HH:MM labels need 48 CSS pixels per interval, including a visible gap.
+    // Keep every interval; expanding the plot is preferable to shrinking text.
+    minimumWidth = left + right + Math.max(0, values.length - 1) * 48,
+    w = mini ? 310 : Math.max(trendSize?.width || 700, minimumWidth),
+    h = mini ? 82 : trendSize?.height || 230,
     top = 16,
-    angle = !mini && trendSize ? hourlyLabelLayout(w, values.length).angle : 0,
-    bottom = mini ? 12 : angle ? 48 : trendSize ? 30 : 36,
+    bottom = mini ? 12 : 30,
     max =
       Math.ceil(
         (Math.max(1, ...values.flatMap((v) => [v.target || 0, v.actual || 0])) * 1.15) / 4,
@@ -385,7 +392,10 @@ export function trendSvg(values, { t, esc, number, trendSize }, mini = false) {
   let svg =
     '<svg class="' +
     (mini ? 'mini-trend' : 'group-trend-svg') +
-    '" viewBox="0 0 ' +
+    '" ' +
+    // Width attributes work under the app's CSP; inline style attributes do not.
+    (mini ? '' : `width="${minimumWidth}" `) +
+    'viewBox="0 0 ' +
     w +
     ' ' +
     h +
@@ -404,15 +414,14 @@ export function trendSvg(values, { t, esc, number, trendSize }, mini = false) {
       '" y2="' +
       yy +
       '"/>';
-    if (!mini)
-      svg +=
-        '<text x="' +
-        (left - 6) +
-        '" y="' +
-        (yy + 4) +
-        '" text-anchor="end">' +
-        number(Math.round(max * (1 - i / 2))) +
-        '</text>';
+    svg +=
+      '<text x="' +
+      (left - 6) +
+      '" y="' +
+      (yy + 4) +
+      '" text-anchor="end">' +
+      number(Math.round(max * (1 - i / 2))) +
+      '</text>';
   }
   for (const key of ['target', 'actual']) {
     let path = '',
@@ -429,8 +438,7 @@ export function trendSvg(values, { t, esc, number, trendSize }, mini = false) {
   }
   values.forEach((v, i) => {
     if (!mini) {
-      const labelY = angle ? h - bottom + 14 : h - 5;
-      svg += `<text x="${x(i)}" y="${labelY}" text-anchor="${angle ? 'end' : 'middle'}" ${angle ? `transform="rotate(${angle} ${x(i)} ${labelY})"` : ''}>${esc(v.slot?.start || '')}</text>`;
+      svg += `<text class="trend-time-label" x="${x(i)}" y="${h - 5}" text-anchor="middle">${esc(v.slot?.start || '')}</text>`;
     }
     if (v.actual == null) return;
     const below = v.target != null && v.actual < v.target,

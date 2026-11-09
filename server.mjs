@@ -826,6 +826,7 @@ const files = {
       'excel-preview',
       'line-details',
       'production-overview',
+      'group-trend-dense',
     ].map((name) => [`/guide-images/${name}.png`, [`../docs/images/${name}.png`, 'image/png']]),
   ),
   '/': ['index.html', 'text/html'],

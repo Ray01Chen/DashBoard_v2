@@ -508,14 +508,15 @@
 }
 .line-modal-trend {
   min-width: 0;
-  overflow: hidden;
+  overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #fff;
 }
 .line-modal-trend .group-trend-svg {
   display: block;
-  width: 100%;
+  width: auto;
+  min-width: 100%;
   height: auto;
   min-height: 285px;
 }

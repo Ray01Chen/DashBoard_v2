@@ -74,7 +74,7 @@ const guides = {
         paragraphs: [
           'Overview defaults to Whole day, so Target, Actual and Gap cover both shifts. Whole day / Day / Night is available above both Overview and Production details. Each line/model uses its selected output station; group totals never double-count every station.',
           'Normal line clicks open details. Full screen clicks open a station-detail dialog; X or Esc returns to the same group/page. Its header follows the active colour theme and keeps line, model, owner, Target, Actual and Gap together. Each station labels Day and Night personnel separately.',
-          'The hourly chart uses the full dialog width with a larger plot. Display options independently toggle group trend and output share. Missing output remains blank rather than invented as zero. The board shows at most seven units per page.',
+          'The group trend keeps every time label readable; dense schedules scroll horizontally inside the chart, including fullscreen. Hover or Tab to an interval to see its values. Refresh keeps the scroll position. Display options independently toggle group trend and output share. Missing output remains blank. The board shows at most seven units per page.',
         ],
       },
       {
@@ -171,7 +171,7 @@ const guides = {
         paragraphs: [
           '總覽預設「全天」，目標、實績與差異合併兩班；生產總覽與生產細節上方都可切換全天／早班／晚班。每組產線／Model 仍只使用所選來源站，避免重複計產量。',
           '全螢幕明細頂部沿用目前主題配色，集中產線、機種、負責人、目標、實績與差異；各站人員分早班、晚班標示。X 或 Esc 關閉後保留分組與頁次。',
-          '每小時產量圖放大並貼合明細寬度。顯示選項仍可分別控制產量趨勢與占比；未填報保持空白。每頁最多七組，其他組用底部分頁查看。',
+          '分組總產量趨勢保留每個時段名稱與間距；時段較多時在圖表內左右捲動，全螢幕也適用。滑鼠停留或 Tab 聚焦查看數值，刷新保留捲動位置。顯示選項可分別控制趨勢與占比；未填報保持空白。每頁最多七組。',
         ],
       },
       {
@@ -269,7 +269,7 @@ const guides = {
         paragraphs: [
           'ภาพรวมเริ่มต้นที่ทั้งวัน รวม Target, Actual และ Gap ของสองกะ ทั้งหน้าภาพรวมและรายละเอียดเลือกทั้งวัน/กะเช้า/กะกลางคืนได้ แต่ละสาย/Model ยังใช้สถานีแหล่งผลผลิตเดียวเพื่อไม่ให้นับซ้ำ',
           'หน้าต่างเต็มหน้าจอใช้สีตามธีมและรวมสาย Model ผู้รับผิดชอบ Target Actual และ Gap ไว้ด้านบน การ์ดแต่ละสถานีแยกบุคลากรกะเช้าและกะกลางคืน X หรือ Esc กลับกลุ่ม/หน้าเดิม',
-          'กราฟรายชั่วโมงใหญ่ขึ้นและใช้ความกว้างเต็มหน้าต่าง ตัวเลือกแสดงยังเปิดแนวโน้มและสัดส่วนแยกกัน ไม่กรอกไม่ถือเป็นศูนย์ สูงสุดเจ็ดคู่ต่อหน้า',
+          'กราฟรวมรักษาระยะห่างของป้ายเวลาทุกช่วง หากมีหลายช่วงให้เลื่อนแนวนอนในกราฟ รวมถึงเต็มหน้าจอ ชี้เมาส์หรือกด Tab เพื่อดูค่า รีเฟรชเก็บตำแหน่งเลื่อนเดิม ตัวเลือกเปิดแนวโน้มและสัดส่วนแยกกัน ไม่กรอกไม่ถือเป็นศูนย์ สูงสุดเจ็ดคู่ต่อหน้า',
         ],
       },
       {
@@ -315,7 +315,7 @@ const exampleScreens = [
     'no-output-station',
   ],
   ['excel-preview'],
-  ['production-overview', 'line-details'],
+  ['production-overview', 'group-trend-dense', 'line-details'],
   [],
   [],
 ];
@@ -339,6 +339,7 @@ const exampleLabels = {
       'excel-preview': 'Excel import preview',
       'line-details': 'Theme-aware fullscreen details with owner, totals and day/night personnel',
       'production-overview': 'Production overview with DELTA branding and theme controls',
+      'group-trend-dense': 'Dense whole-day trend: scroll horizontally to view every interval',
     },
   },
   zh: {
@@ -360,6 +361,7 @@ const exampleLabels = {
       'excel-preview': 'Excel 匯入預覽',
       'line-details': '跟隨主題的全螢幕明細與各站早晚班人員',
       'production-overview': '台達品牌與主題配色的生產總覽',
+      'group-trend-dense': '全天多時段趨勢：左右捲動查看所有時段',
     },
   },
   th: {
@@ -381,6 +383,7 @@ const exampleLabels = {
       'excel-preview': 'ตัวอย่างนำเข้า Excel',
       'line-details': 'รายละเอียดเต็มจอตามธีม พร้อมยอดรวมและบุคลากรแยกกะ',
       'production-overview': 'ภาพรวมการผลิตพร้อมสัญลักษณ์ DELTA และธีมสี',
+      'group-trend-dense': 'กราฟทั้งวันหลายช่วงเวลา เลื่อนแนวนอนเพื่อดูทุกช่วง',
     },
   },
 };

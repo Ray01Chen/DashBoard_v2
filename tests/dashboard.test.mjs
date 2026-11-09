@@ -146,13 +146,39 @@ test('fullscreen trends use their container geometry and retain readable interva
   assert.match(wide, /x="1296"/);
   assert.equal((wide.match(/data-trend-tip=/g) || []).length, 12);
   const narrow = trendSvg(values, { ...ctx, trendSize: { width: 340, height: 95 } });
-  assert.match(narrow, /viewBox="0 0 340 95"/);
-  assert.match(narrow, /transform="rotate\(/);
+  assert.match(narrow, /viewBox="0 0 600 95"/);
+  assert.match(narrow, /width="600"/);
+  assert.equal((narrow.match(/class="trend-time-label"/g) || []).length, 12);
   for (const value of values) assert.ok(narrow.includes(value.slot.start));
   assert.match(
     trendSvg(values, { ...ctx, trendSize: { width: 1320, height: 130 } }, true),
     /viewBox="0 0 310 82"/,
   );
+});
+
+test('dense whole-day trends retain every time label and hit area without compressing the axis', () => {
+  const ctx = { t: (key) => key, esc: String, number: (value) => String(value ?? '—') };
+  const values = Array.from({ length: 72 }, (_, index) => ({
+    slot: {
+      start: `${String(Math.floor(index / 3)).padStart(2, '0')}:${String((index % 3) * 20).padStart(2, '0')}`,
+    },
+    target: 10,
+    actual: index % 2 ? null : 0,
+  }));
+  for (const width of [280, 600, 1320]) {
+    const svg = trendSvg(values, { ...ctx, trendSize: { width, height: 230 } });
+    assert.match(svg, /viewBox="0 0 3480 230"/);
+    assert.match(svg, /width="3480"/);
+    const positions = [...svg.matchAll(/class="trend-time-label" x="([\d.]+)"/g)].map((match) =>
+      Number(match[1]),
+    );
+    assert.equal(positions.length, values.length);
+    for (let index = 1; index < positions.length; index++)
+      assert.ok(positions[index] - positions[index - 1] >= 48);
+    assert.equal((svg.match(/data-trend-tip=/g) || []).length, values.length);
+  }
+  assert.match(trendSvg([], ctx), /emptyChart/);
+  assert.equal((trendSvg([values[0]], ctx).match(/class="trend-time-label"/g) || []).length, 1);
 });
 
 test('output shares use actual output of the selected lines and preserve missing values', () => {
@@ -194,6 +220,9 @@ test('legacy accounts migrate once with new passwords, correct roles and revoked
   assert.equal(auth.login(req, 'operator', 'member').status, 401);
   const hashes = db.prepare('SELECT password_hash FROM users ORDER BY username').all();
   createAuth(db);
-  assert.deepEqual(db.prepare('SELECT password_hash FROM users ORDER BY username').all(), hashes);
+  assert.deepEqual(
+    db.prepare('SELECT password_hash FROM users ORDER BY username').all(),
+    hashes,
+  );
   db.close();
 });

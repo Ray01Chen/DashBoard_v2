@@ -2092,18 +2092,14 @@ const chartObserver = new ResizeObserver((entries) => {
   }
 });
 chartObserver.observe($('#chart'));
-// Fullscreen transitions and chart toggles resize the plot after the initial
-// render. Follow the container so the SVG settles at the same width as its card.
+// Sidebar changes, viewport changes and fullscreen can all resize the group
+// chart. Measure the actual container in normal mode as well as on the board.
 let groupTrendWidth = 0;
 const groupTrendObserver = new ResizeObserver((entries) => {
   const width = Math.round(entries[0].contentRect.width);
   if (width > 0 && width !== groupTrendWidth) {
     groupTrendWidth = width;
-    if (
-      state.config &&
-      state.view === 'overview' &&
-      document.body.classList.contains('fullscreen-board')
-    )
+    if (state.config && ['overview', 'details'].includes(state.view))
       renderChart();
   }
 });

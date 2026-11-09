@@ -43,6 +43,10 @@ Click **Add issue** or its preview, or press **F2** in a numeric cell. The edito
 
 Overview defaults to **Whole day**, with Target, Actual and Gap combined across both shifts. Whole day / Day / Night is available in both Overview and Production details. In fullscreen details, the header follows the active colour theme and groups Line, Model, Owner and the three totals; each station labels Day and Night personnel separately. The hourly chart fills the dialog width at a larger height.
 
+The group output trend keeps every time label readable. Dense schedules scroll horizontally inside the chart, including fullscreen, without widening the page. Hover or Tab to an interval for its Target/Actual tooltip. Refresh retains the chart's scroll position.
+
+![Dense whole-day trend](./images/group-trend-dense.png)
+
 ![Issue editor](./images/issue-editor.png)
 
 ## Saved station order

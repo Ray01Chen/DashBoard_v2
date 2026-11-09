@@ -1636,6 +1636,91 @@ try {
   record(
     'Independent page URLs support direct loading, refresh, Back/Forward and shared settings drafts with guarded navigation',
   );
+  // Exercise a realistic 24-hour schedule in the actual renderer and browser.
+  // Configuration and data live only in this script's disposable database.
+  const beforeDenseChart = await readConfig();
+  const denseChartConfig = structuredClone(beforeDenseChart);
+  const clockTime = (minutes) => `${String(Math.floor(minutes / 60) % 24).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+  for (const [shift, firstMinute] of [['day', 480], ['night', 1200]]) {
+    denseChartConfig.schedules[shift] = Array.from({ length: 36 }, (_, index) => ({
+      start: clockTime(firstMinute + index * 20),
+      end: clockTime(firstMinute + (index + 1) * 20),
+      kind: 'production',
+    }));
+  }
+  response = await context.request.put(baseURL + '/api/config', { data: denseChartConfig });
+  assert.equal(response.status(), 200, await response.text());
+  await page.goto(baseURL + '/overview');
+  await page.locator('#report-date').fill('2026-12-20');
+  await page.locator('#report-date').dispatchEvent('change');
+  await page.locator('[data-report-scope="all"]').click();
+  const assertDenseTrend = async () => {
+    await page.locator('#group-trend').waitFor({ state: 'visible' });
+    await page.waitForFunction(() =>
+      document.querySelectorAll('#group-trend .trend-time-label').length === 72);
+    const geometry = await page.locator('#group-trend').evaluate((chart) => {
+      const labels = [...chart.querySelectorAll('.trend-time-label')]
+        .map((label) => label.getBoundingClientRect());
+      return {
+        count: labels.length,
+        separated: labels.every((label, index) =>
+          !index || label.left >= labels[index - 1].right + 8),
+        readable: labels.every((label) => label.height >= 9),
+        scrollable: chart.scrollWidth > chart.clientWidth,
+        pageOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        viewport: innerWidth,
+        chartWidth: chart.clientWidth,
+        svg: chart.querySelector('svg')?.outerHTML.slice(0, 220),
+        svgWidth: chart.querySelector('svg')?.getBoundingClientRect().width,
+        labelWidth: labels[0]?.width,
+      };
+    });
+    assert.equal(geometry.count, 72);
+    assert.equal(geometry.separated, true, JSON.stringify(geometry));
+    assert.equal(geometry.readable, true);
+    assert.equal(geometry.scrollable, true);
+    assert.equal(geometry.pageOverflow, false);
+    await page.locator('#group-trend .trend-hit').last().focus();
+    assert.ok(await page.locator('#group-trend').evaluate((chart) => chart.scrollLeft > 0));
+  };
+  for (const language of ['en', 'zh', 'th']) {
+    await page.locator('#language-select').selectOption(language);
+    for (const width of [1440, 1024, 768, 390]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await assertDenseTrend();
+    }
+  }
+  await page.locator('#language-select').selectOption('en');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await assertDenseTrend();
+  const beforeRefreshScroll = await page.locator('#group-trend').evaluate((chart) => chart.scrollLeft);
+  await Promise.all([
+    page.waitForResponse((response) => response.url().includes('/api/records?') && response.url().includes('shift=night')),
+    page.locator('#refresh-now').click(),
+  ]);
+  await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
+  const afterRefreshScroll = await page.locator('#group-trend').evaluate((chart) => chart.scrollLeft);
+  assert.ok(beforeRefreshScroll > 100);
+  assert.ok(Math.abs(afterRefreshScroll - beforeRefreshScroll) <= 1);
+  await page.locator('#group-trend').evaluate((chart) => chart.scrollLeft = 0);
+  await screenshot('.group-trend-panel', 'group-trend-dense');
+  await page.locator('#enter-fullscreen').click();
+  await page.locator('.board-display-options summary').click();
+  await page.locator('#board-show-trend').check();
+  await page.locator('.board-display-options summary').click();
+  for (const width of [1440, 1024, 768, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await assertDenseTrend();
+  }
+  await page.locator('#exit-fullscreen').click();
+  const latestDenseConfig = await readConfig();
+  response = await context.request.put(baseURL + '/api/config', {
+    data: { ...beforeDenseChart, version: latestDenseConfig.version },
+  });
+  assert.equal(response.status(), 200, await response.text());
+  await page.goto(baseURL + '/overview');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  record('Dense 72-interval group trends keep every label readable and separated, scroll locally, support keyboard access and preserve refresh position in three languages and four widths, including fullscreen');
   await page.locator('[data-view="help"]').click();
   assert.match(await page.locator('#help-content').innerText(), /station/i);
   assert.equal(await page.locator('#help-content .help-topic').count(), 7);
