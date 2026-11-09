@@ -1,4 +1,9 @@
-import { scheduleFor, schedulesForLine } from './production-schedules.js';
+import {
+  scheduleFor,
+  schedulesForLine,
+  reportSchedule,
+  isArchivedProductionDate,
+} from './production-schedules.js';
 import {
   modelOf,
   productionKey,
@@ -125,6 +130,8 @@ const messages = {
     dayMode: 'Whole-day spreadsheet',
     total: 'Total',
     productionDate: 'Production date',
+    historicalSchedule: 'Saved historical schedule',
+    historicalScheduleHint: 'Showing the intervals saved on this production date.',
     importScope:
       'Choose a whole-day or single-shift file. Night intervals after midnight belong to the selected production date.',
     pastePending: 'Pasted cells are pending autosave.',
@@ -236,6 +243,8 @@ const messages = {
     dayMode: '整日雙班試算表',
     total: '合計',
     productionDate: '生產日期',
+    historicalSchedule: '歷史已存班表',
+    historicalScheduleHint: '依此生產日當時已存時段顯示。',
     importScope: '可選整日雙班或單班範本／匯入；午夜後的晚班時段仍屬於所選生產日期。',
     pastePending: '已貼上，等待自動儲存。',
     invalidPaste:
@@ -349,6 +358,8 @@ const messages = {
     dayMode: 'ตารางทั้งสองกะตลอดวัน',
     total: 'รวม',
     productionDate: 'วันที่ผลิต',
+    historicalSchedule: 'ตารางเวลาที่บันทึกเดิม',
+    historicalScheduleHint: 'แสดงช่วงเวลาที่บันทึกในวันที่ผลิตนี้',
     importScope:
       'เลือกแม่แบบและนำเข้าทั้งวันหรือแยกกะได้ ช่วงกะดึกหลังเที่ยงคืนยังเป็นวันที่ผลิตที่เลือก',
     pastePending: 'วางแล้ว รอการบันทึกอัตโนมัติ',
@@ -1060,7 +1071,7 @@ export function createEntryController({
       const entry = queue.get(element.dataset.rowKey);
       if (entry)
         element.textContent = number(
-          entryTotal(entry.latest.slots, element.dataset.entryTotal),
+          entryTotal(displaySlots(entry.latest), element.dataset.entryTotal),
         );
     }
     for (const element of mount.querySelectorAll('[data-entry-day-total]')) {
@@ -1068,9 +1079,10 @@ export function createEntryController({
         element.textContent = dayContext.get().error ? number(null) : text('loading');
         continue;
       }
-      const slots = [element.dataset.dayKey, element.dataset.nightKey].flatMap(
-        (key) => queue.get(key)?.latest.slots || [],
-      );
+      const slots = [element.dataset.dayKey, element.dataset.nightKey].flatMap((key) => {
+        const record = queue.get(key)?.latest;
+        return record ? displaySlots(record) : [];
+      });
       element.textContent = number(
         entryTotal(slots, element.dataset.entryDayField || 'target'),
       );
@@ -1729,17 +1741,34 @@ export function createEntryController({
     return { [context.shift]: context, ...(extra ? { [extra.shift]: extra } : {}) };
   }
 
-  function intervalsFor(context, rows) {
-    const slots = new Map(
-      scheduleFor(context.config, rows[0]?.line || line, context.shift)
-        .filter((slot) => slot.kind === 'production')
-        .map((slot) => [slot.id, slot]),
+  function displaySlots(record) {
+    const context = getContext();
+    const row =
+      context.config.rows.find((row) => row.id === record.rowId) || record.rowSnapshot;
+    const ids = new Set(
+      reportSchedule(
+        context.config,
+        row?.line || line,
+        record.shift || context.shift,
+        record.date || context.date,
+        record.slots || [],
+      ).map((slot) => slot.id),
     );
-    for (const row of rows) {
-      const record = queue.get(keyFor(context, row.id))?.latest || rowPayload(context, row);
-      for (const slot of record.slots) if (!slots.has(slot.id)) slots.set(slot.id, slot);
-    }
-    return [...slots.values()];
+    return (record.slots || []).filter((slot) => ids.has(slot.id));
+  }
+
+  function intervalsFor(context, rows) {
+    const saved = rows.flatMap((row) => {
+      const record = recordsFor(context).get(row.id) || localSaved.get(keyFor(context, row.id));
+      return record?.slots || [];
+    });
+    return reportSchedule(
+      context.config,
+      rows[0]?.line || line,
+      context.shift,
+      context.date,
+      saved,
+    );
   }
 
   function shiftPicker(context) {
@@ -1861,6 +1890,12 @@ export function createEntryController({
         (unit) => (!line || unit.line === line) && (!model || modelOf(unit) === model),
       ) ||
       productionUnits(context.config)[0];
+    const historical =
+      currentUnit &&
+      isArchivedProductionDate(context.config, currentUnit.line, context.date) &&
+      Object.values(contexts).some((ctx) =>
+        rowsFor(ctx).some((row) => sameProduction(row, currentUnit) && savedFor(ctx, row.id)),
+      );
     const excel = `<details class="entry-import-scope"><summary class="button">Excel</summary><div class="entry-excel-menu">${[
       'all',
       'day',
@@ -1875,7 +1910,7 @@ export function createEntryController({
         return `<div><strong>${esc(text(shift === 'all' ? 'wholeDay' : shift))}</strong><button type="button" class="button" data-entry-action="template" data-import-shift="${shift}" ${!ready || importState.busy ? 'disabled' : ''}>${esc(text('template'))}</button><button type="button" class="button" data-entry-action="open-import" data-import-shift="${shift}" ${!ready || importState.busy ? 'disabled' : ''}>${esc(text('importExcel'))}</button></div>`;
       })
       .join('')}</div></details>`;
-    return `<div class="entry-sheet-tools"><div class="entry-sheet-primary">${bulkLaunch(currentUnit)}<div class="entry-sheet-identity">${unit ? productionIdentityMarkup(unit, esc, { singleLine: true }) : `<strong>${esc(line || text('allLines'))}</strong><span>${esc(model || text('allModels'))}</span>`}</div></div><div class="entry-sheet-actions">${shiftPicker(context)}<button type="button" class="button" data-entry-action="current-slot">${esc(text('currentSlot'))}</button>${excel}${unit ? `<button type="button" class="button entry-restore-defaults" data-entry-action="restore-defaults" data-restore-defaults="${esc(productionKey(unit))}">${esc(text('restoreDefaults'))}</button>` : ''}<button type="button" class="button" data-entry-action="save-all">${esc(text('saveNow'))}</button><span data-entry-overall role="status"></span></div></div>`;
+    return `<div class="entry-sheet-tools"><div class="entry-sheet-primary">${bulkLaunch(currentUnit)}<div class="entry-sheet-identity">${unit ? productionIdentityMarkup(unit, esc, { singleLine: true }) : `<strong>${esc(line || text('allLines'))}</strong><span>${esc(model || text('allModels'))}</span>`}${historical ? `<small class="entry-history-badge" title="${esc(text('historicalScheduleHint'))}">${esc(text('historicalSchedule'))}</small>` : ''}</div></div><div class="entry-sheet-actions">${shiftPicker(context)}<button type="button" class="button" data-entry-action="current-slot">${esc(text('currentSlot'))}</button>${excel}${unit ? `<button type="button" class="button entry-restore-defaults" data-entry-action="restore-defaults" data-restore-defaults="${esc(productionKey(unit))}">${esc(text('restoreDefaults'))}</button>` : ''}<button type="button" class="button" data-entry-action="save-all">${esc(text('saveNow'))}</button><span data-entry-overall role="status"></span></div></div>`;
   }
 
   /** One row per station across the full production day. The line daily preset

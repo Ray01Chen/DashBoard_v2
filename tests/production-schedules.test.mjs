@@ -134,3 +134,96 @@ test('current-slot entry navigation uses the selected line and skips its own bre
   assert.equal(currentEntrySlot(context, atBreak, 'B').id, 'd1');
   assert.equal(currentEntrySlot(context, new Date('2026-11-09T08:45:00+07:00'), 'A').id, 'a2');
 });
+
+test('current and future entry hide deleted CONFIG intervals while archived dates retain saved data', async () => {
+  const { reportSchedule } = await import('../public/production-schedules.js');
+  const config = { schedules: custom, lineSchedules: { B: template } };
+  const saved = [{ ...template.day[0], target: 12, actual: 0, issue: 'Kept in storage' }];
+  const before = structuredClone(saved),
+    now = Date.parse('2026-11-09T08:35:00+07:00');
+  assert.deepEqual(
+    reportSchedule(config, 'A', 'day', '2026-11-09', saved, now).map((slot) => slot.id),
+    ['a1', 'a2'],
+  );
+  assert.deepEqual(
+    reportSchedule(config, 'A', 'day', '2099-01-01', saved, now).map((slot) => slot.id),
+    ['a1', 'a2'],
+  );
+  assert.deepEqual(reportSchedule(config, 'A', 'day', '2001-01-01', saved, now), saved);
+  assert.equal(reportSchedule(config, 'B', 'day', '2026-11-09', saved, now)[0].id, 'd1');
+  assert.deepEqual(saved, before);
+  const overnight = {
+    schedules: {
+      day: template.day,
+      night: [{ id: 'night-new', start: '23:00', end: '01:00', kind: 'production' }],
+    },
+  };
+  assert.equal(
+    reportSchedule(
+      overnight,
+      'A',
+      'night',
+      '2026-11-09',
+      saved,
+      Date.parse('2026-11-10T00:30:00+07:00'),
+    )[0].id,
+    'night-new',
+  );
+  assert.equal(
+    reportSchedule(
+      overnight,
+      'A',
+      'night',
+      '2026-11-09',
+      saved,
+      Date.parse('2026-11-10T02:00:00+07:00'),
+    )[0].id,
+    'd1',
+  );
+});
+
+test('editing the default template isolates existing lines until an explicit subset is applied', async () => {
+  const { editScheduleTemplate, applyScheduleTemplate } =
+    await import('../public/production-schedules.js');
+  const config = { lines: ['A', 'B'], schedules: structuredClone(template) };
+  const editable = editScheduleTemplate(config);
+  editable.day[0].end = '08:50';
+  editable.day[1].start = '08:50';
+  assert.equal(config.lineSchedules.A.day[0].end, '09:00');
+  assert.equal(config.lineSchedules.B.day[0].end, '09:00');
+  assert.equal(applyScheduleTemplate(config, 'default', ['A']), true);
+  assert.equal(config.lineSchedules.A.day[0].end, '08:50');
+  assert.equal(config.lineSchedules.B.day[0].end, '09:00');
+  editable.day[0].end = '08:45';
+  assert.equal(config.lineSchedules.A.day[0].end, '08:50');
+  const before = JSON.stringify(config);
+  assert.equal(applyScheduleTemplate(config, 'default', ['A', 'unknown']), false);
+  assert.equal(JSON.stringify(config), before);
+});
+
+test('named templates remain independent and reuse normalized IDs when applied in the same save', async () => {
+  const { scheduleTemplate, editScheduleTemplate, applyScheduleTemplate } =
+    await import('../public/production-schedules.js');
+  const config = {
+    lines: ['A', 'B'],
+    schedules: structuredClone(template),
+    scheduleTemplates: [
+      { id: 'saved-one', name: 'Short break', schedules: structuredClone(template) },
+      { id: 'saved-two', name: 'Long break', schedules: structuredClone(custom) },
+    ],
+  };
+  const raw = editScheduleTemplate(config, 'saved-one');
+  raw.day[0].end = '08:50';
+  raw.day[1].start = '08:50';
+  assert.equal(config.schedules.day[0].end, '09:00');
+  assert.equal(scheduleTemplate(config, 'saved-two').schedules.day[0].end, '08:30');
+  assert.equal(config.lineSchedules, undefined);
+  applyScheduleTemplate(config, 'saved-one', ['A', 'B']);
+  const normalized = normalizeSchedules(raw, template, fail);
+  const references = [{ input: raw, output: normalized }];
+  const a = normalizeSchedules(config.lineSchedules.A, template, fail, references);
+  const b = normalizeSchedules(config.lineSchedules.B, template, fail, references);
+  assert.equal(a.day[0].id, normalized.day[0].id);
+  assert.equal(b.day[0].id, normalized.day[0].id);
+  assert.equal(a.day[2].id, 'd2');
+});

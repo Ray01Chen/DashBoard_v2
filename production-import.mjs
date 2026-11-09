@@ -1,4 +1,4 @@
-import { scheduleFor } from './public/production-schedules.js';
+import { reportSchedule } from './public/production-schedules.js';
 import { messages } from './public/i18n.js';
 import { readSpreadsheet, writeSpreadsheet } from './spreadsheet.mjs';
 import { importDiagnostic } from './import-messages.mjs';
@@ -101,10 +101,8 @@ function templateEntries(config, shift, date, defaults, records) {
     if (record.rowSnapshot) mappings.set(record.rowId, record.rowSnapshot);
   for (const row of mappings.values()) {
     if (!stationHasOutput(row, config)) continue;
-    const slots =
-      saved.get(row.id)?.slots ||
-      defaults[row.id]?.slots ||
-      scheduleFor(config, row.line, shift).filter((slot) => slot.kind === 'production');
+    const savedSlots = saved.get(row.id)?.slots || defaults[row.id]?.slots || [];
+    const slots = reportSchedule(config, row.line, shift, date, savedSlots);
     for (const slot of slots)
       entries.push({
         rowId: row.id,
@@ -330,12 +328,7 @@ export function previewImport(
     }
     const row = matches[0],
       savedSlots = savedById.get(row.id)?.slots || defaults[row.id]?.slots || [],
-      slots = [
-        ...savedSlots,
-        ...scheduleFor(config, row.line, shift)
-          .filter((slot) => slot.kind === 'production')
-          .filter((slot) => !savedSlots.some((saved) => saved.id === slot.id)),
-      ];
+      slots = reportSchedule(config, row.line, shift, date, savedSlots);
     if (!stationHasOutput(row, config)) {
       error('rowId', 'noOutput');
       continue;
@@ -408,12 +401,7 @@ export function previewImport(
     // Use captured interval order, including overnight and retired intervals;
     // sorting clock strings would incorrectly move midnight before the evening.
     const captured = savedById.get(row.rowId)?.slots || defaults[row.rowId]?.slots || [];
-    const slots = [
-      ...captured,
-      ...scheduleFor(config, mappings.get(row.rowId)?.line, shift)
-        .filter((slot) => slot.kind === 'production')
-        .filter((slot) => !captured.some((saved) => saved.id === slot.id)),
-    ];
+    const slots = reportSchedule(config, mappings.get(row.rowId)?.line, shift, date, captured);
     const intervalRank = new Map(slots.map((slot, index) => [slot.id, index]));
     row.changes.sort((a, b) => intervalRank.get(a.slotId) - intervalRank.get(b.slotId));
   }

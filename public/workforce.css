@@ -597,8 +597,8 @@
 
 .help-screens {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
   margin-bottom: 20px;
 }
 .help-screens figure {
@@ -635,9 +635,6 @@
 }
 
 @media (max-width: 600px) {
-  .help-screens {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .personnel-panel > .panel-heading {
     align-items: flex-start;
     flex-wrap: wrap;
@@ -680,4 +677,45 @@
     padding-left: 16px;
     padding-right: 16px;
   }
+}
+
+.help-example {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.help-example > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  background: var(--tint);
+}
+.help-example > summary > span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 6px;
+  background: var(--soft);
+  color: var(--primary);
+}
+.help-example > summary::after {
+  content: '+';
+  margin-left: auto;
+  color: var(--primary);
+}
+.help-example[open] > summary::after {
+  content: '−';
+}
+.help-example > summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+.help-example figure {
+  padding: 14px;
 }

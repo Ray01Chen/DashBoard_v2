@@ -291,7 +291,7 @@ test('historical slot union aggregates each saved cell once and preserves all-so
     }));
   c.rows[1].active = false;
   c.monitoring.outputSources.CD303 = 3;
-  const result = line(c, saved);
+  const result = line(c, saved, Date.parse('2026-11-05T12:00:00+07:00'));
   assert.equal(result.source, 'all');
   assert.deepEqual(result.sourceRows, [3, 4]);
   assert.equal(result.actual, 290);
@@ -332,9 +332,12 @@ test('unsaved UI defaults cannot become history or replace a saved snapshot', ()
     [defaults, saved],
   ]) {
     const result = line(c, input);
-    assert.equal(result.target, 7);
-    assert.equal(result.actual, 5);
+    assert.equal(result.target, 0);
+    assert.equal(result.actual, 0);
     assert.equal(result.series.find((slot) => slot.id === 'd1').start, '08:00');
+    const archived = line(c, input, Date.parse('2026-11-05T12:00:00+07:00'));
+    assert.equal(archived.target, 7);
+    assert.equal(archived.actual, 5);
     assert.equal(
       result.series.some((slot) => slot.id === 'ghost'),
       false,

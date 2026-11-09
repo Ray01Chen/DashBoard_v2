@@ -104,15 +104,66 @@ try {
     page.waitForFunction(
       () => document.querySelector('[data-entry-overall]')?.textContent === 'Saved',
     );
+  // Capture a focused operation at a stable viewport. Fixed page chrome must
+  // not be composited over a tall element screenshot by Chromium.
   const screenshot = async (selector, name) => {
     if (!screenshots) return;
-    await page.setViewportSize({ width: 1440, height: 1800 });
+    const viewport = page.viewportSize();
+    const menus = await page
+      .locator('.entry-import-scope[open], .board-display-options[open]')
+      .elementHandles();
+    for (const menu of menus) await menu.evaluate((node) => (node.open = false));
+    await page.mouse.move(0, 0);
+    const position = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
+    await page.setViewportSize({ width: 1440, height: 1200 });
     await page.locator('#toast').waitFor({ state: 'hidden' });
-    await page
-      .locator(selector)
-      .first()
-      .screenshot({ path: path.join(root, 'docs/images/' + name + '.png') });
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.evaluate(() => document.fonts.ready);
+    // Serve test-only CSS from this same origin; retain the app's real CSP.
+    const captureCSS = '**/__guide-capture.css';
+    await page.route(captureCSS, (route) =>
+      route.fulfill({
+        contentType: 'text/css',
+        body: `
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+      .sidebar, .topbar, .setup-footer, #toast, .trend-tooltip { visibility: hidden !important; }
+    `,
+      }),
+    );
+    const captureStyle = await page.addStyleTag({ url: baseURL + '/__guide-capture.css' });
+    let internalScroll;
+    try {
+      const target = page.locator(selector).first();
+      internalScroll = await target.evaluateHandle((node) =>
+        [node, ...node.querySelectorAll('*')]
+          .filter((element) => element.scrollLeft || element.scrollTop)
+          .map((element) => ({ element, x: element.scrollLeft, y: element.scrollTop })),
+      );
+      await internalScroll.evaluate((entries) =>
+        entries.forEach(({ element }) => element.scrollTo(0, 0)),
+      );
+      await target.scrollIntoViewIfNeeded();
+      const box = await target.boundingBox();
+      assert.ok(
+        box && box.width <= 1440 && box.height <= 1200,
+        `Guide image ${name} needs a more focused capture: ${JSON.stringify(box)}`,
+      );
+      await target.screenshot({ path: path.join(root, 'docs/images/' + name + '.png') });
+    } finally {
+      if (internalScroll) {
+        await internalScroll.evaluate((entries) =>
+          entries.forEach(({ element, x, y }) => element.isConnected && element.scrollTo(x, y)),
+        );
+        await internalScroll.dispose();
+      }
+      for (const menu of menus)
+        await menu.evaluate((node) => {
+          if (node.isConnected) node.open = true;
+        });
+      await captureStyle.evaluate((node) => node.remove());
+      await page.unroute(captureCSS);
+      await page.setViewportSize(viewport);
+      await page.evaluate(({ x, y }) => scrollTo(x, y), position);
+    }
   };
   const model = secondModel,
     otherModel = 'SECOND-MODEL';
@@ -1004,7 +1055,7 @@ try {
   assert.equal(report.records.find((row) => row.rowId === pack.id).slots[0].actual, 55);
   assert.equal(report.records.find((row) => row.rowId === test.id).slots[0].actual, 44);
   await screenshot('.entry-unified', 'production-entry');
-  await screenshot('.entry-station-values', 'production-cell');
+  await screenshot('.entry-matrix-scroll', 'production-cell');
   record('Real XLSX preview and import preserve different station targets, actuals and issues');
   // Keep server-authoritative time deterministic for current-interval metrics.
   let monitorClock = Date.parse('2026-11-10T08:50:00+07:00');
@@ -1132,11 +1183,7 @@ try {
   );
   await page.locator('[data-view="overview"]').click();
   await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
-  if (screenshots) {
-    await page.locator('#toast').waitFor({ state: 'hidden' });
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await page.screenshot({ path: path.join(root, 'docs/images/production-overview.png') });
-  }
+  await screenshot('#line-dashboard', 'production-overview');
   await page.locator('#enter-fullscreen').click();
   await page.locator('.board-display-options summary').click();
   for (const width of [1440, 1024, 768, 390]) {
@@ -1663,7 +1710,7 @@ try {
       .count(),
   );
   await saveSettings();
-  await screenshot('[data-mapping-unit]', 'line-configuration');
+
   await page.locator('[data-view="entry"]').click();
   const noOutputRow = page.locator(`[data-entry-station-row="${test.id}"]`);
   assert.equal(await noOutputRow.locator('[data-entry-field], [data-issue-cell]').count(), 0);
@@ -2008,7 +2055,7 @@ try {
     await page.setViewportSize({ width: 1440, height: 1000 });
     if (screenshots)
       await page.locator('#structure-schedule').evaluate((node) => node.scrollIntoView());
-    await screenshot('#settings-body', 'line-schedules');
+    await screenshot('#structure-schedule', 'line-schedules');
     const customReport = await readReport(lineScheduleDate);
     const customSlot = customizedSchedules.lineSchedules['DEMO-A'].day[0];
     assert.equal(customReport.defaults[scheduleRow.id].slots[0].id, customSlot.id);
@@ -2059,13 +2106,11 @@ try {
     const workbook = writeSpreadsheet([header, customExcelRow]);
     await page.locator('.entry-import-scope > summary').click();
     await page.locator('[data-entry-action="open-import"][data-import-shift="day"]').click();
-    await page
-      .locator('[data-entry-file]')
-      .setInputFiles({
-        name: 'per-line.xlsx',
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        buffer: workbook,
-      });
+    await page.locator('[data-entry-file]').setInputFiles({
+      name: 'per-line.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      buffer: workbook,
+    });
     await page.waitForFunction(
       () => !document.querySelector('[data-entry-action="apply-import"]').disabled,
     );
@@ -2094,6 +2139,273 @@ try {
     assert.equal(response.status(), 200, await response.text());
     record(
       'Per-line schedules copy and edit the template without changing other lines, drive station defaults and batch entry, round-trip Excel, and retain saved history when returning to template inheritance',
+    );
+  }
+
+  {
+    const beforeTemplates = await readConfig();
+    const futureDate = '2099-04-12',
+      archiveDate = '2001-04-12';
+    const row = beforeTemplates.rows.find(
+      (row) =>
+        row.active &&
+        !row.deleted &&
+        row.hasOutput !== false &&
+        row.line === 'DEMO-A' &&
+        row.model === model,
+    );
+    const deletedSlot = beforeTemplates.schedules.day.find(
+      (slot) => slot.kind === 'production',
+    );
+    for (const date of [futureDate, archiveDate]) {
+      response = await context.request.put(baseURL + `/api/entry/records/${row.id}`, {
+        data: {
+          date,
+          shift: 'day',
+          version: 0,
+          configVersion: beforeTemplates.version,
+          stationEntry: true,
+          slots: [
+            {
+              id: deletedSlot.id,
+              target: 12,
+              actual: 5,
+              issue: 'Retired interval stays in storage',
+            },
+          ],
+        },
+      });
+      assert.equal(response.status(), 200, await response.text());
+    }
+    const storedArchive = (await readReport(archiveDate)).records;
+    await page.goto(baseURL + '/settings/master-data');
+    await page.locator('#schedule-template-select').selectOption('default');
+    await page.locator('#schedule-template-name').fill('Standard revised');
+    await page.locator('[data-action="add-schedule-template"]').click();
+    await page
+      .locator('[data-action="remove-slot"][data-shift-key="day"][data-index="1"]')
+      .click();
+    await page
+      .locator('[data-action="remove-slot"][data-shift-key="day"][data-index="0"]')
+      .click();
+    await page.locator('.schedule-apply [data-save-settings]').click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector('#settings-save-status').textContent ===
+        'All settings are saved.',
+    );
+    let current = await readConfig();
+    const standardId = current.scheduleTemplates.find(
+      (template) => template.name === 'Standard revised',
+    ).id;
+    assert.equal(
+      current.scheduleTemplates.find((template) => template.id === standardId).schedules.day
+        .length,
+      1,
+    );
+    assert.deepEqual(current.schedules, beforeTemplates.schedules);
+    assert.deepEqual(current.lineSchedules, beforeTemplates.lineSchedules);
+    await page.locator('#schedule-template-select').selectOption('default');
+    await page.locator('#schedule-template-name').fill('Late break');
+    await page.locator('[data-action="add-schedule-template"]').click();
+    await page.locator('.schedule-apply [data-save-settings]').click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector('#settings-save-status').textContent ===
+        'All settings are saved.',
+    );
+    current = await readConfig();
+    const alternativeId = current.scheduleTemplates.find(
+      (template) => template.name === 'Late break',
+    ).id;
+    await page.reload();
+    await page.locator('#schedule-template-select').selectOption(standardId);
+    assert.equal(
+      await page.locator('[data-time-field="start"][data-shift-key="day"]').count(),
+      1,
+    );
+    await page.locator('[data-schedule-apply-line="DEMO-A"]').check();
+    assert.equal(await page.locator('[data-schedule-apply-line="DEMO-B"]').isChecked(), false);
+    await screenshot('#structure-schedule', 'line-schedules');
+    await page.locator('[data-action="apply-schedule-template"]').click();
+    await page.locator('#confirm-no').click();
+    assert.deepEqual((await readConfig()).lineSchedules, beforeTemplates.lineSchedules);
+    await page.locator('[data-action="apply-schedule-template"]').click();
+    assert.match(await page.locator('#confirm-description').innerText(), /DEMO-A/);
+    await page.locator('#confirm-yes').click();
+    await page.locator('.schedule-apply [data-save-settings]').click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector('#settings-save-status').textContent ===
+        'All settings are saved.',
+    );
+    current = await readConfig();
+    const applied = current.lineSchedules['DEMO-A'];
+    assert.equal(applied.day.length, 1);
+    assert.equal(applied.day[0].start, '08:40');
+    assert.deepEqual(current.lineSchedules['DEMO-B'], beforeTemplates.lineSchedules['DEMO-B']);
+    assert.equal(
+      (await readReport(futureDate)).records
+        .find((record) => record.rowId === row.id)
+        .slots.find((slot) => slot.id === deletedSlot.id).actual,
+      5,
+    );
+    await page.goto(baseURL + '/entry');
+    await page.locator('[data-entry-line]').selectOption('DEMO-A');
+    await page.locator('[data-entry-model-filter]').selectOption(model);
+    await page.locator('#report-date').fill(futureDate);
+    await page.locator('#report-date').dispatchEvent('change');
+    await page.locator('[data-entry-mode]').selectOption('shift');
+    await page.locator('[data-entry-select-shift="day"]').click();
+    await page.waitForFunction(
+      () => document.querySelectorAll('[data-entry-field="actual"]').length > 0,
+    );
+    assert.deepEqual(
+      await page
+        .locator('[data-entry-field="actual"]')
+        .evaluateAll((inputs) => [...new Set(inputs.map((input) => input.dataset.slotId))]),
+      [applied.day[0].id],
+    );
+    assert.doesNotMatch(await page.locator('#entry-content').innerText(), /08:00[–-]08:20/);
+    const cell = page
+      .locator(`[data-entry-station-row="${row.id}"] [data-entry-field="actual"]`)
+      .first();
+    await cell.fill('9');
+    await page.locator('[data-entry-action="save-all"]').click();
+    await saved();
+    const afterEdit = (await readReport(futureDate)).records.find(
+      (record) => record.rowId === row.id,
+    );
+    assert.equal(afterEdit.slots.find((slot) => slot.id === applied.day[0].id).actual, 9);
+    assert.equal(afterEdit.slots.find((slot) => slot.id === deletedSlot.id).actual, 5);
+    assert.equal(
+      await page
+        .locator(`[data-entry-total="actual"][data-row-key="${futureDate}|day|${row.id}"]`)
+        .innerText(),
+      '9',
+    );
+    const csvResponse = await context.request.get(
+      `${baseURL}/api/export?date=${futureDate}&shift=day&lang=en`,
+    );
+    assert.equal(csvResponse.status(), 200);
+    const csvRows = readSpreadsheet(
+      'export.csv',
+      (await csvResponse.body()).toString('base64'),
+    ).map((item) => item.map((cell) => cell.value));
+    const csvHeader = csvRows[0];
+    assert.equal(
+      csvRows
+        .slice(1)
+        .filter(
+          (item) =>
+            item[csvHeader.indexOf('Line')] === row.line &&
+            item[csvHeader.indexOf('Model')] === model,
+        )
+        .some((item) => item[csvHeader.indexOf('Time slot')] === '08:00-08:20'),
+      false,
+    );
+
+    await page.locator('[data-entry-mode]').selectOption('sheet');
+    assert.equal(await page.locator(`[data-entry-shift-slot="${deletedSlot.id}"]`).count(), 0);
+    await page.locator('[data-entry-action="bulk-open"]').first().click();
+    await page.waitForFunction(
+      () =>
+        document.querySelectorAll('[data-bulk-row]').length > 0 &&
+        !document.querySelector('[data-entry-action="bulk-refresh"]').disabled,
+    );
+    assert.equal(
+      await page
+        .locator('[data-bulk-slot] option')
+        .evaluateAll((options) => options.some((option) => option.value.includes('08:00'))),
+      false,
+    );
+    await page.locator('[data-entry-action="bulk-close"]').click();
+    await page.locator('.entry-bulk-dialog').waitFor({ state: 'hidden' });
+    const futureTemplate = await context.request.get(
+      `${baseURL}/api/import/template?date=${futureDate}&shift=day`,
+    );
+    const futureRows = readSpreadsheet(
+      'current.xlsx',
+      (await futureTemplate.body()).toString('base64'),
+    ).map((row) => row.map((cell) => cell.value));
+    const header = futureRows[0],
+      idColumn = header.indexOf('Row ID'),
+      timeColumn = header.indexOf('Time slot');
+    assert.equal(
+      futureRows
+        .filter((item, index) => index && Number(item[idColumn]) === row.id)
+        .some((item) => item[timeColumn] === '08:00-08:20'),
+      false,
+    );
+    await page.locator('#report-date').fill(archiveDate);
+    await page.locator('#report-date').dispatchEvent('change');
+    await page.locator('[data-entry-mode]').selectOption('shift');
+    await page.locator('[data-entry-select-shift="day"]').click();
+    await page
+      .locator(`[data-entry-field="actual"][data-slot-id="${deletedSlot.id}"]`)
+      .first()
+      .waitFor();
+    assert.equal(
+      await page
+        .locator(
+          `[data-entry-station-row="${row.id}"] [data-entry-field="actual"][data-slot-id="${deletedSlot.id}"]`,
+        )
+        .inputValue(),
+      '5',
+    );
+    await page.locator('.entry-history-badge').waitFor({ state: 'visible' });
+    assert.deepEqual((await readReport(archiveDate)).records, storedArchive);
+    await page.goto(baseURL + '/overview');
+    await page.locator('#report-date').fill(futureDate);
+    await page.locator('#report-date').dispatchEvent('change');
+    await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
+    await page.locator('.dashboard-actions [data-metric-scope="day"]').click();
+    const monitorCard = page
+      .locator('.line-card')
+      .filter({ hasText: 'DEMO-A' })
+      .filter({ hasText: model.split('-')[0] })
+      .first();
+    assert.equal(await monitorCard.locator('[data-metric="dailyActual"] b').innerText(), '9');
+    await page.locator('#report-date').fill(archiveDate);
+    await page.locator('#report-date').dispatchEvent('change');
+    await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
+    assert.equal(await monitorCard.locator('[data-metric="dailyActual"] b').innerText(), '5');
+    await page.locator('.dashboard-actions [data-metric-scope="interval"]').click();
+
+    await page.goto(baseURL + '/settings/master-data');
+    await page.locator('#schedule-template-select').selectOption(alternativeId);
+    await page.locator('#schedule-template-name').fill('Evening shift');
+    await page.locator('[data-action="rename-schedule-template"]').click();
+    await saveSettings();
+    await page.locator('#schedule-template-select').selectOption(standardId);
+    await page.locator('[data-action="delete-schedule-template"]').click();
+    await page.locator('#confirm-yes').click();
+    await saveSettings();
+    current = await readConfig();
+    assert.deepEqual(current.lineSchedules['DEMO-A'], applied);
+    assert.equal(
+      current.scheduleTemplates.some((template) => template.id === standardId),
+      false,
+    );
+    assert.equal(
+      current.scheduleTemplates.find((template) => template.id === alternativeId).name,
+      'Evening shift',
+    );
+    const invalid = structuredClone(current);
+    invalid.scheduleTemplates.push({ ...invalid.scheduleTemplates[0], id: 'duplicate-name' });
+    const rejected = await context.request.put(baseURL + '/api/config', { data: invalid });
+    assert.equal(rejected.status(), 400);
+    assert.equal((await readConfig()).version, current.version);
+    response = await context.request.put(baseURL + '/api/config', {
+      data: {
+        ...beforeTemplates,
+        scheduleTemplates: beforeTemplates.scheduleTemplates || [],
+        version: current.version,
+      },
+    });
+    assert.equal(response.status(), 200, await response.text());
+    record(
+      'Multiple named templates persist, rename/delete safely and apply only to selected lines; deleted CONFIG slots disappear from current/future entry and Excel while original historical values remain intact',
     );
   }
 
@@ -2299,7 +2611,7 @@ try {
             contentFits: elements.every((card, index) =>
               [
                 ...card.querySelectorAll(
-                  '.line-card-top, .line-card-values, .line-card-status, .line-trend',
+                  '.line-card-top, .line-card-values, .line-card-status, .line-trend, .production-model, .line-card-values b, .line-card-values small',
                 ),
               ].every((element) => {
                 const rect = element.getBoundingClientRect(),
@@ -2345,8 +2657,16 @@ try {
             };
           }),
         );
+        const legendFits = await page.locator('#output-share').evaluate((panel) => {
+          const box = panel.closest('.panel').getBoundingClientRect();
+          return [...panel.querySelectorAll('.share-legend > div')].every((row) => {
+            const rect = row.getBoundingClientRect();
+            return rect.top >= box.top && rect.bottom <= box.bottom + 1;
+          });
+        });
+        assert.equal(legendFits, true, `Share legend clipped at ${width}x${height}`);
         assert.ok(
-          plots.every((plot) => plot.width >= 300 && plot.height >= 30 && plot.fills),
+          plots.every((plot) => plot.width >= 260 && plot.height >= 30 && plot.fills),
           JSON.stringify({ width, height, plots }),
         );
       }
@@ -2378,13 +2698,38 @@ try {
   );
   await page.locator('[data-view="help"]').click();
   assert.match(await page.locator('#help-content').innerText(), /station/i);
-  assert.equal(await page.locator('#help-content .help-topic').count(), 7);
+  assert.equal(await page.locator('#help-content .help-topic').count(), 8);
   for (const path of await page
     .locator('#help-content img')
     .evaluateAll((images) => images.map((image) => image.getAttribute('src')))) {
     const result = await context.request.get(baseURL + path);
     assert.equal(result.status(), 200, 'Guide image: ' + path);
   }
+  for (const topic of await page.locator('#help-content .help-topic').all()) {
+    if (!(await topic.evaluate((node) => node.open)))
+      await topic.locator(':scope > summary').click();
+    const example = topic.locator('.help-example').first();
+    if (!(await example.count())) continue;
+    await example.locator(':scope > summary').click();
+    await example.locator('img').waitFor({ state: 'visible' });
+    await page.waitForFunction(
+      (source) =>
+        [...document.images].some(
+          (image) =>
+            image.getAttribute('src') === source && image.complete && image.naturalWidth > 0,
+        ),
+      await example.locator('img').getAttribute('src'),
+    );
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+    );
+    await example.locator(':scope > summary').click();
+  }
+  await screenshot('#help-content .help-screens', 'guide-steps');
+  record(
+    'Guide screenshots load in ordered expandable steps without page overflow; each capture excludes fixed page chrome',
+  );
   const memberContext = await browser.newContext({ viewport: { width: 1024, height: 1000 } });
   await memberContext.request.post(baseURL + '/api/auth/login', {
     data: { username: 'member', password: 'member' },

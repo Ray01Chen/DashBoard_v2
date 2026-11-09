@@ -610,7 +610,8 @@ export function setupReadiness(draft) {
           (unit) => draft.lines.includes(unit.line) && draft.models.includes(unit.model),
         ))) &&
     scheduleReadiness(draft.schedules) &&
-    Object.values(draft.lineSchedules || {}).every(scheduleReadiness);
+    Object.values(draft.lineSchedules || {}).every(scheduleReadiness) &&
+    (draft.scheduleTemplates || []).every((template) => scheduleReadiness(template.schedules));
   const people = draft.personnel || [];
   const validPeople =
     people.length > 0 &&
@@ -678,7 +679,8 @@ export function setupAccess(draft) {
     targets:
       lines &&
       scheduleReadiness(draft.schedules) &&
-      Object.values(draft.lineSchedules || {}).every(scheduleReadiness)
+      Object.values(draft.lineSchedules || {}).every(scheduleReadiness) &&
+      (draft.scheduleTemplates || []).every((template) => scheduleReadiness(template.schedules))
         ? []
         : ['structure'],
     personnel: jobs ? [] : ['structure'],

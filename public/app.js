@@ -1,4 +1,11 @@
-import { scheduleFor, scheduleCatalog, schedulesForLine } from './production-schedules.js';
+import {
+  scheduleFor,
+  scheduleCatalog,
+  schedulesForLine,
+  scheduleTemplate,
+  editScheduleTemplate,
+  applyScheduleTemplate,
+} from './production-schedules.js';
 import { createEntryController } from './entry.js';
 import { pagePath, resolvePage } from './pages.js';
 import { issuePresets, issueSettingsMarkup, validateIssuePresets } from './issue-presets.js';
@@ -121,6 +128,8 @@ const state = {
   detailGroupId: '',
   boardPage: 0,
   scheduleLine: '',
+  scheduleTemplateId: 'default',
+  scheduleApplyLines: [],
   groupId: '',
   chartLine: '',
   date: today(),
@@ -1174,7 +1183,12 @@ function structureMarkup() {
 // line alone never mutates the shared template or another line's draft.
 function scheduleDraft(edit = false) {
   if (!state.draft.lines.includes(state.scheduleLine)) state.scheduleLine = '';
-  if (!state.scheduleLine) return state.draft.schedules;
+  if (!scheduleTemplate(state.draft, state.scheduleTemplateId))
+    state.scheduleTemplateId = 'default';
+  if (!state.scheduleLine)
+    return edit
+      ? editScheduleTemplate(state.draft, state.scheduleTemplateId)
+      : scheduleTemplate(state.draft, state.scheduleTemplateId).schedules;
   const overrides =
     state.draft.lineSchedules ||
     (edit ? (state.draft.lineSchedules = Object.create(null)) : {});
@@ -1194,10 +1208,20 @@ function scheduleDraft(edit = false) {
 function scheduleMarkup() {
   const schedules = scheduleDraft();
   const custom = Object.hasOwn(state.draft.lineSchedules || {}, state.scheduleLine);
-  return `<div id="structure-schedule" class="settings-section-heading"><div><h2>${esc(t('scheduleTitle'))}</h2><p>${esc(t('scheduleDesc'))}</p></div></div>
+  return `<section id="structure-schedule" class="schedule-settings"><div class="settings-section-heading"><div><h2>${esc(t('scheduleTitle'))}</h2><p>${esc(t('scheduleDesc'))}</p></div></div>
+    <section class="panel schedule-template-tools">
+      <label>${esc(t('savedScheduleTemplates'))}<select id="schedule-template-select">
+        <option value="default">${esc(t('scheduleTemplate'))}</option>
+        ${(state.draft.scheduleTemplates || []).map((template) => `<option value="${esc(template.id)}" ${template.id === state.scheduleTemplateId ? 'selected' : ''}>${esc(template.name)}</option>`).join('')}
+      </select></label>
+      <label>${esc(t('templateName'))}<input id="schedule-template-name" maxlength="60" value="${state.scheduleTemplateId === 'default' ? '' : esc(scheduleTemplate(state.draft, state.scheduleTemplateId)?.name || '')}" placeholder="${esc(t('templateName'))}"></label>
+      <button class="button" data-action="add-schedule-template">${esc(t('newScheduleTemplate'))}</button>
+      <button class="button" data-action="rename-schedule-template" ${state.scheduleTemplateId === 'default' ? 'disabled' : ''}>${esc(t('rename'))}</button>
+      <button class="button" data-action="delete-schedule-template" ${state.scheduleTemplateId === 'default' ? 'disabled' : ''}>${esc(t('remove'))}</button>
+    </section>
     <section class="panel schedule-scope">
       <label>${esc(t('scheduleScope'))}<select id="schedule-line-select">
-        <option value="">${esc(t('scheduleTemplate'))}</option>
+        <option value="">${esc(t('editSelectedTemplate'))}</option>
         ${state.draft.lines.map((line) => `<option value="${esc(line)}" ${state.scheduleLine === line ? 'selected' : ''}>${esc(line)}</option>`).join('')}
       </select></label>
       <span class="muted">${esc(t(state.scheduleLine ? (custom ? 'scheduleCustom' : 'scheduleInherited') : 'scheduleTemplateHint'))}</span>
@@ -1244,7 +1268,16 @@ function scheduleMarkup() {
     </section>`,
       )
       .join('')}</div>
-    <div class="calculation-note">${icon('info')}<span>${esc(t('scheduleProtect'))}</span></div>`;
+    ${
+      !state.scheduleLine
+        ? `<fieldset class="panel schedule-apply"><legend>${esc(t('applyTemplateLines'))}</legend>
+      <div class="schedule-line-checks">${state.draft.lines.map((line) => `<label><input type="checkbox" data-schedule-apply-line="${esc(line)}" ${state.scheduleApplyLines.includes(line) ? 'checked' : ''}>${esc(line)}</label>`).join('')}</div>
+      <div><button class="button" data-action="schedule-select-all">${esc(t('selectAll'))}</button><button class="button" data-action="apply-schedule-template" ${state.scheduleApplyLines.length ? '' : 'disabled'}>${esc(t('applySelectedTemplate', { count: state.scheduleApplyLines.length }))}</button><button class="button primary" data-save-settings data-action="save-schedule-settings">${esc(t('saveSettings'))}</button></div>
+      <p class="form-hint">${esc(t('templateApplyHint'))}</p>
+    </fieldset>`
+        : ''
+    }
+    <div class="calculation-note">${icon('info')}<span>${esc(t('scheduleProtect'))}</span></div></section>`;
 }
 function appearanceMarkup() {
   return `<div class="settings-section-heading"><div><h2>${esc(t('appearanceTitle'))}</h2><p>${esc(t('appearanceDesc'))}</p></div></div><section class="panel appearance-card"><h3>${esc(t('defaultTheme'))}</h3><div class="theme-options">${themes.map((theme) => `<button class="theme-option ${state.draft.theme === theme ? 'selected' : ''}" data-action="default-theme" data-theme-name="${theme}" aria-pressed="${state.draft.theme === theme}"><span class="swatch swatch-${theme}">${state.draft.theme === theme ? icon('check') : ''}</span><strong>${esc(t(theme))}</strong></button>`).join('')}</div><div class="appearance-fields"><label>${esc(t('defaultLanguage'))}<select id="default-language"><option value="zh" ${state.draft.language === 'zh' ? 'selected' : ''}>Chinese</option><option value="en" ${state.draft.language === 'en' ? 'selected' : ''}>English</option><option value="th" ${state.draft.language === 'th' ? 'selected' : ''}>Thai</option></select></label><div><span>${esc(t('browserPrefs'))}</span><button class="button" data-action="use-defaults">${icon('refresh')}${esc(t('useDefaults'))}</button></div></div><div class="theme-preview" data-theme="${state.draft.theme}"><span class="preview-icon">BP</span><div><strong>BP PULSE · ${esc(t('preview'))}</strong><p>${esc(t('previewDesc'))}</p></div><span class="preview-check">${icon('check')}</span></div></section>`;
@@ -1463,6 +1496,17 @@ $('#settings-body').addEventListener('change', async (e) => {
     const result = updateMapping(state.draft, index, patch);
     renderSettings();
     if (!result.ok) return showSettingsError({ code: result.code });
+  } else if (el.id === 'schedule-template-select') {
+    state.scheduleTemplateId = el.value;
+    state.scheduleLine = '';
+    renderSettings();
+    return;
+  } else if (d.scheduleApplyLine !== undefined) {
+    state.scheduleApplyLines = el.checked
+      ? [...new Set([...state.scheduleApplyLines, d.scheduleApplyLine])]
+      : state.scheduleApplyLines.filter((line) => line !== d.scheduleApplyLine);
+    renderSettings();
+    return;
   } else if (el.id === 'schedule-line-select') {
     state.scheduleLine = el.value;
     renderSettings();
@@ -1577,6 +1621,70 @@ $('#settings-body').addEventListener('click', async (e) => {
   const { action, catalog, index, shiftKey, kind, themeName } = b.dataset,
     i = Number(index),
     draft = state.draft;
+  if (action === 'save-schedule-settings') return saveSettings();
+  if (action === 'add-schedule-template' || action === 'rename-schedule-template') {
+    const name = $('#schedule-template-name').value.trim();
+    if (
+      !name ||
+      (draft.scheduleTemplates || []).some(
+        (template) =>
+          template.id !==
+            (action === 'rename-schedule-template' ? state.scheduleTemplateId : '') &&
+          template.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
+      )
+    )
+      return toast(t('errScheduleTemplates'));
+    if (action === 'add-schedule-template') {
+      const id = draftId();
+      (draft.scheduleTemplates ||= []).push({
+        id,
+        name,
+        schedules: structuredClone(scheduleTemplate(draft, state.scheduleTemplateId).schedules),
+      });
+      state.scheduleTemplateId = id;
+      state.scheduleLine = '';
+    } else scheduleTemplate(draft, state.scheduleTemplateId).name = name;
+    renderSettings();
+    return;
+  }
+  if (action === 'delete-schedule-template') {
+    if (
+      state.scheduleTemplateId === 'default' ||
+      !(await confirmAction('deleteTemplateTitle', 'deleteTemplateDesc'))
+    )
+      return;
+    draft.scheduleTemplates = draft.scheduleTemplates.filter(
+      (template) => template.id !== state.scheduleTemplateId,
+    );
+    state.scheduleTemplateId = 'default';
+    state.scheduleLine = '';
+    renderSettings();
+    return;
+  }
+  if (action === 'schedule-select-all') {
+    state.scheduleApplyLines =
+      state.scheduleApplyLines.length === draft.lines.length ? [] : [...draft.lines];
+    renderSettings();
+    return;
+  }
+  if (action === 'apply-schedule-template') {
+    const lines = state.scheduleApplyLines.filter((line) => draft.lines.includes(line));
+    if (
+      lines.length &&
+      (await confirmAction(
+        'replaceScheduleTitle',
+        'applyTemplateConfirm',
+        'confirm',
+        'cancel',
+        { lines: lines.join(', ') },
+      ))
+    ) {
+      applyScheduleTemplate(draft, state.scheduleTemplateId, lines);
+      renderSettings();
+      toast(t('templateApplied', { count: lines.length }));
+    }
+    return;
+  }
   if (action === 'copy-schedule-template' || action === 'inherit-schedule') {
     if (!state.scheduleLine) return;
     if (
@@ -1588,7 +1696,7 @@ $('#settings-body').addEventListener('click', async (e) => {
     if (action === 'inherit-schedule') delete state.draft.lineSchedules[state.scheduleLine];
     else
       Object.defineProperty(state.draft.lineSchedules, state.scheduleLine, {
-        value: structuredClone(state.draft.schedules),
+        value: structuredClone(scheduleTemplate(draft, state.scheduleTemplateId).schedules),
         enumerable: true,
         writable: true,
         configurable: true,

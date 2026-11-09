@@ -1,6 +1,6 @@
 # BP9 Production Center guide
 
-Open <http://10.201.169.250:43871/>. manager / manager manages shared settings; member / member enters production, imports and reviews reports. The in-app User guide follows the logged-in role. Language choices are Chinese / English / Thai in every interface language.
+Open your deployed Production Center. A manager account manages shared settings; a member account enters production, imports and reviews reports. The in-app User guide follows the logged-in role. Language choices are Chinese / English / Thai in every interface language.
 
 The refreshed shell uses DELTA branding, a soft theme-coloured header, an active navigation marker and consistent filter/card spacing. Language, theme and account controls stay in the upper-right corner; sidebar collapse and all production actions remain available. [Overview screenshot](./images/production-overview.png).
 
@@ -61,7 +61,13 @@ Managers drag the grip in the far-left Order column to place a station before or
 
 ![Interval fill](./images/interval-batch.png)
 
-Managers choose Shared schedule template or a line in Master data & shift times. Editing an inherited line creates its own copy; Copy current template and Follow template again are also available. All models on a physical line share that line’s breaks. Template changes affect inheriting lines; custom lines remain independent. Target allocation, station entry, current-slot navigation, Excel and monitoring use the line’s schedule; saved historical reports keep their original intervals.
+In Settings → Master data & shift times, choose Default schedule template to edit the initial times, or select another saved template. Enter a name and Save as new template to keep multiple schedules. Adjust production/break times and Save settings. Editing a template alone does not change existing lines.
+
+Tick the desired Lines to apply, Apply to selected lines, confirm and Save settings. Use Schedule scope to inspect the actual line schedule. All models on that line share the result. Rename/Remove manage the template list; deleting a template retains applied line copies and saved reports.
+
+Current/future station fields, interval buttons and Excel use the selected line’s current CONFIG only. Removed slots disappear. Archived production dates retain saved original slots and values; an active overnight shift still uses the current schedule. See the focused template screenshot below.
+
+![Named templates, times and selected target lines](./images/line-schedules.png)
 
 Fill interval uses the selected line’s current CONFIG schedule directly, without matching saved historical intervals. Schedule changes do not block entry: new slots are saved on the selected date, while original slots, values and issues remain in SQLite and can be viewed on their original dates.
 

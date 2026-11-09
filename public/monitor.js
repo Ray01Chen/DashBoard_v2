@@ -1,4 +1,4 @@
-import { scheduleFor, schedulesForLine } from './production-schedules.js';
+import { scheduleFor, schedulesForLine, reportSchedule } from './production-schedules.js';
 import {
   modelOf,
   productionKey,
@@ -261,6 +261,19 @@ export function buildLineMonitor(
     const rows = lineRows.filter((row) => source === 'all' || row.id === source),
       saved = rows.map((row) => map.get(row.id)).filter(Boolean),
       slots = new Map(windows.map((slot) => [slot.id, slot]));
+    const activeLine = config.rows.some(
+      (row) => row.active !== false && !row.deleted && sameProduction(row, unit),
+    );
+    const visibleIds = new Set(
+      reportSchedule(
+        config,
+        line,
+        shift,
+        date,
+        saved.filter((record) => !isDefault(record)).flatMap((record) => record.slots),
+        now,
+      ).map((slot) => slot.id),
+    );
     for (const record of saved.filter((record) => !isDefault(record))) {
       // Captured shifts may start earlier than today's edited schedule. Their
       // original first interval anchors midnight, preserving historical dates.
@@ -269,7 +282,7 @@ export function buildLineMonitor(
         scheduleFor(config, line, shift)[0]?.start ||
         '00:00';
       for (const slot of record.slots)
-        if (slot.kind !== 'break') {
+        if (slot.kind !== 'break' && (!activeLine || visibleIds.has(slot.id))) {
           const captured = { ...slots.get(slot.id), ...slot };
           slots.set(slot.id, intervalWindow(captured, date, anchor));
         }

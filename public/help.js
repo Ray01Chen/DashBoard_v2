@@ -26,7 +26,6 @@ const guides = {
         title: '1–8 · Configure the production workspace',
         paragraphs: [
           '1. Master data & shift times: maintain Lines, Models, Jobs, Stations and one English issue quick-text list. Choose Line and Model from dropdowns to add each allowed combination; a line may have several models. Define non-overlapping production and break intervals for both shifts.',
-          'Choose Shared schedule template or a line in Master data. Edit the current template, or copy/edit it for one line. All models on that line share its day/night breaks. Template changes affect inheriting lines; custom schedules stay independent. Follow template again asks before replacing a custom draft. Save settings applies the line schedule to targets, entry, Excel and monitoring; saved history keeps its original times.',
           '2. Daily targets: each line/model has one daily preset. Every station starts with that preset divided by production minutes across both shifts, excluding breaks. People and station mappings are not prerequisites for setting the preset.',
           '3. People by job: the complete master job list includes empty jobs. Add or activate people under the correct job. Removing a job deletes its directory people and assignments when settings are saved; captured historical names remain.',
           '4. Assign people to lines: choose Line and Model, then Job in Day, Night or Owners. Tick multiple names and Add selected. The same job may have several people in either shift. Clear selection only clears pending ticks; X removes an assigned person. Empty-job guidance opens that roster.',
@@ -36,6 +35,17 @@ const guides = {
           'Produces output is separate from Active. Keep a station Active and uncheck Produces output to show it without production entry. Its captured reports remain read-only; batch fill and Excel templates skip it, and import rejects changes to it. Output station choices include only enabled output-producing stations. Re-enabling output restores entry without erasing prior values. Existing stations produce output by default.',
           'Select Output station in this same panel. Only enabled stations are offered. The selected station supplies this line/model’s dashboard Target, Actual, Gap and alerts; other stations retain independent reports. If no station is enabled, the control explains what to add first.',
           '6. Groups organize physical lines and their models. 7. Alerts & refresh configures rules. 8. Language & appearance sets shared defaults. Save settings at top/bottom publishes the draft; Save draft stays in this browser/account. Load saved settings confirms before discarding modified drafts. Version conflicts preserve the draft.',
+        ],
+      },
+      {
+        managerOnly: true,
+        title: 'Save and apply schedule templates',
+        paragraphs: [
+          'Open Settings → Master data & shift times. Choose Default schedule template to edit the initial times, or select a saved template.',
+          'Enter a name and choose Save as new template to keep another schedule. Adjust Day/Night production and break times, then Save settings. Rename and Remove manage saved templates.',
+          'Tick the lines under Lines to apply, choose Apply to selected lines, confirm, then Save settings. Editing a template alone does not change existing lines; all models on a selected line share its applied schedule.',
+          'Use Schedule scope to inspect or adjust an individual line. Copy selected template copies the template currently selected above. Deleting a template retains the copies already applied to lines.',
+          'Current and future entry and Excel use the selected line’s CONFIG only; removed slots disappear. Archived dates retain saved original slots and values, including original night-shift production dates.',
         ],
       },
       {
@@ -125,7 +135,6 @@ const guides = {
         title: '第 1～8 步：依現場順序設定',
         paragraphs: [
           '1. 基礎資料與班別時間：維護 Lines、Models、Jobs、Stations 及單一英文異常快捷文字清單。下拉選產線與 Model 新增配對，同線可有多個 Model；設定兩班生產及休息時段，時間不可重疊。',
-          '基礎資料的班表範圍可選共用範本或產線。共用範本可調整，產線可複製或直接修改成獨立班表；同線所有 Model 共用早晚班與休息設定。範本變更只影響沿用的產線，恢復沿用前會確認取代自訂草稿。儲存設定後，目標、填報、Excel 與監控依該線班表，歷史時段與數值保留。',
           '2. 產線日目標：每組產線／Model 有一個日目標預設，各站依相同預設與生產分鐘分配自己的時段目標，排除休息。尚無人員或站點也可先設定。',
           '3. 依職務建立人員：完整職務清單包含空職務，新增或啟用正確職務的人員。刪職務會在儲存設定時刪除所屬名冊及分配，歷史填報保留當時姓名。',
           '4. 產線人員分配：選 Line、Model，再在早班、晚班或 OWNER 選職務，勾選多人並新增。同職務每班可多人；清除勾選只清待加入選擇，下方已分配者用 X 移除。空職務提示可直接開名冊。',
@@ -135,6 +144,17 @@ const guides = {
           '「有產出」與「啟用配置」分開。維持啟用、取消有產出，站點仍顯示但免填報，已存產量與異常僅供查閱。批次填寫及 Excel 範本略過此站，匯入不接受它的修改；產量來源只可選啟用的產出站。重新勾選有產出可恢復填寫，既有值保留；舊配置預設都有產出。',
           '在同一區選「產量來源站點」，只列啟用站點。該站供應此組看板目標、實績、差額及警示，其他站保留獨立填報；沒有啟用站時會提示先新增。',
           '6. 分組管理實體產線及其 Model。7. 警示與刷新設定規則。8. 語言與外觀設定共用預設。上方／底部儲存設定發布草稿，儲存草稿只留目前瀏覽器與帳號；載入已儲存設定會先確認放棄變動。版本衝突保留草稿。',
+        ],
+      },
+      {
+        managerOnly: true,
+        title: '班表範本：儲存、修改與套用',
+        paragraphs: [
+          '開啟「設定 → 基礎資料與班別時間」。在「已儲存班表範本」選「預設班表範本」，即可修改原本的時段；也可選其他已存範本。',
+          '輸入範本名稱，按「另存新範本」。調整早晚班的生產、休息時間後按「儲存設定」。可儲存多份，並使用修改名稱、刪除管理。',
+          '在「選擇套用線體」勾選線體，按「套用至所選線體」，確認後再按「儲存設定」。只改範本不會自動改現有線體；同線所有 Model 共用套用結果。',
+          '「班表範圍」可選某線查看或個別調整；「複製所選範本」會複製上方選中的範本。刪除範本不會刪除已套用的線體班表。',
+          '目前及未來日期的填報與 Excel 只顯示該線 CONFIG，刪掉的時段不再出現。過去日期仍保留當天已存時段與數值；跨午夜夜班仍屬開班日。',
         ],
       },
       {
@@ -225,7 +245,6 @@ const guides = {
         title: 'ขั้นตอนที่ 1–8 · ตั้งค่าตามลำดับงาน',
         paragraphs: [
           '1. ข้อมูลหลักและเวลากะ: สร้าง Lines, Models, Jobs, Stations และรายการข้อความปัญหาภาษาอังกฤษ เลือกสายและ Model เพื่อเพิ่มคู่ สายเดียวมีหลาย Model ได้ กำหนดเวลาผลิตและพักสองกะไม่ให้ซ้อนกัน',
-          'เลือกแม่แบบตารางเวลากลางหรือสายในการตั้งค่าข้อมูลหลัก แก้แม่แบบหรือคัดลอกเพื่อกำหนดเวลาผลิตและพักแยกสำหรับสายเดียว ทุก Model ในสายใช้เวลาเดียวกัน สายที่ใช้แม่แบบเปลี่ยนตามแม่แบบ ส่วนตารางเฉพาะไม่เปลี่ยน การกลับไปใช้แม่แบบขอยืนยันก่อน บันทึกแล้วเป้าหมาย การกรอก Excel และการติดตามใช้ตารางของสายนั้น ประวัติเก็บเวลาเดิม',
           '2. เป้าหมายรายวัน: แต่ละคู่สาย/Model มีค่าเริ่มต้นหนึ่งค่า แต่ละสถานีแบ่งเป้าหมายของตนตามนาทีผลิตสองกะโดยไม่รวมพัก ตั้งได้ก่อนมีบุคลากรหรือสถานี',
           '3. บุคลากรตามหน้าที่: รายการหน้าที่ทั้งหมดรวมหน้าที่ว่าง เพิ่มหรือเปิดใช้คนในหน้าที่ถูกต้อง ลบหน้าที่จะลบคนและการมอบหมายเมื่อบันทึก รายงานเดิมคงชื่อเดิม',
           '4. มอบหมายบุคลากร: เลือก Line, Model และหน้าที่ในกะเช้า กลางคืนหรือผู้รับผิดชอบ ติ๊กหลายคนแล้วเพิ่ม หน้าที่เดียวมีหลายคนได้ ล้างที่เลือกไม่ลบคนที่เพิ่มแล้ว ใช้ X นำออก ปุ่มในรายการว่างเปิดหน้าบุคลากร',
@@ -235,6 +254,17 @@ const guides = {
           'มีผลผลิตแยกจากเปิดใช้ เก็บสถานีที่เปิดใช้แต่ยกเลิกมีผลผลิตเพื่อแสดงสถานีโดยไม่ต้องกรอก รายงานเดิมดูได้อย่างเดียว กรอกทั้งสายและแม่แบบ Excel ข้ามสถานีนี้ การนำเข้าปฏิเสธการเปลี่ยนแปลง เลือกแหล่งผลผลิตได้เฉพาะสถานีที่เปิดใช้และมีผลผลิต เปิดมีผลผลิตอีกครั้งเพื่อกรอกโดยรักษาข้อมูลเดิม สถานีเดิมถือว่ามีผลผลิตโดยค่าเริ่มต้น',
           'เลือกสถานีแหล่งผลผลิตในแผงเดียวกัน มีเฉพาะสถานีที่เปิดใช้ สถานีนั้นเป็นแหล่งเป้าหมาย ผลจริง ส่วนต่างและการเตือนของคู่ สถานีอื่นกรอกแยก หากไม่มีสถานีจะแจ้งให้เพิ่มก่อน',
           '6. กลุ่มรวมสายและ Model ของสาย 7. การเตือนและรีเฟรชตั้งกฎ 8. ภาษาและรูปแบบตั้งค่าเริ่มต้น บันทึกการตั้งค่าเพื่อเผยแพร่ บันทึกร่างเก็บเฉพาะเบราว์เซอร์/บัญชี โหลดการตั้งค่าจะยืนยันก่อนทิ้งร่างที่แก้ รุ่นขัดแย้งไม่ทับร่าง',
+        ],
+      },
+      {
+        managerOnly: true,
+        title: 'บันทึก แก้ไข และใช้แม่แบบตารางเวลา',
+        paragraphs: [
+          'เปิด Settings → ข้อมูลหลัก เลือกแม่แบบเริ่มต้นเพื่อแก้เวลาเดิม หรือเลือกแม่แบบที่บันทึกไว้',
+          'ใส่ชื่อแล้วบันทึกเป็นแม่แบบใหม่ ปรับช่วงผลิตและพักของทั้งสองกะ แล้วบันทึกการตั้งค่า เปลี่ยนชื่อหรือลบแม่แบบได้',
+          'เลือกสายที่จะใช้ กดใช้แม่แบบ ยืนยัน แล้วบันทึกการตั้งค่า การแก้แม่แบบอย่างเดียวไม่เปลี่ยนสายเดิม ทุก Model ในสายใช้ตารางเดียวกัน',
+          'เลือกสายในขอบเขตตารางเวลาเพื่อดูหรือแก้รายสาย คัดลอกแม่แบบที่เลือกจากรายการด้านบน ลบแม่แบบไม่ลบตารางที่ใช้กับสายแล้ว',
+          'วันที่ปัจจุบันและอนาคตแสดงเฉพาะ CONFIG ของสาย ช่วงที่ลบไม่แสดงในกรอกและ Excel วันที่เก่าใช้ช่วงเวลาและค่าที่บันทึก กะข้ามเที่ยงคืนยังเป็นวันเริ่มผลิต',
         ],
       },
       {
@@ -304,7 +334,6 @@ const guides = {
 const exampleScreens = [
   [
     'setup-order',
-    'line-schedules',
     'models-and-lines',
     'issue-quick-text',
     'daily-targets',
@@ -312,6 +341,7 @@ const exampleScreens = [
     'line-people',
     'line-configuration',
   ],
+  ['line-schedules'],
   [],
   [
     'production-entry',
@@ -328,13 +358,13 @@ const exampleScreens = [
 ];
 const exampleLabels = {
   en: {
-    note: 'Training screenshots use isolated DEMO lines and sample personnel. Select an image to open it at full size.',
+    note: 'Expand one operation below to see its screenshot. Examples use the English interface and DEMO data; click an image for full size.',
     captions: {
       'setup-order': 'Setup order',
       'models-and-lines': 'Line/model dropdown pairing',
       'issue-quick-text': 'English issue quick text in Master data',
       'daily-targets': 'One default target per line + model',
-      'line-schedules': 'Shared schedule template and per-line day/night breaks',
+      'line-schedules': 'Save a named schedule template, select lines and apply',
       'people-by-job': 'People filtered by job',
       'line-people': 'Line teams and owners',
       'line-configuration': 'Integrated station configuration and output source',
@@ -353,13 +383,13 @@ const exampleLabels = {
     },
   },
   zh: {
-    note: '以下截圖使用獨立測試環境的 DEMO 產線與示範人名。點圖可開啟完整尺寸。',
+    note: '依操作名稱展開對應圖片。截圖統一使用 English 介面與 DEMO 資料；Chinese／Thai 的操作位置相同，點圖可看原尺寸。',
     captions: {
       'setup-order': '設定順序',
       'models-and-lines': '下拉配對產線與 Model',
       'issue-quick-text': '基礎資料的英文異常快捷文字',
       'daily-targets': '每組產線＋Model 一個預設日目標',
-      'line-schedules': '共用班表範本與各產線獨立休息時段',
+      'line-schedules': '儲存班表範本，再勾選線體套用',
       'people-by-job': '依職務篩選人員',
       'line-people': '產線兩班與負責人',
       'line-configuration': '整合站點配置與產量來源',
@@ -377,13 +407,13 @@ const exampleLabels = {
     },
   },
   th: {
-    note: 'ภาพตัวอย่างใช้สาย DEMO และบุคลากรจากฐานทดสอบแยก คลิกภาพเพื่อเปิดขนาดเต็ม',
+    note: 'ขยายหัวข้อการทำงานเพื่อดูภาพ ตัวอย่างใช้เมนู English และข้อมูล DEMO ตำแหน่งปุ่มเหมือน Chinese/Thai คลิกภาพเพื่อดูขนาดเต็ม',
     captions: {
       'setup-order': 'ลำดับตั้งค่า',
       'models-and-lines': 'จับคู่สาย / Model',
       'issue-quick-text': 'ข้อความปัญหาภาษาอังกฤษในข้อมูลหลัก',
       'daily-targets': 'เป้าหมายต่อสาย + Model',
-      'line-schedules': 'แม่แบบตารางเวลากลางและเวลาพักแยกตามสาย',
+      'line-schedules': 'บันทึกแม่แบบแล้วเลือกสายที่จะใช้',
       'people-by-job': 'บุคลากรตามหน้าที่',
       'line-people': 'ทีมและผู้รับผิดชอบ',
       'line-configuration': 'บุคลากรอัตโนมัติ',
@@ -429,9 +459,9 @@ export function helpMarkup({ role, language, esc = escapeHtml } = {}) {
     const names = exampleScreens[index];
     return names.length
       ? `<p class="help-example-note">${esc(examples.note)}</p><div class="help-screens">${names
-          .map((name) => {
+          .map((name, index) => {
             const caption = examples.captions[name];
-            return `<figure><a href="/guide-images/${name}.png" target="_blank" rel="noopener"><img src="/guide-images/${name}.png" alt="${esc(caption)}" loading="lazy"></a><figcaption>${esc(caption)}</figcaption></figure>`;
+            return `<details class="help-example"><summary><span>${index + 1}</span>${esc(caption)}</summary><figure><a href="/guide-images/${name}.png" target="_blank" rel="noopener"><img src="/guide-images/${name}.png" alt="${esc(caption)}" loading="lazy"></a><figcaption>${esc(caption)}</figcaption></figure></details>`;
           })
           .join('')}</div>`
       : '';

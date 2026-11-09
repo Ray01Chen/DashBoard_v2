@@ -263,7 +263,8 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
     });
   const snapshot = async (date) =>
     (await member(base + `/api/records?date=${date}&shift=day`)).json();
-  const date = '2099-04-01';
+  // Captured schedule/import cases deliberately use an archived production date.
+  const date = '2001-04-01';
   let config, defaultDay;
   try {
     for (let attempt = 0; attempt < 100; attempt++) {

@@ -6,7 +6,7 @@
 | --- | --- |
 | `server.mjs`、`auth.mjs` | HTTP 路由、權限、SQLite 儲存、版本檢查與稽核 |
 | `production-defaults.mjs`、`public/production-targets.js` | 伺服器預設、人員快照與兩班日目標分配 |
-| `public/production-schedules.js`、`schedule-config.mjs` | 共用範本／產線班表解析、時段 ID 保留及跨班重疊驗證 |
+| `public/production-schedules.js`、`schedule-config.mjs` | 多份範本／產線班表解析、日期投影、時段 ID 保留及跨班重疊驗證 |
 | `public/production-models.js` | Line／Model 識別、站點順序與人員名稱解析 |
 | `public/entry.js` | 填報控制器、各站儲存佇列、矩形貼上、批次草稿與匯入操作 |
 | `production-import.mjs`、`spreadsheet.mjs` | Excel／CSV 編解碼、預覽驗證及匯入 |
@@ -24,7 +24,9 @@
 - 各站獨立儲存，使用伺服器版本檢查；批次時段與 Excel 匯入使用整批驗證，遇到衝突保留草稿供使用者處理。
 - 全天報表是兩班的唯讀合併結果，不能把合併版本當作任一班的寫入版本。
 - 「恢復預設」使用伺服器提供的時段 Target，清空所選日期及 Line／Model 兩班的 Actual／Issue，須由使用者確認。人員快照與日目標設定不變。
-- 班表存於 `schedules`（範本）與 `lineSchedules[line]`（獨立複本）。所有時段讀取經 `schedulesForLine`／`scheduleFor`，目標分配傳入實體 line。`scheduleCatalog` 只供多線圖表／表格彙整，不能用於單線寫入驗證。未改時段沿用 ID，改起訖或類型才產生新 ID；不同線允許休息時段不同，同一線內及跨班禁止重疊。
+- 班表存於 `schedules`（預設）、`scheduleTemplates[]`（具名範本）與 `lineSchedules[line]`（套用後的獨立複本）。範本修改不隱式套用；編輯預設時先保留既有沿用線體的原班表。明確套用後才取代所選線體，刪除範本不刪線體複本。
+- `normalizeSchedules` 共用跨班重疊驗證；未改時段先沿用原 ID，同次儲存範本與多線體時，經已驗證範本映射共用新 ID，避免同一時段在分組圖變成多個時間點。這是設定複本的身份維護，不比對歷史填報來阻擋批次。
+- `reportSchedule` 統一目前／未來只顯示 CONFIG、已結束歷史日讀已存時段的規則；夜班跨午夜未結束時仍屬目前生產日。填報儲存佇列保留完整 record，僅過濾欄位與合計，不能為了隱藏舊欄直接刪掉資料。Excel／CSV 與啟用線體監控共用投影。
 - `monitor.js` 在每條線內建立生產 windows，休息判定、停滯計時與目前目標各自計算。範本變動不改自訂線或歷史快照；產線改名、刪除同步維護 override。
 - 批次選項與 `planStationInterval` 只以所選產線目前 CONFIG 的生產時段 ID 為寫入目的；不讀舊時段來比對或阻擋。`writeRecord` 合併新時段並保留原快照。前端「恢復預設目標」依目前 CONFIG 重新分配日目標，不能使用歷史快照的預設。
 - 批次「恢復預設目標」只修改目前時段草稿的 Target，並清空尚未套用的共用 Target，避免儲存時再次覆蓋預設；Actual／Issue 草稿保留。
@@ -35,7 +37,7 @@
 
 ## 寫法與驗證
 
-全螢幕 `boardSize` 固定為 7，桌面卡片以大曲線及三項數字為主。短筆電縮減上方選用圖表高度，保留七列；小螢幕讓曲線獨佔一列並捲動清單。瀏覽器測試三語、兩種數字模式及 1280×720 到 2560×1440，量測七張卡完整可見、曲線寬至少 300px，且 SVG 座標和容器寬高一致。卡片狀態文字依所選數字模式判斷，警示顏色仍由原累計／停滯規則決定。
+全螢幕 `boardSize` 固定為 7，桌面卡片以大曲線及三項數字為主。短筆電縮減上方選用圖表高度，保留七列；小螢幕讓曲線獨佔一列並捲動清單。瀏覽器測試三語、兩種數字模式及 1280×720 到 2560×1440，量測七張卡完整可見、曲線寬至少 260px，且 SVG 座標和容器寬高一致。卡片狀態文字依所選數字模式判斷，警示顏色仍由原累計／停滯規則決定。
 
 `renderTrend` 共用於產線、分組及明細圖，從 CSS 容器量測像素尺寸。產線曲線不再使用固定 310×82 viewBox，也不再擠進 90px 欄。`trendSvg` 的完整時間軸每個標籤至少保留 48px；密集時段只在圖內捲動。ResizeObserver 處理側欄／視窗／全螢幕變更，用尺寸鍵避免重畫迴圈；明細關閉時解除觀察。保留圖表捲動位置。
 
@@ -50,3 +52,6 @@
 執行 `npm test`，以及 `BP_BROWSER_PATH=/usr/bin/chromium node scripts/browser-smoke.mjs --screenshots`。瀏覽器測試使用隔離資料庫；`--screenshots` 更新教學圖。瀏覽器路徑可依本機安裝調整，Playwright 設定見腳本開頭。
 
 本次另用 ESLint 檢查前端、伺服器、測試及腳本的未使用變數、不可達程式、重複參數／鍵值與固定條件。這些檢查輔助清理，功能是否必要仍須依呼叫流程與歷史資料用途判斷。
+
+
+教學採每項操作一張圖、依步驟展開。`screenshot` 測試輔助函式會固定寬度、關閉並還原臨時選單、重置並還原內部捲動、移開滑鼠，再以同源 CSS 排除畫面外的固定導覽。不可為截圖關掉 CSP，也不可直接拍長篇 `#settings-body` 作為班表說明。範本區域使用 `#structure-schedule`；總覽使用 `#line-dashboard`，截圖尺寸上限 1440×1200。圖片與程式一併由 `--screenshots` 更新。

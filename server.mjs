@@ -1,5 +1,9 @@
 import { normalizeSchedules } from './schedule-config.mjs';
-import { scheduleFor, schedulesForLine } from './public/production-schedules.js';
+import {
+  scheduleFor,
+  schedulesForLine,
+  reportSchedule,
+} from './public/production-schedules.js';
 import http from 'node:http';
 import { resolvePage } from './public/pages.js';
 import { issuePresets, validateIssuePresets } from './public/issue-presets.js';
@@ -429,6 +433,27 @@ function validateConfig(data) {
   for (const row of config.rows)
     if (!ids.has(row.id)) next.rows.push({ ...row, active: false, deleted: true });
   next.schedules = normalizeSchedules(data.schedules, config.schedules, fail);
+  const templates = data.scheduleTemplates ?? config.scheduleTemplates ?? [];
+  if (!Array.isArray(templates) || templates.length > 50) fail(400, 'errScheduleTemplates');
+  const templateIds = new Set(),
+    templateNames = new Set();
+  next.scheduleTemplates = templates.map((template) => {
+    const id = string(template?.id, 100),
+      name = string(template?.name, 60);
+    if (
+      !/^[a-zA-Z0-9-]+$/.test(id) ||
+      id === 'default' ||
+      !name ||
+      templateIds.has(id) ||
+      templateNames.has(name.toLocaleLowerCase())
+    )
+      fail(400, 'errScheduleTemplates');
+    templateIds.add(id);
+    templateNames.add(name.toLocaleLowerCase());
+    const previous =
+      config.scheduleTemplates?.find((item) => item.id === id)?.schedules || config.schedules;
+    return { id, name, schedules: normalizeSchedules(template.schedules, previous, fail) };
+  });
   const overrides = data.lineSchedules ?? config.lineSchedules ?? {};
   if (
     !overrides ||
@@ -447,6 +472,13 @@ function validateConfig(data) {
       schedules,
       schedulesForLine(config, line),
       fail,
+      [
+        { input: data.schedules, output: next.schedules },
+        ...templates.map((template, index) => ({
+          input: template.schedules,
+          output: next.scheduleTemplates[index].schedules,
+        })),
+      ],
     );
   }
   if (
@@ -1116,14 +1148,12 @@ const server = http.createServer(async (req, res) => {
         ],
       ];
       for (const row of exportRows) {
-        const r = records.find((r) => r.rowId === row.id) || snapshot.defaults[row.id],
-          actuals = r?.slots.filter((s) => s.actual !== null).map((s) => s.actual) || [],
-          actual = actuals.length ? actuals.reduce((a, b) => a + b, 0) : null;
-        const slots = [...(r?.slots || [])];
-        for (const s of scheduleFor(config, row.line, shift).filter(
-          (s) => s.kind === 'production',
-        ))
-          if (!slots.some((v) => v.id === s.id)) slots.push(s);
+        const r = records.find((r) => r.rowId === row.id) || snapshot.defaults[row.id];
+        const slots = reportSchedule(config, row.line, shift, date, r?.slots || []);
+        const actuals = slots
+          .map((slot) => r?.slots.find((saved) => saved.id === slot.id)?.actual)
+          .filter((value) => value != null);
+        const actual = actuals.length ? actuals.reduce((sum, value) => sum + value, 0) : null;
         for (const slot of slots) {
           const m = r?.slots.find((s) => s.id === slot.id);
           rows.push([
