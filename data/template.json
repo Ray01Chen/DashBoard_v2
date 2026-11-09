@@ -1,0 +1,554 @@
+{
+    "source":  "temp.xlsx",
+    "sheet":  "1104",
+    "plant":  "BP9",
+    "slots":  [
+                  "07:40-08:00",
+                  "08:00-09:00",
+                  "09:00-10:00",
+                  "10:10-11:00",
+                  "11:00-12:00"
+              ],
+    "break":  "10:00-10:10",
+    "rows":  [
+                 {
+                     "id":  3,
+                     "plant":  "BP9",
+                     "line":  "CD303",
+                     "job":  "PD",
+                     "station":  "HI"
+                 },
+                 {
+                     "id":  4,
+                     "plant":  "BP9",
+                     "line":  "CD303",
+                     "job":  "IE",
+                     "station":  "TU"
+                 },
+                 {
+                     "id":  5,
+                     "plant":  "BP9",
+                     "line":  "CD303",
+                     "job":  "ME",
+                     "station":  "CA"
+                 },
+                 {
+                     "id":  6,
+                     "plant":  "BP9",
+                     "line":  "CD303",
+                     "job":  "TE",
+                     "station":  "ATS1"
+                 },
+                 {
+                     "id":  7,
+                     "plant":  "BP9",
+                     "line":  "CD303",
+                     "job":  "AE",
+                     "station":  "BI"
+                 },
+                 {
+                     "id":  8,
+                     "plant":  "BP9",
+                     "line":  "CD303",
+                     "job":  "QA",
+                     "station":  "ATS2"
+                 },
+                 {
+                     "id":  9,
+                     "plant":  "BP9",
+                     "line":  "CD303",
+                     "job":  null,
+                     "station":  "Pack"
+                 },
+                 {
+                     "id":  10,
+                     "plant":  "BP9",
+                     "line":  "CD304",
+                     "job":  "PD",
+                     "station":  "HI"
+                 },
+                 {
+                     "id":  11,
+                     "plant":  "BP9",
+                     "line":  "CD304",
+                     "job":  "IE",
+                     "station":  "TU"
+                 },
+                 {
+                     "id":  12,
+                     "plant":  "BP9",
+                     "line":  "CD304",
+                     "job":  "ME",
+                     "station":  "CA"
+                 },
+                 {
+                     "id":  13,
+                     "plant":  "BP9",
+                     "line":  "CD304",
+                     "job":  "TE",
+                     "station":  "ATS1"
+                 },
+                 {
+                     "id":  14,
+                     "plant":  "BP9",
+                     "line":  "CD304",
+                     "job":  "AE",
+                     "station":  "BI"
+                 },
+                 {
+                     "id":  15,
+                     "plant":  "BP9",
+                     "line":  "CD304",
+                     "job":  "QA",
+                     "station":  "ATS2"
+                 },
+                 {
+                     "id":  16,
+                     "plant":  "BP9",
+                     "line":  "CD304",
+                     "job":  null,
+                     "station":  "Pack"
+                 },
+                 {
+                     "id":  17,
+                     "plant":  "BP9",
+                     "line":  "CD305",
+                     "job":  "PD",
+                     "station":  "HI"
+                 },
+                 {
+                     "id":  18,
+                     "plant":  "BP9",
+                     "line":  "CD305",
+                     "job":  "IE",
+                     "station":  "TU"
+                 },
+                 {
+                     "id":  19,
+                     "plant":  "BP9",
+                     "line":  "CD305",
+                     "job":  "ME",
+                     "station":  "CA"
+                 },
+                 {
+                     "id":  20,
+                     "plant":  "BP9",
+                     "line":  "CD305",
+                     "job":  "TE",
+                     "station":  "ATS1"
+                 },
+                 {
+                     "id":  21,
+                     "plant":  "BP9",
+                     "line":  "CD305",
+                     "job":  "AE",
+                     "station":  "BI"
+                 },
+                 {
+                     "id":  22,
+                     "plant":  "BP9",
+                     "line":  "CD305",
+                     "job":  "QA",
+                     "station":  "ATS2"
+                 },
+                 {
+                     "id":  23,
+                     "plant":  "BP9",
+                     "line":  "CD305",
+                     "job":  null,
+                     "station":  "Pack"
+                 },
+                 {
+                     "id":  24,
+                     "plant":  "BP9",
+                     "line":  "CD306",
+                     "job":  "PD",
+                     "station":  "HI"
+                 },
+                 {
+                     "id":  25,
+                     "plant":  "BP9",
+                     "line":  "CD306",
+                     "job":  "IE",
+                     "station":  "TU"
+                 },
+                 {
+                     "id":  26,
+                     "plant":  "BP9",
+                     "line":  "CD306",
+                     "job":  "ME",
+                     "station":  "CA"
+                 },
+                 {
+                     "id":  27,
+                     "plant":  "BP9",
+                     "line":  "CD306",
+                     "job":  "TE",
+                     "station":  "ATS1"
+                 },
+                 {
+                     "id":  28,
+                     "plant":  "BP9",
+                     "line":  "CD306",
+                     "job":  "AE",
+                     "station":  "BI"
+                 },
+                 {
+                     "id":  29,
+                     "plant":  "BP9",
+                     "line":  "CD306",
+                     "job":  "QA",
+                     "station":  "ATS2"
+                 },
+                 {
+                     "id":  30,
+                     "plant":  "BP9",
+                     "line":  "CD306",
+                     "job":  null,
+                     "station":  "Pack"
+                 },
+                 {
+                     "id":  31,
+                     "plant":  "BP9",
+                     "line":  "CD307",
+                     "job":  "PD",
+                     "station":  "HI"
+                 },
+                 {
+                     "id":  32,
+                     "plant":  "BP9",
+                     "line":  "CD307",
+                     "job":  "IE",
+                     "station":  "TU"
+                 },
+                 {
+                     "id":  33,
+                     "plant":  "BP9",
+                     "line":  "CD307",
+                     "job":  "ME",
+                     "station":  "CA"
+                 },
+                 {
+                     "id":  34,
+                     "plant":  "BP9",
+                     "line":  "CD307",
+                     "job":  "TE",
+                     "station":  "ATS1"
+                 },
+                 {
+                     "id":  35,
+                     "plant":  "BP9",
+                     "line":  "CD307",
+                     "job":  "AE",
+                     "station":  "BI"
+                 },
+                 {
+                     "id":  36,
+                     "plant":  "BP9",
+                     "line":  "CD307",
+                     "job":  "QA",
+                     "station":  "ATS2"
+                 },
+                 {
+                     "id":  37,
+                     "plant":  "BP9",
+                     "line":  "CD307",
+                     "job":  null,
+                     "station":  "Pack"
+                 },
+                 {
+                     "id":  38,
+                     "plant":  "BP9",
+                     "line":  "CDS301",
+                     "job":  "PD",
+                     "station":  "CA"
+                 },
+                 {
+                     "id":  39,
+                     "plant":  "BP9",
+                     "line":  "CDS301",
+                     "job":  "IE",
+                     "station":  "ATS1"
+                 },
+                 {
+                     "id":  40,
+                     "plant":  "BP9",
+                     "line":  "CDS301",
+                     "job":  "ME",
+                     "station":  "ATS2"
+                 },
+                 {
+                     "id":  41,
+                     "plant":  "BP9",
+                     "line":  "CDS301",
+                     "job":  "TE",
+                     "station":  "Pack"
+                 },
+                 {
+                     "id":  42,
+                     "plant":  "BP9",
+                     "line":  "CDS301",
+                     "job":  "AE",
+                     "station":  null
+                 },
+                 {
+                     "id":  43,
+                     "plant":  "BP9",
+                     "line":  "CDS301",
+                     "job":  "QA",
+                     "station":  null
+                 },
+                 {
+                     "id":  44,
+                     "plant":  "BP9",
+                     "line":  "CDS302",
+                     "job":  "PD",
+                     "station":  "CA"
+                 },
+                 {
+                     "id":  45,
+                     "plant":  "BP9",
+                     "line":  "CDS302",
+                     "job":  "IE",
+                     "station":  "ATS1"
+                 },
+                 {
+                     "id":  46,
+                     "plant":  "BP9",
+                     "line":  "CDS302",
+                     "job":  "ME",
+                     "station":  "ATS2"
+                 },
+                 {
+                     "id":  47,
+                     "plant":  "BP9",
+                     "line":  "CDS302",
+                     "job":  "TE",
+                     "station":  "Pack"
+                 },
+                 {
+                     "id":  48,
+                     "plant":  "BP9",
+                     "line":  "CDS302",
+                     "job":  "AE",
+                     "station":  null
+                 },
+                 {
+                     "id":  49,
+                     "plant":  "BP9",
+                     "line":  "CDS302",
+                     "job":  "QA",
+                     "station":  null
+                 },
+                 {
+                     "id":  50,
+                     "plant":  "BP9",
+                     "line":  "CDS303",
+                     "job":  "PD",
+                     "station":  "CA"
+                 },
+                 {
+                     "id":  51,
+                     "plant":  "BP9",
+                     "line":  "CDS303",
+                     "job":  "IE",
+                     "station":  "ATS1"
+                 },
+                 {
+                     "id":  52,
+                     "plant":  "BP9",
+                     "line":  "CDS303",
+                     "job":  "ME",
+                     "station":  "ATS2"
+                 },
+                 {
+                     "id":  53,
+                     "plant":  "BP9",
+                     "line":  "CDS303",
+                     "job":  "TE",
+                     "station":  "Pack"
+                 },
+                 {
+                     "id":  54,
+                     "plant":  "BP9",
+                     "line":  "CDS303",
+                     "job":  "AE",
+                     "station":  null
+                 },
+                 {
+                     "id":  55,
+                     "plant":  "BP9",
+                     "line":  "CDS303",
+                     "job":  "QA",
+                     "station":  null
+                 },
+                 {
+                     "id":  56,
+                     "plant":  "BP9",
+                     "line":  "CDS304",
+                     "job":  "PD",
+                     "station":  "CA"
+                 },
+                 {
+                     "id":  57,
+                     "plant":  "BP9",
+                     "line":  "CDS304",
+                     "job":  "IE",
+                     "station":  "ATS1"
+                 },
+                 {
+                     "id":  58,
+                     "plant":  "BP9",
+                     "line":  "CDS304",
+                     "job":  "ME",
+                     "station":  "ATS2"
+                 },
+                 {
+                     "id":  59,
+                     "plant":  "BP9",
+                     "line":  "CDS304",
+                     "job":  "TE",
+                     "station":  "Pack"
+                 },
+                 {
+                     "id":  60,
+                     "plant":  "BP9",
+                     "line":  "CDS304",
+                     "job":  "AE",
+                     "station":  null
+                 },
+                 {
+                     "id":  61,
+                     "plant":  "BP9",
+                     "line":  "CDS304",
+                     "job":  "QA",
+                     "station":  null
+                 },
+                 {
+                     "id":  62,
+                     "plant":  "BP9",
+                     "line":  "CDS305",
+                     "job":  "PD",
+                     "station":  "CA"
+                 },
+                 {
+                     "id":  63,
+                     "plant":  "BP9",
+                     "line":  "CDS305",
+                     "job":  "IE",
+                     "station":  "ATS1"
+                 },
+                 {
+                     "id":  64,
+                     "plant":  "BP9",
+                     "line":  "CDS305",
+                     "job":  "ME",
+                     "station":  "ATS2"
+                 },
+                 {
+                     "id":  65,
+                     "plant":  "BP9",
+                     "line":  "CDS305",
+                     "job":  "TE",
+                     "station":  "Pack"
+                 },
+                 {
+                     "id":  66,
+                     "plant":  "BP9",
+                     "line":  "CDS305",
+                     "job":  "AE",
+                     "station":  null
+                 },
+                 {
+                     "id":  67,
+                     "plant":  "BP9",
+                     "line":  "CDS305",
+                     "job":  "QA",
+                     "station":  null
+                 },
+                 {
+                     "id":  68,
+                     "plant":  "BP9",
+                     "line":  "CDS306",
+                     "job":  "PD",
+                     "station":  "CA"
+                 },
+                 {
+                     "id":  69,
+                     "plant":  "BP9",
+                     "line":  "CDS306",
+                     "job":  "IE",
+                     "station":  "ATS1"
+                 },
+                 {
+                     "id":  70,
+                     "plant":  "BP9",
+                     "line":  "CDS306",
+                     "job":  "ME",
+                     "station":  "ATS2"
+                 },
+                 {
+                     "id":  71,
+                     "plant":  "BP9",
+                     "line":  "CDS306",
+                     "job":  "TE",
+                     "station":  "Pack"
+                 },
+                 {
+                     "id":  72,
+                     "plant":  "BP9",
+                     "line":  "CDS306",
+                     "job":  "AE",
+                     "station":  null
+                 },
+                 {
+                     "id":  73,
+                     "plant":  "BP9",
+                     "line":  "CDS306",
+                     "job":  "QA",
+                     "station":  null
+                 },
+                 {
+                     "id":  74,
+                     "plant":  "BP9",
+                     "line":  "CDS307",
+                     "job":  "PD",
+                     "station":  "CA"
+                 },
+                 {
+                     "id":  75,
+                     "plant":  "BP9",
+                     "line":  "CDS307",
+                     "job":  "IE",
+                     "station":  "ATS1"
+                 },
+                 {
+                     "id":  76,
+                     "plant":  "BP9",
+                     "line":  "CDS307",
+                     "job":  "ME",
+                     "station":  "ATS2"
+                 },
+                 {
+                     "id":  77,
+                     "plant":  "BP9",
+                     "line":  "CDS307",
+                     "job":  "TE",
+                     "station":  "Pack"
+                 },
+                 {
+                     "id":  78,
+                     "plant":  "BP9",
+                     "line":  "CDS307",
+                     "job":  "AE",
+                     "station":  null
+                 },
+                 {
+                     "id":  79,
+                     "plant":  "BP9",
+                     "line":  "CDS307",
+                     "job":  "QA",
+                     "station":  null
+                 }
+             ]
+}

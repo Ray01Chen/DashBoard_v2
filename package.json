@@ -1,0 +1,9 @@
+{
+  "name": "bp9-production-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BP9 production reporting dashboard based on temp.xlsx",
+  "engines": { "node": ">=24.11.0" },
+  "scripts": { "start": "node server.mjs", "test": "node --test tests/*.test.mjs" }
+}

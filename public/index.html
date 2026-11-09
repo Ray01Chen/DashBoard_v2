@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en" data-theme="delta">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0087dc" />
+    <meta name="description" content="BP PULSE — Production workspace" />
+    <title>BP9 - Production Center</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/entry.css" />
+    <link rel="stylesheet" href="/workflow.css" />
+    <link rel="stylesheet" href="/workforce.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main" data-i18n="skip">跳至主要內容</a>
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-row">
+        <a href="/" class="brand" aria-label="BP PULSE"
+          ><span class="brand-mark">BP</span
+          ><span class="brand-word"
+            >BP PULSE<small data-i18n="brandSub">生產數據工作台</small></span
+          ></a
+        ><button
+          class="icon-button collapse-button"
+          id="collapse-sidebar"
+          aria-expanded="true"
+          aria-controls="sidebar"
+          data-i18n-title="collapse"
+          data-i18n-aria="collapse"
+        >
+          <span data-icon="panel"></span>
+        </button>
+      </div>
+      <div class="workspace">
+        <span class="plant-avatar">BP</span
+        ><span class="workspace-copy"
+          ><strong data-i18n="plantCenter">BP9 生產中心</strong
+          ><small data-i18n="plantOperations">廠區營運</small></span
+        ><span class="online-dot"></span>
+      </div>
+      <p class="nav-caption" data-i18n="workspace">工作空間</p>
+      <nav data-i18n-aria="workspace">
+        <a href="/overview" class="nav-item active" data-view="overview" data-i18n-title="overview">
+          <span data-icon="grid"></span><span class="nav-label" data-i18n="overview">生產總覽</span>
+        </a>
+        <a href="/details" class="nav-item" data-view="details" data-i18n-title="details">
+          <span data-icon="clipboard"></span><span class="nav-label" data-i18n="details"></span>
+        </a>
+        <a href="/entry" class="nav-item" data-view="entry" data-i18n-title="entry">
+          <span data-icon="edit"></span><span class="nav-label" data-i18n="entry"></span>
+        </a>
+        <a href="/guide" class="nav-item" data-view="help" data-i18n-title="help">
+          <span data-icon="info"></span><span class="nav-label" data-i18n="help"></span>
+        </a>
+        <div class="nav-divider" data-admin-only></div>
+        <a
+          href="/settings/master-data"
+          class="nav-item"
+          data-view="settings"
+          data-admin-only
+          data-i18n-title="settings"
+        >
+          <span data-icon="settings"></span
+          ><span class="nav-label" data-i18n="settings">系統設定</span>
+        </a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="template-note" data-admin-only>
+          <span data-icon="sliders"></span
+          ><strong data-i18n="setupTitle">將報表變成你的工作方式</strong>
+          <p data-i18n="setupDesc">在設定中管理產線、時間與外觀。</p>
+          <a href="/settings/master-data" id="open-settings"
+            ><span data-i18n="openSettings">前往系統設定</span> ↗</a
+          >
+        </div>
+        <div class="sidebar-footer">
+          <span class="online-dot"></span><span>BP PULSE</span><span>v2.0</span>
+        </div>
+      </div>
+    </aside>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="breadcrumb">
+          <span data-i18n="workspace">工作空間</span><span>/</span><strong id="breadcrumb"></strong>
+        </div>
+        <div class="topbar-right">
+          <span class="status" id="connection"><i></i><span data-i18n="syncing"></span></span
+          ><label class="header-select"
+            ><span data-icon="globe"></span
+            ><select id="language-select" data-i18n-aria="language">
+              <option value="zh">Chinese</option>
+              <option value="en">English</option>
+              <option value="th">Thai</option>
+            </select></label
+          ><label class="header-select theme-select"
+            ><span data-icon="palette"></span
+            ><select id="theme-select" data-i18n-aria="theme"></select></label
+          ><span class="current-user" id="current-user"></span><span class="user-avatar">BP</span
+          ><button
+            class="icon-button logout-button"
+            id="logout"
+            data-i18n-title="logout"
+            data-i18n-aria="logout"
+            hidden
+          >
+            <span data-icon="logout"></span>
+          </button>
+        </div>
+      </header>
+      <main id="main" tabindex="-1">
+        <div id="error-banner" class="error-banner" role="alert" hidden></div>
+        <section class="page-heading">
+          <div>
+            <div class="eyebrow">
+              <span></span><span data-i18n="intelligence">生產數據洞察</span>
+            </div>
+            <h1 id="page-title"></h1>
+            <p id="page-description"></p>
+          </div>
+        </section>
+        <div id="report-content">
+          <section class="filter-bar" data-i18n-aria="reportDate">
+            <div class="filter-group">
+              <label class="filter-label" for="report-date" data-i18n="reportDate"></label
+              ><label class="date-control"
+                ><span data-icon="calendar"></span
+                ><input id="report-date" type="date" data-i18n-aria="reportDate" /></label
+              ><button class="button today-button" id="today" data-i18n="today"></button
+              ><span class="filter-separator"></span>
+              <div class="segmented">
+                <button data-shift="day" class="selected" aria-pressed="true">
+                  <span data-icon="sun"></span><span data-i18n="day"></span></button
+                ><button data-shift="night" aria-pressed="false">
+                  <span data-icon="moon"></span><span data-i18n="night"></span>
+                </button>
+              </div>
+            </div>
+            <button class="button export-button" id="export" disabled>
+              <span data-icon="download"></span><span data-i18n="export"></span>
+            </button>
+          </section>
+          <section id="line-dashboard" hidden>
+            <div class="board-header">
+              <div>
+                <span class="section-eyebrow">BP9 / LIVE PRODUCTION</span
+                ><strong id="board-context"></strong>
+              </div>
+              <div class="board-actions">
+                <details class="board-display-options">
+                  <summary data-i18n="displayOptions"></summary>
+                  <div>
+                    <label
+                      ><input type="checkbox" id="board-show-trend" /><span
+                        data-i18n="groupTrend"
+                      ></span></label
+                    ><label
+                      ><input type="checkbox" id="board-show-share" /><span
+                        data-i18n="outputShare"
+                      ></span
+                    ></label>
+                  </div>
+                </details>
+                <button class="button" id="exit-fullscreen">
+                  <span data-icon="close"></span><span data-i18n="exitFullscreen"></span>
+                </button>
+              </div>
+            </div>
+            <div class="line-dashboard-heading">
+              <div>
+                <h2 data-i18n="lineOverview"></h2>
+                <p data-i18n="lineOverviewDesc"></p>
+              </div>
+              <div class="dashboard-actions">
+                <button class="button" id="enter-fullscreen">
+                  <span data-icon="fullscreen"></span><span data-i18n="fullscreen"></span>
+                </button>
+              </div>
+            </div>
+            <div class="group-tabs" id="group-tabs" role="tablist" data-i18n-aria="group"></div>
+            <div id="group-summary" class="group-summary"></div>
+            <div class="dashboard-top-charts">
+              <section class="panel group-trend-panel">
+                <div class="panel-heading">
+                  <div>
+                    <h2 data-i18n="groupTrend"></h2>
+                    <p data-i18n="groupTrendDesc"></p>
+                  </div>
+                </div>
+                <div id="group-trend" class="group-trend"></div>
+              </section>
+              <section class="panel share-panel">
+                <div class="panel-heading"><h2 data-i18n="outputShare"></h2></div>
+                <div id="output-share"></div>
+              </section>
+            </div>
+            <div class="monitor-summary">
+              <span class="live-tag"><i></i><span data-i18n="live"></span></span
+              ><span id="alert-summary"></span
+              ><span id="refresh-interval" class="refresh-interval"></span
+              ><button class="button" id="refresh-now">
+                <span data-icon="refresh"></span><span data-i18n="refreshNow"></span>
+              </button>
+            </div>
+            <div class="line-cards" id="line-cards"></div>
+            <div class="board-pagination" id="board-pagination"></div>
+            <p class="monitor-hint" data-i18n="monitorHint"></p>
+          </section>
+          <section class="detail-filters panel" id="detail-filters" hidden>
+            <label for="detail-group" data-i18n="group"></label
+            ><select id="detail-group"></select
+            ><label for="detail-line" data-i18n="line"></label
+            ><select id="detail-line"></select>
+          </section>
+          <div class="detail-heading" id="detail-heading" hidden>
+            <button class="button" id="back-overview">
+              <span data-icon="left"></span><span data-i18n="backOverview"></span>
+            </button>
+            <div>
+              <h2 id="detail-line-title"></h2>
+              <p data-i18n="detailHint"></p>
+            </div>
+          </div>
+          <div id="overview-panels" class="overview-panels">
+            <section class="panel trend-panel">
+              <div class="panel-heading">
+                <div>
+                  <h2 data-i18n="hourlyTrend"></h2>
+                  <p data-i18n="hourlyDesc"></p>
+                </div>
+                <div class="legend">
+                  <span><i class="target-legend"></i><span data-i18n="target"></span></span
+                  ><span><i class="actual-legend"></i><span data-i18n="actual"></span></span>
+                </div>
+              </div>
+              <div class="chart-line-filter">
+                <label for="chart-line" data-i18n="chartLine"></label
+                ><select id="chart-line"></select
+                ><span class="point-key met-point"></span><span data-i18n="onTarget"></span
+                ><span class="point-key missed-point"></span><span data-i18n="belowTarget"></span>
+              </div>
+              <div id="chart" class="chart"></div>
+              <div class="table-scroll interval-details">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-i18n="timeSlot"></th>
+                      <th data-i18n="target"></th>
+                      <th data-i18n="actual"></th>
+                      <th data-i18n="gap"></th>
+                      <th data-i18n="status"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="interval-details"></tbody>
+                </table>
+              </div>
+              <div class="chart-bottom">
+                <span data-icon="clock"></span><span id="break-summary"></span>
+              </div>
+            </section>
+          </div>
+          <section class="panel records-panel">
+            <div class="panel-heading records-heading">
+              <div>
+                <div class="section-eyebrow" data-i18n="shopFloor"></div>
+                <h2>
+                  <span id="table-heading"></span><span class="count-badge" id="row-count">0</span>
+                </h2>
+                <p id="table-description"></p>
+              </div>
+              <div class="record-toolbar-actions">
+                <button
+                  class="button"
+                  data-open-settings="structure"
+                  data-settings-anchor="structure-schedule"
+                  data-admin-only
+                >
+                  <span data-icon="clock"></span><span data-i18n="timeSettings"></span></button
+                ><button class="button" id="refresh">
+                  <span data-icon="refresh"></span><span data-i18n="refresh"></span>
+                </button>
+              </div>
+            </div>
+            <div class="table-tools">
+              <div class="line-filter">
+                <label for="line-select" data-i18n="line"></label
+                ><select id="line-select"></select
+                ><span class="line-total" id="line-total"></span>
+              </div>
+              <div class="table-tools-right">
+                <label class="search-control"
+                  ><span data-icon="search"></span
+                  ><input id="search" data-i18n-placeholder="search" data-i18n-aria="search" /><kbd
+                    >/</kbd
+                  ></label
+                ><select id="status-select" data-i18n-aria="status">
+                  <option value="all" data-i18n="allStatus"></option>
+                  <option value="filled" data-i18n="filled"></option>
+                  <option value="pending" data-i18n="pending"></option>
+                  <option value="issue" data-i18n="hasIssue"></option>
+                </select>
+              </div>
+            </div>
+            <div class="slot-tabs" id="slot-tabs" role="tablist" data-i18n-aria="timeSlot"></div>
+            <div class="table-scroll">
+              <table id="production-table">
+                <colgroup>
+                  <col class="col-entry" />
+                  <col class="col-station" />
+                  <col class="col-job" />
+                  <col class="col-team" />
+                  <col class="col-number" />
+                  <col class="col-number" />
+                  <col class="col-number" />
+                  <col class="col-issue" />
+                  <col class="col-status" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th data-i18n="actions"></th>
+                    <th data-i18n="lineStation"></th>
+                    <th data-i18n="job"></th>
+                    <th data-i18n="assignedStaff"></th>
+                    <th class="number" data-i18n="target"></th>
+                    <th class="number" data-i18n="actual"></th>
+                    <th class="number" data-i18n="gap"></th>
+                    <th data-i18n="issueOwner"></th>
+                    <th data-i18n="status"></th>
+                  </tr>
+                </thead>
+                <tbody id="records-body"></tbody>
+              </table>
+            </div>
+            <div class="table-footer">
+              <span id="table-summary"></span>
+              <div class="pagination">
+                <button class="icon-button" id="previous-page" data-i18n-aria="previous">
+                  <span data-icon="left"></span></button
+                ><span id="page-indicator">1 / 1</span
+                ><button class="icon-button" id="next-page" data-i18n-aria="next">
+                  <span data-icon="right"></span>
+                </button>
+              </div>
+            </div>
+          </section>
+          <section id="entry-content" hidden></section>
+        </div>
+        <section id="help-content" hidden></section>
+        <section id="settings-content" hidden>
+          <div class="settings-notice">
+            <span data-icon="info"></span><span data-i18n="settingsShared"></span>
+          </div>
+          <div id="setup-progress" class="setup-progress"></div>
+          <div class="settings-tabs" role="tablist" data-i18n-aria="settings">
+            <a
+              href="/settings/master-data"
+              role="tab"
+              data-settings-tab="structure"
+              aria-selected="true"
+            ></a>
+            <a
+              href="/settings/daily-targets"
+              role="tab"
+              data-settings-tab="targets"
+              aria-selected="false"
+            ></a>
+            <a
+              href="/settings/people"
+              role="tab"
+              data-settings-tab="personnel"
+              aria-selected="false"
+            ></a>
+            <a
+              href="/settings/assignments"
+              role="tab"
+              data-settings-tab="staffing"
+              aria-selected="false"
+            ></a>
+            <a
+              href="/settings/line-configuration"
+              role="tab"
+              data-settings-tab="workforce"
+              aria-selected="false"
+            ></a>
+            <a
+              href="/settings/groups"
+              role="tab"
+              data-settings-tab="groups"
+              aria-selected="false"
+            ></a>
+            <a
+              href="/settings/alerts"
+              role="tab"
+              data-settings-tab="alerts"
+              aria-selected="false"
+            ></a>
+            <a
+              href="/settings/appearance"
+              role="tab"
+              data-settings-tab="appearance"
+              aria-selected="false"
+            ></a>
+          </div>
+          <div id="settings-error" class="error-banner" role="alert" hidden></div>
+          <div class="settings-local-save">
+            <p id="settings-draft-note" role="status"></p>
+            <button
+              type="button"
+              class="button"
+              id="reload-settings"
+              data-i18n="loadSavedSettings"
+            ></button>
+            <button type="button" class="button primary" data-save-settings>
+              <span data-icon="check"></span><span data-i18n="saveSettings"></span>
+            </button>
+          </div>
+          <div id="settings-body" role="tabpanel"></div>
+          <div class="setup-footer">
+            <div>
+              <strong data-i18n="saveSettings"></strong
+              ><span id="settings-save-status" role="status"></span>
+              <span id="setup-next-reason" role="status"></span>
+            </div>
+            <div class="setup-footer-actions">
+              <button
+                type="button"
+                class="button"
+                data-save-draft
+                data-i18n="saveSettingsDraft"
+              ></button>
+              <button
+                type="button"
+                class="button"
+                id="setup-next"
+                aria-describedby="setup-next-reason"
+              ></button>
+              <button type="button" class="button primary" id="save-settings" data-save-settings>
+                <span data-icon="check"></span><span data-i18n="saveSettings">儲存設定</span>
+              </button>
+            </div>
+          </div>
+        </section>
+        <footer class="page-footer">
+          <span><span class="footer-logo">BP PULSE</span><span data-i18n="footer"></span></span
+          ><span id="last-updated"></span>
+        </footer>
+      </main>
+    </div>
+    <dialog id="line-detail-dialog" class="line-detail-dialog" aria-labelledby="line-modal-title">
+      <div id="line-detail-content"></div>
+    </dialog>
+    <dialog
+      id="confirm-dialog"
+      class="confirm-dialog"
+      aria-labelledby="confirm-title"
+      aria-describedby="confirm-description"
+    >
+      <span class="confirm-symbol" data-icon="alert"></span>
+      <h2 id="confirm-title"></h2>
+      <p id="confirm-description"></p>
+      <div>
+        <button class="button" id="confirm-no"></button
+        ><button class="button primary" id="confirm-yes"></button>
+      </div>
+    </dialog>
+    <dialog id="login-dialog" class="login-dialog" aria-labelledby="login-title">
+      <div class="login-brand">
+        <span class="brand-mark">BP</span><strong>BP PULSE</strong
+        ><select id="login-language" aria-label="Language">
+          <option value="zh">Chinese</option>
+          <option value="en">English</option>
+          <option value="th">Thai</option>
+        </select>
+      </div>
+      <div class="section-eyebrow">BP9</div>
+      <h1 id="login-title" data-i18n="loginTitle"></h1>
+      <p class="login-description" data-i18n="loginDesc"></p>
+      <form id="login-form" novalidate>
+        <div id="login-error" class="error-banner" role="alert" hidden></div>
+        <label
+          ><span data-i18n="username"></span
+          ><input
+            id="login-username"
+            name="username"
+            autocomplete="username"
+            maxlength="100"
+            required /></label
+        ><label
+          ><span data-i18n="password"></span
+          ><input
+            id="login-password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            maxlength="200"
+            required /></label
+        ><button
+          class="button primary"
+          id="login-submit"
+          type="submit"
+          data-i18n="loginSubmit"
+        ></button>
+      </form>
+      <p class="login-foot" data-i18n="loginFoot"></p>
+    </dialog>
+    <div id="trend-tooltip" class="trend-tooltip" role="tooltip" hidden></div>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>
