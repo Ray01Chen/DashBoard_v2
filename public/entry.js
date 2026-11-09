@@ -127,6 +127,7 @@ const messages = {
     sheetMode: 'Single-interval spreadsheet',
     interval: 'Time slot',
     noSlot: 'No production interval is configured.',
+    noCurrentSlot: 'The selected production date has no active interval at the current Bangkok time.',
     discard: 'Discard my unsaved changes',
     dayMode: 'Whole-day spreadsheet',
     total: 'Total',
@@ -239,6 +240,7 @@ const messages = {
     sheetMode: '單時段試算表',
     interval: '生產時段',
     noSlot: '尚未設定生產時段。',
+    noCurrentSlot: '所選生產日期在目前曼谷時間沒有進行中的生產時段。',
     discard: '捨棄我的未儲存修改',
     dayMode: '整日雙班試算表',
     total: '合計',
@@ -356,6 +358,7 @@ const messages = {
     sheetMode: 'ตารางช่วงเวลาเดียว',
     interval: 'ช่วงเวลา',
     noSlot: 'ยังไม่ได้กำหนดช่วงเวลาการผลิต',
+    noCurrentSlot: 'วันที่ผลิตที่เลือกไม่มีช่วงการผลิตที่กำลังทำงานตามเวลาปัจจุบันของกรุงเทพฯ',
     discard: 'ยกเลิกการแก้ไขที่ยังไม่บันทึก',
     dayMode: 'ตารางทั้งสองกะตลอดวัน',
     total: 'รวม',
@@ -1119,10 +1122,10 @@ export function createEntryController({
       <div class="entry-issue-presets" aria-label="${esc(text('quickReasons'))}">${issuePresets(
         getContext().config,
       )
-        .filter((item) => item.active && item.confirmed)
+        .filter((item) => item.active)
         .map(
           (item) =>
-            `<button type="button" class="button" data-entry-action="issue-preset" data-issue-preset="${esc(item.id)}">${esc(issueLabel(item, language()))}</button>`,
+            `<button type="button" class="button" data-entry-action="issue-preset" data-issue-preset="${esc(item.id)}">${esc(issueLabel(item))}</button>`,
         )
         .join('')}</div>
       <label class="entry-issue-field"><span>${esc(text('issueDetails'))}</span><textarea rows="4" maxlength="2000" data-entry-field="issue" data-row-key="${esc(key)}" data-slot-id="${esc(slot.id)}" aria-describedby="entry-issue-help">${esc(slot.issue || '')}</textarea></label>
@@ -1584,7 +1587,7 @@ export function createEntryController({
     bulkDialog.innerHTML = `<div class="entry-issue-heading"><h2 id="entry-bulk-title">${esc(text('bulkTitle'))}</h2><button type="button" class="icon-button" data-entry-action="bulk-close" aria-label="${esc(text('close'))}">×</button></div>
       <div class="entry-bulk-selectors"><label>${esc(text('productionDate'))}<input type="date" data-bulk-date value="${esc(context.date)}"></label><label>${esc(text('line'))}<select data-bulk-line>${lines.map((value) => `<option value="${esc(value)}">${esc(value)}</option>`).join('')}</select></label><label>${esc(text('bulkProduct'))}<select data-bulk-model></select></label><label>${esc(text('interval'))}<select data-bulk-slot></select></label></div>
       <div class="entry-bulk-values">${bulkFields.map((field) => `<div><label>${esc(text(field))}<input type="text" ${field === 'issue' ? '' : 'inputmode="numeric"'} maxlength="${field === 'issue' ? 2000 : 12}" autocomplete="off" data-bulk-field="${field}" aria-label="${esc(text(field))}"></label><button type="button" class="button" data-entry-action="bulk-apply" data-bulk-apply-field="${field}">${esc(text(field === 'target' ? 'bulkApplyTarget' : field === 'actual' ? 'bulkApplyActual' : 'bulkApplyIssue'))}</button></div>`).join('')}</div>
-      <div class="entry-bulk-quick-text">${issuePresets(context.config).filter((item) => item.active && item.confirmed).map((item) => `<button type="button" class="button" data-entry-action="bulk-issue-preset" data-issue-preset="${esc(item.id)}">${esc(issueLabel(item, language()))}</button>`).join('')}</div>
+      <div class="entry-bulk-quick-text">${issuePresets(context.config).filter((item) => item.active).map((item) => `<button type="button" class="button" data-entry-action="bulk-issue-preset" data-issue-preset="${esc(item.id)}">${esc(issueLabel(item))}</button>`).join('')}</div>
       <div class="entry-bulk-preview" data-bulk-preview></div><p class="entry-error" data-bulk-error role="alert"></p><div class="entry-bulk-actions"><span data-bulk-status role="status"></span><div><button type="button" class="button" data-entry-action="bulk-refresh" hidden>${esc(text('bulkRefresh'))}</button><button type="button" class="button primary" data-entry-action="bulk-save">${esc(text('saveNow'))}</button></div></div>`;
     bulkScopeControls();
     bulkDialog.showModal();
@@ -1628,12 +1631,12 @@ export function createEntryController({
     if (action === 'clear-issue') input.value = '';
     else {
       const item = issuePresets(getContext().config).find(
-        (item) => item.id === preset && item.active && item.confirmed,
+        (item) => item.id === preset && item.active,
       );
       if (!item) return;
       const prefix =
         input.selectionStart && !/\s$/.test(input.value.slice(0, input.selectionStart)) ? '\n' : '';
-      const insertion = prefix + issueLabel(item, language()) + ': ';
+      const insertion = prefix + issueLabel(item) + ': ';
       if (
         input.value.length - (input.selectionEnd - input.selectionStart) + insertion.length >
         2000
@@ -1697,11 +1700,11 @@ export function createEntryController({
         if (!contexts[shift])
           return `<span role="status">${esc(text(shift))} · ${esc(text('loading'))}</span>`;
         if (mode !== 'sheet')
-          return `<button class="button ${selectedShift === shift ? 'selected' : ''}" data-entry-select-shift="${shift}">${esc(text(shift))}</button>`;
+          return `<button type="button" class="button ${mode === 'shift' && selectedShift === shift ? 'selected' : ''}" data-entry-select-shift="${shift}">${esc(text(shift))}</button>`;
         return intervalsFor(contexts[shift], rowsFor(contexts[shift]))
           .map(
             (slot) =>
-              `<button class="button ${selectedShift === shift && selectedSlot === slot.id ? 'selected' : ''}" data-entry-shift-slot="${esc(slot.id)}" data-slot-shift="${shift}">${esc(text(shift))} · ${esc(slot.start)}–${esc(slot.end)}</button>`,
+              `<button type="button" class="button ${selectedShift === shift && selectedSlot === slot.id ? 'selected' : ''}" data-entry-shift-slot="${esc(slot.id)}" data-slot-shift="${shift}">${esc(text(shift))} · ${esc(slot.start)}–${esc(slot.end)}</button>`,
           )
           .join('');
       })
@@ -2450,6 +2453,7 @@ export function createEntryController({
     if (slotButton) {
       selectedShift = slotButton.dataset.slotShift || slotButton.dataset.entrySelectShift;
       selectedSlot = slotButton.dataset.entryShiftSlot || '';
+      if (slotButton.dataset.entrySelectShift && mode === 'day') mode = 'shift';
       void queue.flush();
       render();
       return;
@@ -2466,10 +2470,10 @@ export function createEntryController({
     if (action === 'bulk-issue-preset') {
       if (!bulkEditor || bulkEditor.busy || bulkEditor.loading) return;
       const preset = issuePresets(getContext().config).find((item) =>
-        item.id === button.dataset.issuePreset && item.active && item.confirmed);
+        item.id === button.dataset.issuePreset && item.active);
       if (preset) {
         const input = bulkDialog.querySelector('[data-bulk-field="issue"]');
-        input.value = issueLabel(preset, language());
+        input.value = issueLabel(preset);
         updateBulkControls();
         input.focus();
       }
@@ -2491,10 +2495,11 @@ export function createEntryController({
     }
     if (action === 'current-slot') {
       const current = currentEntrySlot(getContext());
-      if (!current) return;
+      if (!current) return setBanner(text('noCurrentSlot'));
       selectedShift = current.shift;
       selectedSlot = current.id;
-      if (mode !== 'day') render();
+      mode = 'sheet';
+      render();
       const input = [...mount.querySelectorAll('[data-entry-field="actual"]')].find(
         (cell) =>
           cell.dataset.slotId === current.id &&

@@ -557,8 +557,23 @@ try {
   await screenshot('.settings-tabs', 'setup-order');
   await page.locator('[data-settings-tab="structure"]').click();
   await screenshot('.model-assignment-panel', 'models-and-lines');
+  assert.equal(await page.locator('.issue-preset-settings').count(), 1);
+  await screenshot('.issue-preset-settings', 'issue-quick-text');
+  await page.locator('[data-issue-action="add"]').click();
+  assert.equal(await page.locator('[data-save-settings]').first().isDisabled(), true);
+  await page.locator('[data-issue-label]').last().fill('Safety stop');
+  assert.equal(await page.locator('[data-save-settings]').first().isDisabled(), false);
+  await saveSettings();
+  await page.locator('[data-settings-tab="alerts"]').click();
+  assert.equal(await page.locator('.issue-preset-settings').count(), 0);
+  await page.locator('[data-settings-tab="structure"]').click();
+  assert.ok(
+    await page.locator('[data-issue-label]').evaluateAll((inputs) =>
+      inputs.some((input) => input.value === 'Safety stop'),
+    ),
+  );
   record(
-    'People-by-job linkage, same-job multi-person teams and role-specific setup remain available',
+    'People-by-job linkage, same-job teams and the English issue list in Master data remain available',
   );
   await page.locator('[data-view="overview"]').click();
   await page.locator('[data-shift="day"]').click();
@@ -597,6 +612,7 @@ try {
   await issueButton(pack.id).click();
   assert.match(await page.locator('.entry-issue-context').innerText(), /PD \/ Pack/);
   assert.match(await page.locator('.entry-issue-context').innerText(), /Day shift.*08:00–08:20/);
+  assert.ok((await page.locator('[data-issue-preset]').allTextContents()).includes('Safety stop'));
   await page.keyboard.press('Escape');
   assert.equal(
     (await readReport(reportDate)).records.length,
@@ -748,8 +764,16 @@ try {
   await saved();
   report = await readReport(reportDate);
   assert.deepEqual(
+    report.records.find((row) => row.rowId === pack.id).slots.map((slot) => slot.target),
+    [121, 122],
+  );
+  assert.deepEqual(
     report.records.find((row) => row.rowId === pack.id).slots.map((slot) => slot.actual),
     [21, 22],
+  );
+  assert.deepEqual(
+    report.records.find((row) => row.rowId === test.id).slots.map((slot) => slot.target),
+    [131, 132],
   );
   assert.deepEqual(
     report.records.find((row) => row.rowId === test.id).slots.map((slot) => slot.actual),
@@ -762,7 +786,7 @@ try {
     String(test.id),
   );
   record(
-    'Excel-style paste and keyboard navigation work across station rows without synchronizing them',
+    'Main-grid paired paste maps odd rows to Target and even rows to Actual across stations; keyboard navigation remains independent',
   );
   for (const [mode, count] of [
     ['sheet', 2],
@@ -774,6 +798,50 @@ try {
     assert.equal(await page.locator('[data-entry-field="target"]').count(), count);
     assert.equal(await page.locator('[data-issue-cell]').count(), count);
   }
+  await page.locator('[data-entry-select-shift="night"]').click();
+  assert.equal(await page.locator('[data-entry-mode]').inputValue(), 'shift');
+  assert.ok(
+    await page.locator('[data-entry-select-shift="night"]').evaluate((button) =>
+      button.classList.contains('selected'),
+    ),
+  );
+  assert.ok(
+    await page.locator('[data-entry-field="actual"]').evaluateAll((inputs) =>
+      inputs.every((input) => input.dataset.rowKey.includes('|night|')),
+    ),
+  );
+  await page.locator('[data-entry-select-shift="day"]').click();
+  assert.ok(
+    await page.locator('[data-entry-field="actual"]').evaluateAll((inputs) =>
+      inputs.every((input) => input.dataset.rowKey.includes('|day|')),
+    ),
+  );
+  await page.evaluate(() => {
+    window.__bpNativeDate = Date;
+    const NativeDate = Date;
+    const fixed = '2026-11-10T01:10:00.000Z';
+    window.Date = class extends NativeDate {
+      constructor(...args) {
+        super(...(args.length ? args : [fixed]));
+      }
+      static now() {
+        return new NativeDate(fixed).valueOf();
+      }
+    };
+  });
+  await page.locator('[data-entry-action="current-slot"]').click();
+  assert.equal(await page.locator('[data-entry-mode]').inputValue(), 'sheet');
+  assert.match(
+    await page.locator('[data-entry-shift-slot].selected').innerText(),
+    /Day shift.*08:00–08:20/,
+  );
+  assert.equal(await page.locator('[data-entry-field="actual"]').count(), 2);
+  await page.evaluate(() => {
+    window.Date = window.__bpNativeDate;
+    delete window.__bpNativeDate;
+  });
+  await page.locator('[data-entry-mode]').selectOption('day');
+  record('Day, night and current-interval controls switch to the requested production scope');
   await page.locator('[data-entry-model-filter]').selectOption(otherModel);
   assert.equal(await page.locator('[data-entry-station-row]').count(), 1);
   assert.equal(await page.locator('[data-entry-field="actual"]').first().inputValue(), '');

@@ -288,6 +288,42 @@ test('Excel paste preflights the full rectangle, preserves blanks and zero, and 
   assert.equal(planEntryPaste('1\t2\n3\t4', grid, 0, 0).valid, false);
 });
 
+test('main entry paired paste maps odd rows to Target and even rows to Actual', () => {
+  const paired = Object.fromEntries(
+    ['target', 'actual'].map((field) => [
+      field,
+      [0, 1].map((row) =>
+        [0, 1].map((column) => ({
+          rowKey: `row-${row}`,
+          slotId: `slot-${column}`,
+          field,
+        })),
+      ),
+    ]),
+  );
+  const plan = planEntryPaste(
+    '10\t11\n20\t21\n30\t31\n40\t41',
+    paired.actual,
+    0,
+    0,
+    paired,
+  );
+  assert.equal(plan.valid, true);
+  assert.deepEqual(
+    plan.edits.map(({ rowKey, slotId, field, value }) => [rowKey, slotId, field, value]),
+    [
+      ['row-0', 'slot-0', 'target', 10],
+      ['row-0', 'slot-1', 'target', 11],
+      ['row-0', 'slot-0', 'actual', 20],
+      ['row-0', 'slot-1', 'actual', 21],
+      ['row-1', 'slot-0', 'target', 30],
+      ['row-1', 'slot-1', 'target', 31],
+      ['row-1', 'slot-0', 'actual', 40],
+      ['row-1', 'slot-1', 'actual', 41],
+    ],
+  );
+});
+
 test('spreadsheet keyboard navigation skips unavailable cells and exits at Tab boundaries', () => {
   const cell = { disabled: false };
   const grid = [

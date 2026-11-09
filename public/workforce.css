@@ -494,21 +494,20 @@
   margin-top: 20px;
 }
 .issue-preset-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 16px;
   padding: 16px 22px;
   border-top: 1px solid var(--line);
 }
-.issue-preset-languages {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-.issue-preset-languages label {
+.issue-preset-label {
   display: grid;
   gap: 6px;
   min-width: 0;
   font-size: 12px;
 }
-.issue-preset-languages input {
+.issue-preset-label input {
   width: 100%;
   min-width: 0;
   padding: 9px;
@@ -522,7 +521,6 @@
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
-  margin-top: 12px;
   font-size: 12px;
 }
 .issue-preset-actions label {
@@ -530,22 +528,8 @@
   align-items: center;
   gap: 6px;
 }
-.issue-preset-preview {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.issue-preset-preview span {
-  padding: 5px 8px;
-  background: var(--tint);
-  border-radius: 4px;
-  overflow-wrap: anywhere;
-}
 @media (max-width: 700px) {
-  .issue-preset-languages {
+  .issue-preset-row {
     grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { resolvePage } from './public/pages.js';
-import { validateIssuePresets } from './public/issue-presets.js';
+import { issuePresets, validateIssuePresets } from './public/issue-presets.js';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -335,6 +335,7 @@ function json(res, status, data) {
 function publicConfig(role = 'admin') {
   const result = {
     ...config,
+    issuePresets: issuePresets(config),
     slots: config.schedules.day
       .filter((s) => s.kind === 'production')
       .map((s) => `${s.start}-${s.end}`),
@@ -811,6 +812,7 @@ const files = {
     [
       'setup-order',
       'models-and-lines',
+      'issue-quick-text',
       'line-people',
       'people-by-job',
       'line-configuration',

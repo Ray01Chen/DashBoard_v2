@@ -3,8 +3,7 @@ import { pagePath, resolvePage } from './pages.js';
 import {
   issuePresets,
   issueSettingsMarkup,
-  issuePresetMessages,
-  suggestIssueTranslations,
+  validateIssuePresets,
 } from './issue-presets.js';
 import {
   productionUnits,
@@ -777,16 +776,19 @@ $('#confirm-dialog').addEventListener('cancel', (e) => {
   finishConfirm(false);
 });
 function updateSettingsSaveState() {
+  const issueListValid = !state.draft || validateIssuePresets(issuePresets(state.draft));
   const status = settingsSaving
     ? 'saving'
-    : localSettingsDraftSaved() && settingsDirty()
-      ? 'settingsDraftSaved'
-      : settingsDirty()
-        ? 'settingsUnsaved'
-        : 'settingsUpToDate';
+    : !issueListValid
+      ? 'errIssuePresets'
+      : localSettingsDraftSaved() && settingsDirty()
+        ? 'settingsDraftSaved'
+        : settingsDirty()
+          ? 'settingsUnsaved'
+          : 'settingsUpToDate';
   $('#settings-save-status').textContent = t(status);
   for (const button of $$('[data-save-settings]')) {
-    button.disabled = settingsSaving;
+    button.disabled = settingsSaving || !issueListValid;
     button.innerHTML = icon('check') + esc(t(settingsSaving ? 'saving' : 'saveSettings'));
   }
   for (const button of $$('[data-save-draft]')) button.disabled = settingsSaving;
@@ -990,7 +992,7 @@ function renderSettings() {
   });
   const context = { draft: state.draft, t, esc, icon, language: state.language };
   const markup = {
-    structure: () => structureMarkup() + scheduleMarkup(),
+    structure: () => structureMarkup() + issueSettingsMarkup(context) + scheduleMarkup(),
     personnel: () => workforceSettingsMarkup({ ...context, selectedJob: state.personJob }),
     staffing: () =>
       lineStaffingMarkup({
@@ -1008,7 +1010,7 @@ function renderSettings() {
       }),
     targets: () => targetsSettingsMarkup({ ...context, selectedLine: state.targetLine }),
     groups: () => groupSettings(context),
-    alerts: () => alertSettings(context) + issueSettingsMarkup(context),
+    alerts: () => alertSettings(context),
     appearance: () => appearanceMarkup(),
   };
   $('#settings-body').innerHTML = markup[state.settingsTab]();
@@ -1135,16 +1137,10 @@ $('#settings-body').addEventListener('input', (event) => {
   if (settingsSaving || !canManage() || !state.draft) return;
   // Capture text/target edits immediately so leaving or saving while focused is safe.
   const data = event.target.dataset;
-  if (data.issueLanguage) {
-    state.draft.issuePresets ||= structuredClone(issuePresets(state.draft));
+  if (data.issueLabel !== undefined) {
+    state.draft.issuePresets = structuredClone(issuePresets(state.draft));
     const item = state.draft.issuePresets[Number(data.issueIndex)];
-    item.labels[data.issueLanguage] = event.target.value;
-    item.confirmed = false;
-    event.target.closest('.issue-preset-row').dataset.sourceLanguage = data.issueLanguage;
-    $(`[data-issue-confirmed="${data.issueIndex}"]`).checked = false;
-    $(`[data-issue-preview="${data.issueIndex}"]`).innerHTML = Object.values(item.labels)
-      .map((label) => `<span>${esc(label)}</span>`)
-      .join('');
+    item.label = event.target.value;
     updateSettingsSaveState();
     return;
   }
@@ -1158,11 +1154,9 @@ $('#settings-body').addEventListener('change', async (e) => {
   if (settingsSaving || !canManage() || !state.draft) return;
   const el = e.target,
     d = el.dataset;
-  if (d.issueConfirmed !== undefined || d.issueEnabled !== undefined) {
-    state.draft.issuePresets ||= structuredClone(issuePresets(state.draft));
-    const index = Number(d.issueConfirmed ?? d.issueEnabled);
-    state.draft.issuePresets[index][d.issueConfirmed !== undefined ? 'confirmed' : 'active'] =
-      el.checked;
+  if (d.issueEnabled !== undefined) {
+    state.draft.issuePresets = structuredClone(issuePresets(state.draft));
+    state.draft.issuePresets[Number(d.issueEnabled)].active = el.checked;
     updateSettingsSaveState();
     return;
   }
@@ -1384,31 +1378,16 @@ $('#settings-body').addEventListener('dragend', clearMappingDrag);
 $('#settings-body').addEventListener('click', async (e) => {
   const issueButton = e.target.closest('[data-issue-action]');
   if (issueButton && state.draft && canManage() && !settingsSaving) {
-    state.draft.issuePresets ||= structuredClone(issuePresets(state.draft));
+    state.draft.issuePresets = structuredClone(issuePresets(state.draft));
     const index = Number(issueButton.dataset.issueIndex);
     const action = issueButton.dataset.issueAction;
     if (action === 'add')
       state.draft.issuePresets.push({
         id: draftId(),
-        labels: { en: '', zh: '', th: '' },
+        label: '',
         active: true,
-        confirmed: false,
       });
     else if (action === 'remove') state.draft.issuePresets.splice(index, 1);
-    else if (action === 'suggest') {
-      const item = state.draft.issuePresets[index];
-      const source =
-        issueButton.closest('.issue-preset-row').dataset.sourceLanguage || state.language;
-      const suggestion = suggestIssueTranslations(
-        item.labels[source] || Object.values(item.labels).find(Boolean),
-      );
-      if (!suggestion) {
-        $('[data-issue-settings-error]').textContent = issuePresetMessages[state.language].manual;
-        return;
-      }
-      item.labels = { ...suggestion };
-      item.confirmed = false;
-    }
     renderSettings();
     return;
   }

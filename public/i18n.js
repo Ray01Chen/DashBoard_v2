@@ -4,7 +4,7 @@ export const localeTags = { zh: 'zh-TW', en: 'en-GB', th: 'th-TH-u-ca-gregory' }
 export const messages = {
   zh: {
     noOutput: '無產出・免填報',
-    errIssuePresets: '請填妥異常快捷文字的三種語言，核對翻譯並勾選確認後再儲存。',
+    errIssuePresets: '每個異常快捷文字都要填寫唯一的英文原因，才能儲存。',
     errNoOutput: '此站設定為無產出，免填生產資料；既有資料保留。',
     mappingOrderChanged: '已調整草稿站點順序，請儲存設定套用。',
     loadSavedSettings: '載入已儲存設定',
@@ -411,8 +411,7 @@ export const messages = {
   },
   en: {
     noOutput: 'No output · reporting not required',
-    errIssuePresets:
-      'Complete and review all three issue translations, then confirm them before saving.',
+    errIssuePresets: 'Enter a unique English reason for every issue quick-text item before saving.',
     errNoOutput:
       'This station has no output. Production entry is not required; existing data is preserved.',
     mappingOrderChanged: 'Station order updated in the draft. Save settings to apply.',
@@ -851,7 +850,7 @@ export const messages = {
   },
   th: {
     noOutput: 'ไม่มีผลผลิต · ไม่ต้องบันทึก',
-    errIssuePresets: 'กรอกและตรวจข้อความปัญหาทั้งสามภาษา แล้วเลือกยืนยันก่อนบันทึก',
+    errIssuePresets: 'กรอกเหตุผลภาษาอังกฤษที่ไม่ซ้ำกันสำหรับข้อความปัญหาทุกรายการก่อนบันทึก',
     errNoOutput: 'สถานีนี้ไม่มีผลผลิต ไม่ต้องบันทึก ข้อมูลเดิมยังอยู่',
     mappingOrderChanged: 'ปรับลำดับสถานีในร่างแล้ว บันทึกการตั้งค่าเพื่อใช้จริง',
     loadSavedSettings: 'โหลดการตั้งค่าที่บันทึก',

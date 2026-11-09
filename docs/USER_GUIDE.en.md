@@ -4,7 +4,7 @@ Open <http://10.201.169.250:43871/>. manager / manager manages shared settings; 
 
 ## Manager: eight setup steps
 
-1. **Master data & shift times:** maintain Lines, Models, Jobs, Stations. Add each allowed Line/Model pair with dropdowns; one line can use several models. Define production/break intervals for both shifts without overlap.
+1. **Master data & shift times:** maintain Lines, Models, Jobs, Stations and the English issue quick-text list. Add each allowed Line/Model pair with dropdowns; one line can use several models. Define production/break intervals for both shifts without overlap.
 2. **Line daily targets:** set one preset per line/model before people or stations are complete. Every station starts with that preset allocated by production minutes across both shifts, excluding breaks.
 3. **People by job:** use the complete job list, including empty jobs. Create, move or activate people. Removing a job deletes its directory people/assignments when saved; historical captured names remain.
 4. **Assign people to lines:** choose Line/Model and a Job in each day/night/owner team. Tick several names and Add selected. The same job can have multiple people. Clear selection only clears pending ticks; X removes an assigned person. Empty-job guidance opens its roster.
@@ -27,6 +27,8 @@ Interval target = daily preset × interval production minutes ÷ total productio
 
 Whole-day spreadsheet shows both shifts; Whole-shift spreadsheet shows the selected shift; Single-interval spreadsheet shows one slot. All modes keep Target/Actual and issue buttons. Day/night and whole-day Target/Actual totals stay with Job/Station in the fixed left column. Blank means not entered/unknown; 0 is explicit zero. Counts must be integers from 0 to 99,999,999.
 
+The **Day shift** and **Night shift** buttons open that complete shift. **Go to current time slot** uses Bangkok time to open the active single interval and focus Actual; when the selected production date has no active interval, the page explains why.
+
 Click another numeric cell to autosave and confirm Saved. Tab moves across intervals within the same field; Enter moves down stations. Paste a numeric rectangle into the same Target or Actual field across stations/intervals. Failed saves retain input. Review a station version conflict before Use latest data or Save my changed cells; only changed cells are merged and other stations stay independent.
 
 Click **Add issue** or its preview, or press **F2** in a numeric cell. The editor identifies the station, date, shift and interval. Quick text inserts equipment, material or quality reasons; edit freely and use Enter for new lines, up to 2,000 characters. Done, X, Esc, Ctrl+Enter or a click outside closes and saves. Clear note removes the saved note. Opening without changes never creates a report. Long notes stay one line in the table; reopening shows the full text. F2 returns to the original numeric cell after closing. Save failures retain text and expose recovery controls beside the totals.
@@ -41,7 +43,7 @@ Managers drag the grip in the far-left Order column to place a station before or
 
 ![Interval fill](./images/interval-batch.png)
 
-Click **Fill interval** at the left of the entry command bar. Select production date, Line, Model and interval. Edit Target, Actual and Issue for each station, or enter a shared value above and use its Apply button. Applying stays in the window for further edits. Confirmed multilingual issue quick text is also available. Blank shared fields preserve existing values; zero writes zero. Individual fields can be cleared.
+Click **Fill interval** at the left of the entry command bar. Select production date, Line, Model and interval. Edit Target, Actual and Issue for each station, or enter a shared value above and use its Apply button. Applying stays in the window for further edits. English issue quick text configured in Master data is also available. Blank shared fields preserve existing values; zero writes zero. Individual fields can be cleared.
 
 **Save now** saves without closing. X, Esc or clicking outside saves before closing; invalid values or conflicts keep the window and drafts open. Changing date/unit/interval saves the original scope before loading the destination. Closing returns entry to that destination. A conflicting batch saves nothing; Refresh preview retains changed fields for review before retrying.
 
