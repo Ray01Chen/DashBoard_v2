@@ -1,10 +1,7 @@
+import { scheduleFor, scheduleCatalog, schedulesForLine } from './production-schedules.js';
 import { createEntryController } from './entry.js';
 import { pagePath, resolvePage } from './pages.js';
-import {
-  issuePresets,
-  issueSettingsMarkup,
-  validateIssuePresets,
-} from './issue-presets.js';
+import { issuePresets, issueSettingsMarkup, validateIssuePresets } from './issue-presets.js';
 import {
   productionUnits,
   orderedStationRows,
@@ -77,7 +74,8 @@ const paths = {
     'M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1 1-3Z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8',
   sliders: 'M4 6h16 M4 12h16 M4 18h16 M8 3v6 M16 9v6 M10 15v6',
   panel: 'M3 4h18v16H3z M9 4v16 M15 9l-3 3 3 3',
-  globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M3 12h18 M12 3c5 5 5 13 0 18 M12 3c-5 5-5 13 0 18',
+  globe:
+    'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M3 12h18 M12 3c5 5 5 13 0 18 M12 3c-5 5-5 13 0 18',
   palette:
     'M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 0-4h-1a1 1 0 0 1 0-2h3a5 5 0 0 0 5-5c0-4-5-7-9-7Z M7 9h.01 M11 6h.01 M16 8h.01 M6 14h.01',
 };
@@ -122,6 +120,7 @@ const state = {
   dailyReport: null,
   detailGroupId: '',
   boardPage: 0,
+  scheduleLine: '',
   groupId: '',
   chartLine: '',
   date: today(),
@@ -361,7 +360,8 @@ function applyLanguage(language, persist = false) {
   $('#save-settings').innerHTML =
     icon('check') + esc(t(settingsSaving ? 'saving' : 'saveSettings'));
   $$('.error-banner[data-error-code]').forEach(
-    (el) => (el.textContent = t(el.dataset.errorCode, JSON.parse(el.dataset.errorParams || '{}'))),
+    (el) =>
+      (el.textContent = t(el.dataset.errorCode, JSON.parse(el.dataset.errorParams || '{}'))),
   );
   $('#toast').hidden = true;
   $('#theme-select').innerHTML = themes
@@ -479,12 +479,11 @@ function getRows() {
 }
 function schedule() {
   const scope = reportScope();
-  return scope === 'all'
-    ? [
-        ...(state.config?.schedules.day || []).map((slot) => ({ ...slot, shift: 'day' })),
-        ...(state.config?.schedules.night || []).map((slot) => ({ ...slot, shift: 'night' })),
-      ]
-    : state.config?.schedules[scope] || [];
+  if (!state.config) return [];
+  const unit = detailUnits().find((unit) => productionKey(unit) === state.line);
+  return unit
+    ? scheduleFor(state.config, unit.line, scope)
+    : scheduleCatalog(state.config, scope);
 }
 function allSlots() {
   const slots = schedule()
@@ -536,7 +535,10 @@ function combineShiftReports(reports) {
   // Whole-day records are read-only projections. Entry must load each shift's
   // own revision before saving; the merged version is only for display.
   const savedByShift = Object.fromEntries(
-    reports.map(([shift, data]) => [shift, new Map(data.records.map((row) => [row.rowId, row]))]),
+    reports.map(([shift, data]) => [
+      shift,
+      new Map(data.records.map((row) => [row.rowId, row])),
+    ]),
   );
   const defaultsByShift = Object.fromEntries(
     reports.map(([shift, data]) => [shift, data.defaults || {}]),
@@ -548,22 +550,24 @@ function combineShiftReports(reports) {
     reports.flatMap(([, data]) => Object.keys(data.defaults || {}).map(Number)),
   );
   const combined = (rowId, includeUnsaved) => {
-    const halves = reports.map(([shift]) => {
-      const saved = savedByShift[shift].get(rowId);
-      const value = saved || defaultsByShift[shift][rowId];
-      return value
-        ? {
-            shift,
-            saved,
-            value,
-            slots: (value.slots || []).map((slot) => ({
-              ...slot,
+    const halves = reports
+      .map(([shift]) => {
+        const saved = savedByShift[shift].get(rowId);
+        const value = saved || defaultsByShift[shift][rowId];
+        return value
+          ? {
               shift,
-              ...(saved ? {} : { actual: slot.lineShared ? slot.actual : null, issue: '' }),
-            })),
-          }
-        : null;
-    }).filter(Boolean);
+              saved,
+              value,
+              slots: (value.slots || []).map((slot) => ({
+                ...slot,
+                shift,
+                ...(saved ? {} : { actual: slot.lineShared ? slot.actual : null, issue: '' }),
+              })),
+            }
+          : null;
+      })
+      .filter(Boolean);
     if (!halves.length || (!includeUnsaved && !halves.some((half) => half.saved))) return null;
     const saved = halves.map((half) => half.saved).find(Boolean);
     const base = saved || halves[0].value;
@@ -585,12 +589,11 @@ function combineShiftReports(reports) {
       [...defaultIds].map((id) => [id, combined(id, true)]).filter(([, value]) => value),
     ),
     rowVersions: Object.fromEntries(
-      [...new Set(reports.flatMap(([, data]) => Object.keys(data.rowVersions || {}).map(Number)))].map(
-        (id) => [
-          id,
-          Math.max(...reports.map(([, data]) => data.rowVersions?.[id] || 0)),
-        ],
-      ),
+      [
+        ...new Set(
+          reports.flatMap(([, data]) => Object.keys(data.rowVersions || {}).map(Number)),
+        ),
+      ].map((id) => [id, Math.max(...reports.map(([, data]) => data.rowVersions?.[id] || 0))]),
     ),
     activity: Object.assign({}, ...reports.map(([, data]) => data.activity || {})),
   };
@@ -737,6 +740,7 @@ function monitorContext() {
     board: document.body.classList.contains('fullscreen-board'),
     boardPage: state.boardPage,
     boardSize: 7,
+    metricScope: stored('bp-metric-scope') === 'day' ? 'day' : 'interval',
     chartLine: state.view === 'details' ? state.line : state.chartLine,
     t,
     esc,
@@ -755,6 +759,11 @@ function renderChart() {
           t('allLines'),
       );
   applyBoardDisplay();
+  for (const button of document.querySelectorAll('[data-metric-scope]')) {
+    const selected =
+      button.dataset.metricScope === (stored('bp-metric-scope') === 'day' ? 'day' : 'interval');
+    button.setAttribute('aria-pressed', String(selected));
+  }
   if (state.config?.monitoring) renderMonitoring(monitorContext());
   updateCurrentInterval();
 }
@@ -786,7 +795,16 @@ function filteredRows() {
       return false;
     return (
       !state.search ||
-      [row.line, modelOf(row), row.job, row.station, r?.owner, r?.dayTeam, r?.nightTeam, s?.issue]
+      [
+        row.line,
+        modelOf(row),
+        row.job,
+        row.station,
+        r?.owner,
+        r?.dayTeam,
+        r?.nightTeam,
+        s?.issue,
+      ]
         .join(' ')
         .toLocaleLowerCase()
         .includes(state.search.toLocaleLowerCase())
@@ -816,7 +834,8 @@ function renderTable() {
       .slice(start, start + state.pageSize)
       .map((row) => {
         const r = state.records.get(row.id),
-          s = measurement(r) || state.defaults[row.id]?.slots.find((s) => s.id === state.slotId),
+          s =
+            measurement(r) || state.defaults[row.id]?.slots.find((s) => s.id === state.slotId),
           status = !stationHasOutput(row, state.config)
             ? 'noOutput'
             : s?.issue
@@ -856,7 +875,13 @@ function confirmText(title, description, yes, no) {
   $('#confirm-dialog').showModal();
   return new Promise((resolve) => (confirmResolve = resolve));
 }
-function confirmAction(title, description, yes = 'confirm', no = 'continueEditing', params = {}) {
+function confirmAction(
+  title,
+  description,
+  yes = 'confirm',
+  no = 'continueEditing',
+  params = {},
+) {
   return confirmText(t(title), t(description, params), t(yes), t(no));
 }
 function finishConfirm(value) {
@@ -890,7 +915,9 @@ function updateSettingsSaveState() {
   $('#reload-settings').disabled = settingsSaving;
   const note = $('#settings-draft-note');
   note.textContent = t(
-    state.draft?.version !== state.config?.version ? 'settingsDraftConflict' : 'settingsDraftHint',
+    state.draft?.version !== state.config?.version
+      ? 'settingsDraftConflict'
+      : 'settingsDraftHint',
   );
 }
 function settingsDirty() {
@@ -1143,16 +1170,49 @@ function structureMarkup() {
         '',
       )}</div>${lineModelsMarkup({ draft, esc, icon, language: state.language, selectedLine: state.unitFilterLine, addLine: state.unitAdd.line, addModel: state.unitAdd.model })}`;
 }
+// Editing an inherited line creates its own copy on first change; selecting a
+// line alone never mutates the shared template or another line's draft.
+function scheduleDraft(edit = false) {
+  if (!state.draft.lines.includes(state.scheduleLine)) state.scheduleLine = '';
+  if (!state.scheduleLine) return state.draft.schedules;
+  const overrides =
+    state.draft.lineSchedules ||
+    (edit ? (state.draft.lineSchedules = Object.create(null)) : {});
+  if (edit && !Object.hasOwn(overrides, state.scheduleLine))
+    Object.defineProperty(overrides, state.scheduleLine, {
+      value: structuredClone(state.draft.schedules),
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+  return Object.hasOwn(overrides, state.scheduleLine)
+    ? overrides[state.scheduleLine]
+    : state.draft.schedules;
+}
+
 // Schedules are part of the master-data step; existing time IDs are sent unchanged.
 function scheduleMarkup() {
+  const schedules = scheduleDraft();
+  const custom = Object.hasOwn(state.draft.lineSchedules || {}, state.scheduleLine);
   return `<div id="structure-schedule" class="settings-section-heading"><div><h2>${esc(t('scheduleTitle'))}</h2><p>${esc(t('scheduleDesc'))}</p></div></div>
+    <section class="panel schedule-scope">
+      <label>${esc(t('scheduleScope'))}<select id="schedule-line-select">
+        <option value="">${esc(t('scheduleTemplate'))}</option>
+        ${state.draft.lines.map((line) => `<option value="${esc(line)}" ${state.scheduleLine === line ? 'selected' : ''}>${esc(line)}</option>`).join('')}
+      </select></label>
+      <span class="muted">${esc(t(state.scheduleLine ? (custom ? 'scheduleCustom' : 'scheduleInherited') : 'scheduleTemplateHint'))}</span>
+      ${state.scheduleLine ? `<div><button class="button" data-action="copy-schedule-template">${esc(t('copyScheduleTemplate'))}</button><button class="button" data-action="inherit-schedule" ${custom ? '' : 'disabled'}>${esc(t('inheritSchedule'))}</button></div>` : ''}
+    </section>
     <div class="schedule-grid">${['day', 'night']
       .map(
         (shift) => `<section class="panel schedule-card">
-      <div class="panel-heading"><h3>${icon(shift === 'day' ? 'sun' : 'moon')}${esc(t(shift))}</h3><span class="count-badge">${state.draft.schedules[shift].length}</span></div>
-      <div class="schedule-items">${state.draft.schedules[shift]
+      <div class="panel-heading"><h3>${icon(shift === 'day' ? 'sun' : 'moon')}${esc(t(shift))}</h3><span class="count-badge">${schedules[shift].length}</span></div>
+      <div class="schedule-items">${schedules[shift]
         .map(
-          (slot, index) => `<div class="schedule-item ${slot.kind === 'break' ? 'is-break' : ''}">
+          (
+            slot,
+            index,
+          ) => `<div class="schedule-item ${slot.kind === 'break' ? 'is-break' : ''}">
         <div class="schedule-item-top">
           <select data-time-field="kind" data-shift-key="${shift}" data-index="${index}" aria-label="${esc(t('type'))}">
             <option value="production" ${slot.kind === 'production' ? 'selected' : ''}>${esc(t('production'))}</option>
@@ -1165,7 +1225,7 @@ function scheduleMarkup() {
           <span class="schedule-duration">${esc(t('minutes', { count: duration(slot) }))}${overnight(slot) ? ' · ' + esc(t('overnight')) : ''}</span>
           <div class="schedule-actions">
             <button class="icon-button" data-action="slot-up" data-shift-key="${shift}" data-index="${index}" ${index === 0 ? 'disabled' : ''} aria-label="${esc(t('moveUp'))}">${icon('up')}</button>
-            <button class="icon-button" data-action="slot-down" data-shift-key="${shift}" data-index="${index}" ${index === state.draft.schedules[shift].length - 1 ? 'disabled' : ''} aria-label="${esc(t('moveDown'))}">${icon('down')}</button>
+            <button class="icon-button" data-action="slot-down" data-shift-key="${shift}" data-index="${index}" ${index === schedules[shift].length - 1 ? 'disabled' : ''} aria-label="${esc(t('moveDown'))}">${icon('down')}</button>
             <button class="icon-button" data-action="remove-slot" data-shift-key="${shift}" data-index="${index}" aria-label="${esc(t('remove'))} ${esc(label(slot))}">${icon('trash')}</button>
           </div>
         </div>
@@ -1262,7 +1322,10 @@ $('#settings-body').addEventListener('change', async (e) => {
     return;
   }
   if (d.unitAddLine !== undefined || d.unitAddModel !== undefined) {
-    const unit = { line: $('[data-unit-add-line]').value, model: $('[data-unit-add-model]').value };
+    const unit = {
+      line: $('[data-unit-add-line]').value,
+      model: $('[data-unit-add-model]').value,
+    };
     state.unitAdd = unit;
     const duplicate = !!unit.line && !!unit.model && !!unitFor(state.draft, unit);
     $('[data-action="add-unit"]').disabled = !unit.line || !unit.model || duplicate;
@@ -1400,12 +1463,17 @@ $('#settings-body').addEventListener('change', async (e) => {
     const result = updateMapping(state.draft, index, patch);
     renderSettings();
     if (!result.ok) return showSettingsError({ code: result.code });
+  } else if (el.id === 'schedule-line-select') {
+    state.scheduleLine = el.value;
+    renderSettings();
+    return;
   } else if (d.timeField) {
-    state.draft.schedules[d.shiftKey][Number(d.index)][d.timeField] = el.value;
+    scheduleDraft(true)[d.shiftKey][Number(d.index)][d.timeField] = el.value;
     renderSettings();
   } else if (d.moveShift) {
-    const [slot] = state.draft.schedules[d.moveShift].splice(Number(d.index), 1);
-    state.draft.schedules[el.value].push(slot);
+    const schedules = scheduleDraft(true);
+    const [slot] = schedules[d.moveShift].splice(Number(d.index), 1);
+    schedules[el.value].push(slot);
     renderSettings();
   } else if (el.id === 'default-language') state.draft.language = el.value;
   updateSettingsSaveState();
@@ -1453,7 +1521,8 @@ $('#settings-body').addEventListener('dragover', (event) => {
   const target = state.draft.rows.find(
     (row) => String(row.id) === element.dataset.configuredMapping,
   );
-  if (!target || target.id === mappingDrag.id || productionKey(target) !== mappingDrag.unit) return;
+  if (!target || target.id === mappingDrag.id || productionKey(target) !== mappingDrag.unit)
+    return;
   event.preventDefault();
   event.dataTransfer.dropEffect = 'move';
   $$('.mapping-drop-before, .mapping-drop-after').forEach((row) =>
@@ -1461,7 +1530,9 @@ $('#settings-body').addEventListener('dragover', (event) => {
   );
   const bounds = element.getBoundingClientRect();
   element.classList.add(
-    event.clientY < bounds.top + bounds.height / 2 ? 'mapping-drop-before' : 'mapping-drop-after',
+    event.clientY < bounds.top + bounds.height / 2
+      ? 'mapping-drop-before'
+      : 'mapping-drop-after',
   );
 });
 $('#settings-body').addEventListener('drop', (event) => {
@@ -1506,6 +1577,25 @@ $('#settings-body').addEventListener('click', async (e) => {
   const { action, catalog, index, shiftKey, kind, themeName } = b.dataset,
     i = Number(index),
     draft = state.draft;
+  if (action === 'copy-schedule-template' || action === 'inherit-schedule') {
+    if (!state.scheduleLine) return;
+    if (
+      Object.hasOwn(state.draft.lineSchedules || {}, state.scheduleLine) &&
+      !(await confirmAction('replaceScheduleTitle', 'replaceScheduleDesc'))
+    )
+      return;
+    state.draft.lineSchedules ||= Object.create(null);
+    if (action === 'inherit-schedule') delete state.draft.lineSchedules[state.scheduleLine];
+    else
+      Object.defineProperty(state.draft.lineSchedules, state.scheduleLine, {
+        value: structuredClone(state.draft.schedules),
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      });
+    renderSettings();
+    return;
+  }
   if (action === 'add-unit') {
     const line = $('[data-unit-add-line]').value,
       model = $('[data-unit-add-model]').value;
@@ -1567,7 +1657,9 @@ $('#settings-body').addEventListener('click', async (e) => {
           { line, model },
           role,
           field.querySelector('[data-staff-job]').value,
-          [...field.querySelectorAll('[data-staff-person]:checked')].map((input) => input.value),
+          [...field.querySelectorAll('[data-staff-person]:checked')].map(
+            (input) => input.value,
+          ),
         )
       : changeStaffAssignment(draft, { line, model }, role, b.dataset.personId, false);
     if (changed) {
@@ -1577,7 +1669,8 @@ $('#settings-body').addEventListener('click', async (e) => {
       [...$$('[data-staff-unit]')]
         .find(
           (item) =>
-            item.dataset.staffUnit === field.dataset.staffUnit && item.dataset.staffRole === role,
+            item.dataset.staffUnit === field.dataset.staffUnit &&
+            item.dataset.staffRole === role,
         )
         ?.querySelector('[data-staff-person], [data-staff-job]')
         ?.focus();
@@ -1604,7 +1697,10 @@ $('#settings-body').addEventListener('click', async (e) => {
   else if (action === 'remove-alert') draft.monitoring.rules.splice(i, 1);
   else if (action === 'add-catalog') {
     const value = $(`#new-${catalog}`).value.trim();
-    if (!value || draft[catalog].some((v) => v.toLocaleLowerCase() === value.toLocaleLowerCase()))
+    if (
+      !value ||
+      draft[catalog].some((v) => v.toLocaleLowerCase() === value.toLocaleLowerCase())
+    )
       return toast(t('errDuplicate'));
     draft[catalog].push(value);
   } else if (action === 'remove-catalog') {
@@ -1639,7 +1735,9 @@ $('#settings-body').addEventListener('click', async (e) => {
   } else if (action === 'mapping-up' || action === 'mapping-down') {
     const row = draft.rows[i];
     const rows = [...$('#settings-body').querySelectorAll('[data-configured-mapping]')];
-    const index = rows.findIndex((element) => element.dataset.configuredMapping === String(row.id));
+    const index = rows.findIndex(
+      (element) => element.dataset.configuredMapping === String(row.id),
+    );
     const target = rows[index + (action === 'mapping-up' ? -1 : 1)];
     if (target) {
       const mapping = draft.rows.find(
@@ -1652,13 +1750,13 @@ $('#settings-body').addEventListener('click', async (e) => {
     const result = removeMapping(draft, i);
     if (!result.ok) return showSettingsError({ code: result.code });
     toast(t('mappingDeleted'));
-  } else if (action === 'remove-slot') draft.schedules[shiftKey].splice(i, 1);
+  } else if (action === 'remove-slot') scheduleDraft(true)[shiftKey].splice(i, 1);
   else if (action === 'slot-up' || action === 'slot-down') {
-    const items = draft.schedules[shiftKey],
+    const items = scheduleDraft(true)[shiftKey],
       j = i + (action === 'slot-up' ? -1 : 1);
     if (j >= 0 && j < items.length) [items[i], items[j]] = [items[j], items[i]];
   } else if (action === 'add-slot') {
-    const items = draft.schedules[shiftKey],
+    const items = scheduleDraft(true)[shiftKey],
       start = items.at(-1)?.end || (shiftKey === 'day' ? '08:00' : '20:00'),
       endMinutes = (minutes(start) + (kind === 'break' ? 10 : 60)) % 1440;
     items.push({
@@ -1973,9 +2071,7 @@ $('#export').onclick = async () => {
     const suffix = `${state.line ? `&line=${encodeURIComponent(state.line)}` : ''}${state.view === 'details' && state.detailGroupId ? `&group=${encodeURIComponent(state.detailGroupId)}` : ''}`;
     const responses = await Promise.all(
       (scope === 'all' ? ['day', 'night'] : [scope]).map((shift) =>
-        fetch(
-          `/api/export?date=${state.date}&shift=${shift}&lang=${state.language}${suffix}`,
-        ),
+        fetch(`/api/export?date=${state.date}&shift=${shift}&lang=${state.language}${suffix}`),
       ),
     );
     if (responses.some((response) => response.status === 401)) {
@@ -1986,7 +2082,10 @@ $('#export').onclick = async () => {
     const csv = await Promise.all(responses.map((response) => response.text()));
     const combined =
       scope === 'all'
-        ? [csv[0].trimEnd(), ...csv.slice(1).map((value) => value.split(/\r?\n/).slice(1).join('\n').trimEnd())]
+        ? [
+            csv[0].trimEnd(),
+            ...csv.slice(1).map((value) => value.split(/\r?\n/).slice(1).join('\n').trimEnd()),
+          ]
             .filter(Boolean)
             .join('\n') + '\n'
         : csv[0];
@@ -2029,11 +2128,21 @@ document.addEventListener('click', (e) => {
 function updateCurrentInterval() {
   if (!state.config) return;
   const scope = reportScope();
+  const unit =
+    state.view === 'details' &&
+    detailUnits().find((unit) => productionKey(unit) === state.line);
+  const lineConfig = unit
+    ? { ...state.config, schedules: schedulesForLine(state.config, unit.line) }
+    : state.config;
+  if (!unit && Object.keys(state.config.lineSchedules || {}).length) {
+    $('#current-interval').textContent = t('perLineSchedule');
+    return;
+  }
   const currentShift =
     scope === 'all'
       ? ['day', 'night'].find((shift) =>
           currentScheduleInterval(
-            state.config,
+            lineConfig,
             state.date,
             shift,
             Date.now() + state.serverOffset,
@@ -2041,7 +2150,7 @@ function updateCurrentInterval() {
         ) || state.shift
       : scope;
   const slot = currentScheduleInterval(
-      state.config,
+      lineConfig,
       state.date,
       currentShift,
       Date.now() + state.serverOffset,
@@ -2050,7 +2159,7 @@ function updateCurrentInterval() {
       ? label(slot) + (slot.kind === 'break' ? ' / ' + t('break') : '')
       : t(
           monitoringPeriodState(
-            state.config,
+            lineConfig,
             state.date,
             currentShift,
             Date.now() + state.serverOffset,
@@ -2073,6 +2182,12 @@ function applyBoardDisplay() {
     trend && share ? 'both' : trend ? 'trend' : share ? 'share' : 'none';
   document.body.classList.toggle('board-with-charts', board && (trend || share));
 }
+for (const button of document.querySelectorAll('[data-metric-scope]')) {
+  button.onclick = () => {
+    stored('bp-metric-scope', button.dataset.metricScope);
+    renderChart();
+  };
+}
 $('#board-show-trend').onchange = (e) => {
   stored('bp-board-trend', String(e.target.checked));
   renderChart();
@@ -2090,18 +2205,22 @@ const chartObserver = new ResizeObserver((entries) => {
   }
 });
 chartObserver.observe($('#chart'));
-// Sidebar changes, viewport changes and fullscreen can all resize the group
-// chart. Measure the actual container in normal mode as well as on the board.
-let groupTrendWidth = 0;
-const groupTrendObserver = new ResizeObserver((entries) => {
-  const width = Math.round(entries[0].contentRect.width);
-  if (width > 0 && width !== groupTrendWidth) {
-    groupTrendWidth = width;
-    if (state.config && ['overview', 'details'].includes(state.view))
-      renderChart();
+// Re-measure plots when sidebar, display options or fullscreen change their
+// containers. Geometry keys prevent the SVG redraw from triggering a loop.
+const trendGeometry = new WeakMap();
+const trendObserver = new ResizeObserver((entries) => {
+  let changed = false;
+  for (const { target, contentRect } of entries) {
+    const key = `${Math.round(contentRect.width)}:${Math.round(contentRect.height)}`;
+    if (contentRect.width > 0 && trendGeometry.get(target) !== key) {
+      trendGeometry.set(target, key);
+      changed = true;
+    }
   }
+  if (changed && state.config && ['overview', 'details'].includes(state.view)) renderChart();
 });
-groupTrendObserver.observe($('#group-trend'));
+trendObserver.observe($('#group-trend'));
+trendObserver.observe($('#line-cards'));
 window.addEventListener('resize', () => {
   if (
     state.config &&

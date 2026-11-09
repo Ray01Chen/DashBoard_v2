@@ -1,3 +1,5 @@
+import { normalizeSchedules } from './schedule-config.mjs';
+import { scheduleFor, schedulesForLine } from './public/production-schedules.js';
 import http from 'node:http';
 import { resolvePage } from './public/pages.js';
 import { issuePresets, validateIssuePresets } from './public/issue-presets.js';
@@ -404,7 +406,11 @@ function validateConfig(data) {
     if (row.active) {
       const existing = config.rows.find((old) => old.id === id);
       // A catalog rename keeps the identity; a model reassignment needs a new ID.
-      if (existing && modelOf(existing) !== row.model && next.models.includes(modelOf(existing)))
+      if (
+        existing &&
+        modelOf(existing) !== row.model &&
+        next.models.includes(modelOf(existing))
+      )
         fail(400, 'errMapping');
       if (
         !next.lines.includes(row.line) ||
@@ -422,64 +428,27 @@ function validateConfig(data) {
   });
   for (const row of config.rows)
     if (!ids.has(row.id)) next.rows.push({ ...row, active: false, deleted: true });
-  const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
-  const minutes = (time) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
-  const allIds = new Set();
-  const shiftRanges = {};
-  for (const shift of ['day', 'night']) {
-    const schedule = data.schedules?.[shift];
-    if (
-      !Array.isArray(schedule) ||
-      !schedule.length ||
-      schedule.length > 48 ||
-      !schedule.some((s) => s?.kind === 'production')
-    )
-      fail(400, 'errSchedule');
-    const ranges = [];
-    next.schedules[shift] = schedule.map((s) => {
-      if (
-        !s ||
-        !['production', 'break'].includes(s.kind) ||
-        !timePattern.test(s.start) ||
-        !timePattern.test(s.end)
-      )
-        fail(400, 'errTime');
-      const start = minutes(s.start),
-        end = minutes(s.end);
-      if (start === end) fail(400, 'errTime');
-      const duration = (end - start + 1440) % 1440;
-      if (duration > 720) fail(400, 'errDuration');
-      if (end > start) ranges.push([start, end]);
-      else ranges.push([start, 1440], [0, end]);
-      const old = config.schedules[shift].find((v) => v.id === s.id);
-      const id =
-        old && old.start === s.start && old.end === s.end && old.kind === s.kind
-          ? old.id
-          : `${shift}-${randomUUID()}`;
-      if (allIds.has(id)) fail(400, 'errDuplicate');
-      allIds.add(id);
-      return { id, kind: s.kind, start: s.start, end: s.end };
-    });
-    ranges.sort((a, b) => a[0] - b[0]);
-    for (let i = 1; i < ranges.length; i++)
-      if (ranges[i][0] < ranges[i - 1][1]) fail(400, 'errOverlap', { shift });
-    shiftRanges[shift] = ranges;
-  }
-  // A clock interval must belong to one shift. Legacy installations with unchanged
-  // overlapping schedules can still edit other settings until their times are fixed.
-  const scheduleSignature = (schedules) =>
-    JSON.stringify(
-      ['day', 'night'].map((shift) =>
-        schedules[shift].map(({ kind, start, end }) => ({ kind, start, end })),
-      ),
-    );
+  next.schedules = normalizeSchedules(data.schedules, config.schedules, fail);
+  const overrides = data.lineSchedules ?? config.lineSchedules ?? {};
   if (
-    scheduleSignature(next.schedules) !== scheduleSignature(config.schedules) &&
-    shiftRanges.day.some((day) =>
-      shiftRanges.night.some((night) => day[0] < night[1] && night[0] < day[1]),
-    )
+    !overrides ||
+    typeof overrides !== 'object' ||
+    Array.isArray(overrides) ||
+    Object.keys(overrides).length > 200
   )
-    fail(400, 'errOverlap', { shift: 'day/night' });
+    fail(400, 'errSchedule');
+  next.lineSchedules = Object.create(null);
+  for (const [line, schedules] of Object.entries(overrides)) {
+    if (!next.lines.includes(line)) {
+      if (config.lines.includes(line)) continue; // A removed line cannot leave an orphan override.
+      fail(400, 'errMapping');
+    }
+    next.lineSchedules[line] = normalizeSchedules(
+      schedules,
+      schedulesForLine(config, line),
+      fail,
+    );
+  }
   if (
     !['delta', 'green', 'indigo', 'amber', 'rose'].includes(data.theme) ||
     !locales.includes(data.language)
@@ -698,11 +667,15 @@ function writeRecord(rowId, data, user, method = 'PUT') {
   data = resolved.data;
   if (!Array.isArray(data.slots) || !data.slots.length || data.slots.length > 96)
     fail(400, 'errSlotData');
-  const schedule = config.schedules[data.shift].filter((s) => s.kind === 'production');
+  const schedule = scheduleFor(config, row.line, data.shift).filter(
+    (s) => s.kind === 'production',
+  );
   const allowed = new Map(
-    [...schedule, ...(resolved.defaultsSnapshot ? data.slots : []), ...(current?.slots || [])].map(
-      (s) => [s.id, s],
-    ),
+    [
+      ...schedule,
+      ...(resolved.defaultsSnapshot ? data.slots : []),
+      ...(current?.slots || []),
+    ].map((s) => [s.id, s]),
   );
   const suppliedIds = new Set();
   if (data.slots.some((s) => s && !s.id) && data.slots.length !== schedule.length)
@@ -778,13 +751,17 @@ function writeRecord(rowId, data, user, method = 'PUT') {
               row,
             ),
           )
-          .map((record) => getActivity.get(data.date, data.shift, record.rowId)?.last_increase_at)
+          .map(
+            (record) => getActivity.get(data.date, data.shift, record.rowId)?.last_increase_at,
+          )
           .filter(Boolean)
           .sort()
           .at(-1)
       : null;
   const lastIncrease =
-    actual > previousActual ? now : previousActivity?.last_increase_at || inheritedIncrease || null;
+    actual > previousActual
+      ? now
+      : previousActivity?.last_increase_at || inheritedIncrease || null;
   setActivity.run(data.date, data.shift, rowId, actual, lastIncrease);
   setRevision.run(data.date, data.shift, rowId, nextVersion);
   audit.run(
@@ -827,6 +804,7 @@ const files = {
       'line-details',
       'production-overview',
       'seven-line-board',
+      'line-schedules',
       'group-trend-dense',
     ].map((name) => [`/guide-images/${name}.png`, [`../docs/images/${name}.png`, 'image/png']]),
   ),
@@ -843,6 +821,7 @@ const files = {
   '/entry.js': ['entry.js', 'text/javascript'],
   '/entry.css': ['entry.css', 'text/css'],
   '/workforce-settings.js': ['workforce-settings.js', 'text/javascript'],
+  '/production-schedules.js': ['production-schedules.js', 'text/javascript'],
   '/production-targets.js': ['production-targets.js', 'text/javascript'],
   '/production-models.js': ['production-models.js', 'text/javascript'],
   '/catalog-settings.js': ['catalog-settings.js', 'text/javascript'],
@@ -881,7 +860,8 @@ const server = http.createServer(async (req, res) => {
     }
     const user = auth.current(req);
     if (url.pathname.startsWith('/api/') && !user) fail(401, 'errAuth');
-    if (req.method === 'GET' && url.pathname === '/api/auth/me') return json(res, 200, { user });
+    if (req.method === 'GET' && url.pathname === '/api/auth/me')
+      return json(res, 200, { user });
     if (req.method === 'GET' && url.pathname === '/api/config') {
       refreshConfig();
       return json(res, 200, publicConfig(user.role));
@@ -1140,7 +1120,9 @@ const server = http.createServer(async (req, res) => {
           actuals = r?.slots.filter((s) => s.actual !== null).map((s) => s.actual) || [],
           actual = actuals.length ? actuals.reduce((a, b) => a + b, 0) : null;
         const slots = [...(r?.slots || [])];
-        for (const s of config.schedules[shift].filter((s) => s.kind === 'production'))
+        for (const s of scheduleFor(config, row.line, shift).filter(
+          (s) => s.kind === 'production',
+        ))
           if (!slots.some((v) => v.id === s.id)) slots.push(s);
         for (const slot of slots) {
           const m = r?.slots.find((s) => s.id === slot.id);
@@ -1185,12 +1167,7 @@ const server = http.createServer(async (req, res) => {
             revision.get(data.date, data.shift, row.id)?.version || 0,
           ]),
         );
-        const patches = planStationInterval(
-          data,
-          config,
-          versions,
-          fail,
-        );
+        const patches = planStationInterval(data, config, versions, fail);
         const saved = patches.map((patch) =>
           writeRecord(
             patch.rowId,

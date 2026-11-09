@@ -2757,6 +2757,7 @@ body:not(.authenticated) > .app-shell {
   min-width: 0;
 }
 .group-trend {
+  --trend-height: 230px;
   padding: 4px 18px 12px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -2765,31 +2766,28 @@ body:not(.authenticated) > .app-shell {
   display: block;
   width: auto;
   min-width: 100%;
-  height: 230px;
+  height: var(--trend-height);
 }
 .group-trend-svg text {
   font-family: inherit;
   fill: var(--muted, #758396);
   font-size: 11px;
 }
-.mini-trend text {
-  font-family: inherit;
-  fill: var(--muted, #758396);
-}
 .share-layout text {
   font-family: inherit;
   fill: var(--muted, #758396);
   font-size: 11px;
 }
+.line-trend {
+  min-width: 0;
+  min-height: 0;
+  display: block;
+}
 .mini-trend {
   display: block;
   width: 100%;
-  height: auto;
-  margin: 15px 0 5px;
-  overflow: visible;
-}
-.mini-trend text {
-  font-size: 10px;
+  height: 100%;
+  overflow: hidden;
 }
 .share-layout {
   display: grid;
@@ -2978,7 +2976,7 @@ body:not(.authenticated) > .app-shell {
   font-size: 11px;
   gap: 6px;
 }
-.line-card .mini-trend {
+.line-card .line-trend {
   grid-column: 3;
   grid-row: 1/3;
   margin: 0;
@@ -3111,12 +3109,6 @@ html:fullscreen {
   }
   .line-card-values {
     grid-column: 2;
-  }
-  .line-card .mini-trend {
-    grid-column: 1/3;
-    grid-row: 3;
-    height: 90px;
-    margin: 8px 0;
   }
   .line-card-status {
     grid-column: 1/3;
@@ -3335,12 +3327,6 @@ html:fullscreen {
   font-size: 10px;
   gap: 1px;
 }
-.fullscreen-board .line-card .mini-trend {
-  height: 100%;
-  max-height: 65px;
-  min-height: 0;
-  margin: 0;
-}
 .fullscreen-board .line-card-status {
   grid-column: 4;
   grid-row: 1/3;
@@ -3390,8 +3376,8 @@ html:fullscreen {
 .fullscreen-board .dashboard-top-charts .panel-heading p {
   display: none;
 }
-.fullscreen-board .group-trend-svg {
-  height: 130px;
+.fullscreen-board .group-trend {
+  --trend-height: 130px;
 }
 .fullscreen-board .share-layout {
   height: 142px;
@@ -3428,9 +3414,6 @@ html:fullscreen {
 }
 .fullscreen-board.board-with-charts .line-card-values b {
   font-size: 20px;
-}
-.fullscreen-board.board-with-charts .line-card .mini-trend {
-  max-height: 45px;
 }
 @media (max-width: 1100px) {
   .fullscreen-board .line-card {
@@ -3517,12 +3500,6 @@ html:fullscreen {
   .fullscreen-board .line-card-values > span {
     font-size: 9px;
   }
-  .fullscreen-board .line-card .mini-trend {
-    grid-column: 2;
-    grid-row: 2;
-    max-height: 32px;
-    height: 32px;
-  }
   .fullscreen-board .line-card-status {
     grid-column: 1;
     grid-row: 2;
@@ -3548,8 +3525,8 @@ html:fullscreen {
   .fullscreen-board .dashboard-top-charts .panel-heading h2 {
     font-size: 10px;
   }
-  .fullscreen-board .group-trend-svg {
-    height: 95px;
+  .fullscreen-board .group-trend {
+    --trend-height: 95px;
   }
   .fullscreen-board .share-layout {
     height: 105px;
@@ -4267,21 +4244,35 @@ html:fullscreen {
   padding-left: 0;
 }
 
-/* Seven desktop rows share a single compact metric line: daily, interval,
- * then cumulative. Smaller viewports keep all seven in a scrollable list. */
+/* Interval values leave the largest desktop column to each line's trend. */
 @media (min-width: 1000px) {
-  .fullscreen-board .line-card-values,
-  .fullscreen-board #group-summary .group-summary-values {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 8px;
-  }
   .fullscreen-board #line-dashboard {
-    --row-columns: 170px minmax(480px, 1fr) 100px 150px;
+    --row-columns: 150px 225px minmax(300px, 1fr) 145px;
     --row-gap: 12px;
     --row-padding: 14px;
   }
   .fullscreen-board #line-cards {
     gap: 4px;
+  }
+  .fullscreen-board .line-card-values,
+  .fullscreen-board #group-summary .group-summary-values {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .fullscreen-board .line-card-values .production-metric small,
+  .fullscreen-board #group-summary .production-metric small {
+    white-space: nowrap;
+    font-size: 9px;
+  }
+  .fullscreen-board .line-card-values > .production-metric + .production-metric,
+  .fullscreen-board .group-summary-values > .production-metric + .production-metric {
+    padding-left: 8px;
+  }
+  .fullscreen-board .line-card-values .production-metric b,
+  .fullscreen-board #group-summary .production-metric b {
+    font-size: 18px;
+    line-height: 1.1;
+    margin-top: 2px;
   }
   .fullscreen-board .line-card {
     grid-template-columns: var(--row-columns);
@@ -4292,39 +4283,48 @@ html:fullscreen {
   }
   .fullscreen-board .line-card .line-card-top,
   .fullscreen-board .line-card .line-card-values,
-  .fullscreen-board .line-card .mini-trend,
+  .fullscreen-board .line-card .line-trend,
   .fullscreen-board .line-card .line-card-status {
     grid-row: 1;
   }
   .fullscreen-board .line-card .line-card-top {
     grid-column: 1;
+    align-self: center;
+    margin: 0;
   }
   .fullscreen-board .line-card .line-card-values {
     grid-column: 2;
   }
-  .fullscreen-board .line-card .mini-trend {
+  .fullscreen-board .line-card .line-trend {
     grid-column: 3;
-    max-height: 38px;
+    height: clamp(38px, 4.8vh, 64px);
+    max-height: none;
   }
   .fullscreen-board .line-card .line-card-status {
     grid-column: 4;
+    padding-block: 0;
+    line-height: 1.35;
+  }
+  .fullscreen-board .line-card .line-card-status > small {
+    font-size: 9px;
   }
   .fullscreen-board .line-card .line-source {
     display: none;
   }
-  .fullscreen-board .line-card-values .production-metric small {
-    font-size: 9px;
-  }
-  .fullscreen-board .line-card-values .production-metric b {
-    font-size: 17px;
+  .fullscreen-board .line-card .production-identity {
+    gap: 1px;
+    line-height: 1.2;
   }
   .fullscreen-board .line-card .production-line {
     font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .fullscreen-board .line-card .production-model {
     display: block;
-    font-size: 9px;
-    line-height: 1.3;
+    font-size: 10px;
+    line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -4334,40 +4334,32 @@ html:fullscreen {
     display: inline;
   }
   .fullscreen-board #group-summary.group-summary {
-    grid-template-columns: 170px minmax(480px, 1fr) 170px;
+    grid-template-columns: 150px 300px minmax(0, 1fr);
+    gap: 12px;
   }
   .fullscreen-board #group-summary .current-interval {
     grid-column: 3;
   }
-  .fullscreen-board #group-summary .production-metric {
-    gap: 2px;
-  }
-  .fullscreen-board #group-summary .production-metric small {
-    font-size: 9px;
-  }
-  .fullscreen-board #group-summary .production-metric b {
-    font-size: 18px;
-    line-height: 1.2;
-  }
-  .fullscreen-board .line-card-values > .production-metric:nth-child(3n + 1),
-  .fullscreen-board .group-summary-values > .production-metric:nth-child(3n + 1) {
-    border-left: 1px solid var(--line);
-    padding-left: 8px;
-  }
-  .fullscreen-board .line-card-values > .production-metric:first-child,
-  .fullscreen-board .group-summary-values > .production-metric:first-child {
-    border-left: 0;
-    padding-left: 0;
-  }
 }
 
 /* Short desktop displays still fit seven rows with both optional charts. */
-@media (min-width: 1000px) and (max-height: 820px) {
+@media (min-width: 1000px) and (max-height: 880px) {
   .fullscreen-board .line-card {
-    min-height: 48px;
+    min-height: 46px;
+    padding-block: 4px;
   }
-  .fullscreen-board .group-trend-svg {
-    height: 90px;
+  .fullscreen-board .line-card .line-trend {
+    height: 34px;
+  }
+  .fullscreen-board .line-card-values .production-metric b {
+    font-size: 16px;
+    margin-top: 0;
+  }
+  .fullscreen-board .line-card-values .production-metric small {
+    line-height: 1.2;
+  }
+  .fullscreen-board .group-trend {
+    --trend-height: 90px;
   }
   .fullscreen-board .dashboard-top-charts {
     max-height: 150px;
@@ -4386,28 +4378,28 @@ html:fullscreen {
 /* Keep the regular desktop overview compact as well as the presentation board. */
 @media (min-width: 1280px) {
   body:not(.fullscreen-board) #line-dashboard {
-    --row-columns: 150px minmax(0, 1fr) 90px 145px;
+    --row-columns: 150px 225px minmax(240px, 1fr) 130px;
     --row-gap: 12px;
     --row-padding: 14px;
   }
   body:not(.fullscreen-board) .line-card {
-    min-height: 76px;
+    min-height: 92px;
     padding-block: 8px;
   }
   body:not(.fullscreen-board) .line-card-values,
   body:not(.fullscreen-board) #group-summary .group-summary-values {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
   }
-  body:not(.fullscreen-board) .line-card .mini-trend {
-    height: 46px;
+  body:not(.fullscreen-board) .line-card .line-trend {
+    height: 72px;
   }
   body:not(.fullscreen-board) .line-card-status {
     padding: 3px 0 3px 12px;
     gap: 3px;
   }
   body:not(.fullscreen-board) #group-summary.group-summary {
-    grid-template-columns: 150px minmax(0, 1fr) 150px;
+    grid-template-columns: 150px 300px minmax(0, 1fr);
     padding-block: 12px;
   }
   body:not(.fullscreen-board) #group-summary .current-interval {
@@ -4422,4 +4414,127 @@ html:fullscreen {
     border-left: 1px solid var(--line);
     padding-left: 8px;
   }
+}
+
+/* Tablet and phone cards give trends their own full-width row. */
+@media (max-width: 1279px) {
+  body:not(.fullscreen-board) .line-card {
+    grid-template-columns: 140px minmax(0, 1fr);
+  }
+  body:not(.fullscreen-board) .line-card .line-trend {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    height: 100px;
+    margin: 8px 0;
+  }
+  body:not(.fullscreen-board) .line-card-status {
+    grid-column: 1 / -1;
+    grid-row: 4;
+  }
+}
+@media (max-width: 999px) {
+  .fullscreen-board .line-card {
+    flex: none;
+    min-height: 170px;
+  }
+  .fullscreen-board .line-card .line-trend {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    height: 88px;
+    max-height: none;
+    margin: 6px 0;
+  }
+  .fullscreen-board .line-card-status {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 0;
+    border: 0;
+    font-size: 10px;
+    overflow: visible;
+  }
+}
+
+@media (min-width: 1000px) and (max-height: 760px) {
+  .fullscreen-board .line-card {
+    min-height: 42px;
+  }
+  .fullscreen-board .line-card .line-trend {
+    height: 30px;
+  }
+  .fullscreen-board .group-trend {
+    --trend-height: 72px;
+  }
+  .fullscreen-board .dashboard-top-charts {
+    max-height: 130px;
+  }
+  .fullscreen-board .share-layout {
+    height: 82px;
+  }
+  .fullscreen-board .share-layout > svg {
+    height: 70px;
+  }
+  .fullscreen-board .share-legend {
+    max-height: 64px;
+  }
+}
+
+.metric-scope-buttons {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--tint);
+  flex-shrink: 0;
+}
+.metric-scope-buttons button {
+  border: 0;
+  border-radius: 5px;
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.metric-scope-buttons button[aria-pressed='true'] {
+  background: var(--primary);
+  color: #fff;
+}
+.metric-scope-buttons button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.schedule-scope {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.schedule-scope label {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+}
+.schedule-scope select {
+  min-width: 180px;
+}
+.schedule-scope > span {
+  flex: 1;
+  font-size: 12px;
+}
+.schedule-scope > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mini-trend .trend-point {
+  stroke-width: 1.25;
 }

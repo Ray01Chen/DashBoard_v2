@@ -1,3 +1,4 @@
+import { scheduleCatalog } from './production-schedules.js';
 import { buildLineMonitor, boardPage, monitoringPeriodState } from './monitor.js';
 import { productionLabel, productionIdentityMarkup } from './production-models.js';
 
@@ -5,18 +6,22 @@ import { productionLabel, productionIdentityMarkup } from './production-models.j
 export function aggregateMonitorSeries(lines, scheduledSlots) {
   const slots = new Map(scheduledSlots.map((slot) => [slot.id, slot]));
   for (const line of lines)
-    for (const value of line.series) if (!slots.has(value.id)) slots.set(value.id, value);
-  return [...slots.values()].map((slot) => {
-    const values = lines.map((line) => line.series.find((value) => value.id === slot.id));
-    return {
-      slot,
-      target: sum(values.map((value) => value?.target)),
-      actual: sum(values.map((value) => value?.actual)),
-    };
-  });
+    for (const value of line.series) slots.set(value.id, { ...slots.get(value.id), ...value });
+  // Different lines can introduce intervals between the template's intervals.
+  // Use captured production timestamps so midnight remains after the evening.
+  return [...slots.values()]
+    .sort((a, b) => (a.startAt ?? 0) - (b.startAt ?? 0) || (a.endAt ?? 0) - (b.endAt ?? 0))
+    .map((slot) => {
+      const values = lines.map((line) => line.series.find((value) => value.id === slot.id));
+      return {
+        slot,
+        target: sum(values.map((value) => value?.target)),
+        actual: sum(values.map((value) => value?.actual)),
+      };
+    });
 }
 
-const overviewMetricKeys = [
+const detailMetricKeys = [
   'dailyTarget',
   'currentTarget',
   'currentActual',
@@ -25,11 +30,15 @@ const overviewMetricKeys = [
   'cumulativeGap',
 ];
 
-export function overviewMetricsMarkup(metrics, { t, esc, number }) {
-  return overviewMetricKeys
+const intervalMetricKeys = ['currentTarget', 'currentActual', 'currentGap'];
+const dailyMetricKeys = ['dailyTarget', 'dailyActual', 'dailyGap'];
+const isGap = (key) => ['currentGap', 'dailyGap', 'cumulativeGap'].includes(key);
+
+export function overviewMetricsMarkup(metrics, { t, esc, number }, keys = detailMetricKeys) {
+  return keys
     .map((key) => {
       const value = metrics[key];
-      const difference = key === 'cumulativeGap';
+      const difference = isGap(key);
       const tone =
         difference && value != null
           ? value < 0
@@ -45,20 +54,15 @@ export function overviewMetricsMarkup(metrics, { t, esc, number }) {
 
 function updateOverviewMetrics(element, metrics, { number }) {
   if (!element) return;
-  for (const key of overviewMetricKeys) {
+  for (const metric of element.querySelectorAll('[data-metric]')) {
+    const key = metric.dataset.metric;
     const value = metrics[key];
     const output = element.querySelector(`[data-metric="${key}"] b`);
     if (!output) continue;
-    output.textContent = (key === 'cumulativeGap' && value > 0 ? '+' : '') + number(value);
+    output.textContent = (isGap(key) && value > 0 ? '+' : '') + number(value);
     output.title = number(value);
     output.className =
-      key === 'cumulativeGap' && value != null
-        ? value < 0
-          ? 'negative'
-          : value > 0
-            ? 'positive'
-            : ''
-        : '';
+      isGap(key) && value != null ? (value < 0 ? 'negative' : value > 0 ? 'positive' : '') : '';
   }
 }
 
@@ -70,18 +74,38 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
     shift === 'all' || !ctx.dailyRecords
       ? all
       : buildLineMonitor(config, ctx.dailyRecords, date, 'all', activity, now);
-  const dailyTargets = new Map(daily.map((line) => [line.key || line.line, line.target]));
+  const dailyTotals = new Map(daily.map((line) => [line.key || line.line, line]));
+  const cardMetricKeys = ctx.metricScope === 'day' ? dailyMetricKeys : intervalMetricKeys;
   const group = config.monitoring.groups.find((g) => g.id === groupId);
   const lines = all
     .filter((line) => !group || group.lines.includes(line.line))
-    .map((line) => ({ ...line, dailyTarget: dailyTargets.get(line.key || line.line) ?? null }));
+    .map((line) => {
+      const daily = dailyTotals.get(line.key || line.line);
+      return {
+        ...line,
+        dailyTarget: daily?.target ?? null,
+        dailyActual: daily?.actual ?? null,
+        dailyGap:
+          daily?.target == null || daily?.actual == null ? null : daily.actual - daily.target,
+      };
+    });
   const totals = Object.fromEntries(
-    overviewMetricKeys.map((key) => [key, sum(lines.map((line) => line[key]))]),
+    [...new Set([...detailMetricKeys, ...dailyMetricKeys, ...intervalMetricKeys])].map(
+      (key) => [key, sum(lines.map((line) => line[key]))],
+    ),
   );
   totals.cumulativeGap =
     totals.cumulativeTarget == null || totals.cumulativeActual == null
       ? null
       : totals.cumulativeActual - totals.cumulativeTarget;
+  totals.currentGap =
+    totals.currentTarget == null || totals.currentActual == null
+      ? null
+      : totals.currentActual - totals.currentTarget;
+  totals.dailyGap =
+    totals.dailyTarget == null || totals.dailyActual == null
+      ? null
+      : totals.dailyActual - totals.dailyTarget;
   const cards = document.querySelector('#line-cards');
   document.querySelector('#alert-summary').textContent = t('alertCount', {
     count: lines.filter((l) => l.rule).length,
@@ -91,20 +115,19 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
   const cardMarkup =
     cardLines
       .map((l) => {
-        const period = monitoringPeriodState(config, date, shift, now),
-          progress =
-            l.cumulativeActual === null
-              ? t('waiting')
-              : l.cumulativeGap === null
-                ? t('noComparableTarget')
-                : t(l.cumulativeGap < 0 ? 'belowTarget' : 'onTarget');
-        const status = t('outputStatus') + ': ' + progress,
-          monitor =
-            t('monitoringStatus') +
-            ': ' +
-            (period === 'activeMonitoring'
-              ? t('idleFor', { seconds: l.idleSeconds })
-              : t(period));
+        const period = l.periodState || monitoringPeriodState(config, date, shift, now);
+        const actual = ctx.metricScope === 'day' ? l.dailyActual : l.currentActual;
+        const gap = ctx.metricScope === 'day' ? l.dailyGap : l.currentGap;
+        const progress =
+          actual == null
+            ? t('waiting')
+            : gap == null
+              ? t('noComparableTarget')
+              : t(gap < 0 ? 'belowTarget' : 'onTarget');
+        const status = t('outputStatus') + ': ' + progress;
+        const monitorText =
+          period === 'activeMonitoring' ? t('idleFor', { seconds: l.idleSeconds }) : t(period);
+        const monitor = t('monitoringStatus') + ': ' + monitorText;
 
         if (!chart) {
           const card = [...cards.children].find(
@@ -122,20 +145,13 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
             lamp.className = 'signal-lamp lamp-' + l.status;
             lamp.setAttribute('aria-label', status);
             const label = card.querySelector('.line-card-status>span');
-            label.textContent = status;
+            label.textContent = progress;
             label.className = l.rule ? 'alert-text' : '';
-            card.querySelector('.line-card-status>small').textContent = monitor;
+            card.querySelector('.line-card-status>small').textContent = monitorText;
           }
           return '';
         }
-        return `<button class="line-card alarm-${l.status} ${l.blink ? 'blinking-frame' : ''} ${chartLine === (l.key || l.line) ? 'selected' : ''}" data-monitor-line="${esc(l.key || l.line)}" aria-label="${esc(productionLabel(l))}" aria-pressed="${chartLine === (l.key || l.line)}"><span class="line-card-top">${productionIdentityMarkup(l, esc)}<span class="signal-lamp lamp-${l.status} " role="img" aria-label="${esc(status)}"></span></span><span class="line-source">${esc(t('sourceLabel', { name: l.sourceLabel || t('noSource') }))}</span><span class="line-card-values">${overviewMetricsMarkup(l, ctx)}</span>${trendSvg(
-          l.series.map((v) => ({
-            ...v,
-            slot: v,
-          })),
-          ctx,
-          true,
-        )}<span class="line-card-status" title="${esc(t('achievementExplain') + ' / ' + monitor)}"><span class="${l.rule ? 'alert-text' : ''}">${esc(status)}</span><small>${esc(monitor)}</small></span></button>`;
+        return `<button class="line-card alarm-${l.status} ${l.blink ? 'blinking-frame' : ''} ${chartLine === (l.key || l.line) ? 'selected' : ''}" data-monitor-line="${esc(l.key || l.line)}" aria-label="${esc(productionLabel(l))}" aria-pressed="${chartLine === (l.key || l.line)}"><span class="line-card-top">${productionIdentityMarkup(l, esc)}<span class="signal-lamp lamp-${l.status} " role="img" aria-label="${esc(status)}"></span></span><span class="line-source">${esc(t('sourceLabel', { name: l.sourceLabel || t('noSource') }))}</span><span class="line-card-values">${overviewMetricsMarkup(l, ctx, cardMetricKeys)}</span><span class="line-trend"></span><span class="line-card-status" title="${esc(t('achievementExplain') + ' / ' + monitor)}"><span class="${l.rule ? 'alert-text' : ''}">${esc(progress)}</span><small>${esc(monitorText)}</small></span></button>`;
       })
       .join('') || `<div class="empty-cell">${esc(t('emptyGroup'))}</div>`;
   if (!chart) {
@@ -147,6 +163,16 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
     return;
   }
   cards.innerHTML = cardMarkup;
+  for (const [index, line] of cardLines.entries()) {
+    const plot = cards.children[index]?.querySelector('.line-trend');
+    if (plot)
+      renderTrend(
+        plot,
+        line.series.map((value) => ({ ...value, slot: value })),
+        ctx,
+        true,
+      );
+  }
   document.querySelector('#board-pagination').innerHTML = ctx.board
     ? '<span>' +
       esc(t('boardPageCount', { page: page.page + 1, pages: page.pages, count: page.total })) +
@@ -176,34 +202,13 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
     '</small><h2>' +
     esc(group?.name || t('allGroups')) +
     '</h2></div></div><div class="group-summary-values">' +
-    overviewMetricsMarkup(totals, ctx) +
+    overviewMetricsMarkup(totals, ctx, cardMetricKeys) +
     '</div><span class="current-interval" id="current-interval"></span>';
-  const production = config.schedules[shift].filter((s) => s.kind === 'production');
+  const production = scheduleCatalog(config, shift, [
+    ...new Set(lines.map((line) => line.line)),
+  ]).filter((s) => s.kind === 'production');
   const trend = document.querySelector('#group-trend');
-  const trendStyle = getComputedStyle(trend);
-  // Measure normal and fullscreen charts alike. Dense schedules can extend
-  // inside the chart's own scroll area without shrinking their time labels.
-  const trendSize = {
-    width: Math.max(
-      240,
-      Math.round(
-        trend.clientWidth -
-          parseFloat(trendStyle.paddingLeft) -
-          parseFloat(trendStyle.paddingRight),
-      ),
-    ),
-    // Match the CSS plot height so short desktop boards retain readable SVG text.
-    height: ctx.board
-      ? innerWidth <= 750
-        ? 95
-        : innerWidth >= 1000 && innerHeight <= 820
-          ? 90
-          : 130
-      : 230,
-  };
-  const scrollLeft = trend.scrollLeft;
-  trend.innerHTML = trendSvg(aggregateMonitorSeries(lines, production), { ...ctx, trendSize });
-  trend.scrollLeft = scrollLeft;
+  renderTrend(trend, aggregateMonitorSeries(lines, production), ctx);
   document.querySelector('#output-share').innerHTML = shareMarkup(
     lines.map((line) => ({ ...line, actual: line.cumulativeActual })),
     ctx,
@@ -428,16 +433,32 @@ function shareMarkup(lines, { t, esc, number }) {
     (!total ? '<p class="share-empty">' + esc(t('shareEmpty')) + '</p>' : '')
   );
 }
+/** Render from CSS container geometry, preserving dense-chart scroll position.
+ * SVG coordinates match CSS pixels so resizing never shrinks text or curves. */
+export function renderTrend(container, values, context, mini = false) {
+  const style = getComputedStyle(container);
+  const width = Math.max(
+    1,
+    container.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+  );
+  const height = mini
+    ? container.clientHeight
+    : parseFloat(style.getPropertyValue('--trend-height')) || container.clientHeight;
+  const scrollLeft = container.scrollLeft;
+  container.innerHTML = trendSvg(values, { ...context, trendSize: { width, height } }, mini);
+  container.scrollLeft = scrollLeft;
+}
+
 export function trendSvg(values, { t, esc, number, trendSize }, mini = false) {
   const left = mini ? 14 : 48,
     right = mini ? 14 : 24,
     // HH:MM labels need 48 CSS pixels per interval, including a visible gap.
     // Keep every interval; expanding the plot is preferable to shrinking text.
     minimumWidth = left + right + Math.max(0, values.length - 1) * 48,
-    w = mini ? 310 : Math.max(trendSize?.width || 700, minimumWidth),
-    h = mini ? 82 : trendSize?.height || 230,
-    top = 16,
-    bottom = mini ? 12 : 30,
+    w = mini ? trendSize?.width || 310 : Math.max(trendSize?.width || 700, minimumWidth),
+    h = trendSize?.height || (mini ? 82 : 230),
+    top = mini ? 6 : 16,
+    bottom = mini ? 6 : 30,
     max =
       Math.ceil(
         (Math.max(1, ...values.flatMap((v) => [v.target || 0, v.actual || 0])) * 1.15) / 4,
@@ -531,7 +552,9 @@ export function trendSvg(values, { t, esc, number, trendSize }, mini = false) {
           x(i) +
           '" cy="' +
           y(v.actual) +
-          '" r="4"/>') +
+          '" r="' +
+          (mini ? 2.5 : 4) +
+          '"/>') +
       '</g>';
   });
   values.forEach((v, i) => {

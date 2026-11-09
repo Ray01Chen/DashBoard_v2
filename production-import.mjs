@@ -1,3 +1,4 @@
+import { scheduleFor } from './public/production-schedules.js';
 import { messages } from './public/i18n.js';
 import { readSpreadsheet, writeSpreadsheet } from './spreadsheet.mjs';
 import { importDiagnostic } from './import-messages.mjs';
@@ -103,7 +104,7 @@ function templateEntries(config, shift, date, defaults, records) {
     const slots =
       saved.get(row.id)?.slots ||
       defaults[row.id]?.slots ||
-      config.schedules[shift].filter((slot) => slot.kind === 'production');
+      scheduleFor(config, row.line, shift).filter((slot) => slot.kind === 'production');
     for (const slot of slots)
       entries.push({
         rowId: row.id,
@@ -263,7 +264,6 @@ export function previewImport(
   if (columns.actual == null && columns.issue == null && columns.target == null)
     errors.push(diagnostic(headerIndex + 1, 'actual', 'missingValues'));
   if (errors.length) return { rows: [], errors, summary: { records: 0, cells: 0 } };
-  const schedule = config.schedules[shift].filter((slot) => slot.kind === 'production');
   const savedById = new Map(savedRecords.map((record) => [record.rowId, record]));
   // Existing records use their original mapping/slot definitions. An archived or
   // renamed station can still receive a correction to its historical actuals.
@@ -332,7 +332,9 @@ export function previewImport(
       savedSlots = savedById.get(row.id)?.slots || defaults[row.id]?.slots || [],
       slots = [
         ...savedSlots,
-        ...schedule.filter((slot) => !savedSlots.some((saved) => saved.id === slot.id)),
+        ...scheduleFor(config, row.line, shift)
+          .filter((slot) => slot.kind === 'production')
+          .filter((slot) => !savedSlots.some((saved) => saved.id === slot.id)),
       ];
     if (!stationHasOutput(row, config)) {
       error('rowId', 'noOutput');
@@ -408,7 +410,9 @@ export function previewImport(
     const captured = savedById.get(row.rowId)?.slots || defaults[row.rowId]?.slots || [];
     const slots = [
       ...captured,
-      ...schedule.filter((slot) => !captured.some((saved) => saved.id === slot.id)),
+      ...scheduleFor(config, mappings.get(row.rowId)?.line, shift)
+        .filter((slot) => slot.kind === 'production')
+        .filter((slot) => !captured.some((saved) => saved.id === slot.id)),
     ];
     const intervalRank = new Map(slots.map((slot, index) => [slot.id, index]));
     row.changes.sort((a, b) => intervalRank.get(a.slotId) - intervalRank.get(b.slotId));

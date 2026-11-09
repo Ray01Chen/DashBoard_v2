@@ -1,3 +1,4 @@
+import { scheduleFor } from './production-schedules.js';
 import { DEFAULT_MODEL, unitFor } from './production-models.js';
 const minutes = (time) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
 
@@ -21,9 +22,9 @@ export function lineDailyTarget(config, line, model = DEFAULT_MODEL) {
  * integer rounding preserves the exact daily total, even for targets of 0 or 1.
  * Shared by the server and settings preview to keep displayed totals consistent.
  */
-export function allocateDailyTarget(config, dailyTarget) {
+export function allocateDailyTarget(config, dailyTarget, line) {
   const slots = ['day', 'night'].flatMap((shift) =>
-    config.schedules[shift]
+    scheduleFor(config, line, shift)
       .filter((slot) => slot.kind === 'production')
       .map((slot) => ({
         ...slot,
@@ -32,7 +33,8 @@ export function allocateDailyTarget(config, dailyTarget) {
       })),
   );
   const totalMinutes = slots.reduce((sum, slot) => sum + slot.minutes, 0);
-  if (dailyTarget == null || !totalMinutes) return slots.map((slot) => ({ ...slot, target: null }));
+  if (dailyTarget == null || !totalMinutes)
+    return slots.map((slot) => ({ ...slot, target: null }));
   const allocated = slots.map((slot, index) => ({
     ...slot,
     index,

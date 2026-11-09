@@ -1,3 +1,4 @@
+import { scheduleFor } from './public/production-schedules.js';
 import { randomUUID } from 'node:crypto';
 import { allocateDailyTarget, lineDailyTarget } from './public/production-targets.js';
 import {
@@ -125,13 +126,18 @@ export function validateProductionDefaults(data, next, previous, fail) {
     const staffing = {};
     for (const role of ['day', 'night', 'owners']) {
       const assigned = rawStaff[role] ?? [];
-      if (!Array.isArray(assigned) || assigned.length > 500 || assigned.some((id) => !ids.has(id)))
+      if (
+        !Array.isArray(assigned) ||
+        assigned.length > 500 ||
+        assigned.some((id) => !ids.has(id))
+      )
         fail(400, 'errStaffing');
       staffing[role] = [...new Set(assigned)];
     }
     return { line: unit.line, model: unit.model, dailyTarget, staffing };
   });
-  if (next.rows.some((row) => row.active && !keys.has(productionKey(row)))) fail(400, 'errMapping');
+  if (next.rows.some((row) => row.active && !keys.has(productionKey(row))))
+    fail(400, 'errMapping');
   // Compatibility view for older clients. Each other model remains independent.
   for (const line of next.lines) {
     const unit = next.productionUnits.find(
@@ -145,7 +151,9 @@ export function validateProductionDefaults(data, next, previous, fail) {
 /** Derived values are safe for member accounts and never write production data. */
 export function buildProductionDefaults(config, shift) {
   const people = new Map(
-    (config.personnel || []).filter((person) => person.active).map((person) => [person.id, person]),
+    (config.personnel || [])
+      .filter((person) => person.active)
+      .map((person) => [person.id, person]),
   );
   return Object.fromEntries(
     config.rows
@@ -160,7 +168,7 @@ export function buildProductionDefaults(config, shift) {
         const dailyTarget = stationHasOutput(row)
           ? lineDailyTarget(config, row.line, modelOf(row))
           : null;
-        const slots = allocateDailyTarget(config, dailyTarget)
+        const slots = allocateDailyTarget(config, dailyTarget, row.line)
           .filter((slot) => slot.shift === shift)
           .map(({ id, start, end, target }) => ({
             id,
@@ -227,7 +235,9 @@ export function resolveEntryData(
   // must not append new slots to that history. Existing live mappings retain
   // support for explicitly reporting newly configured intervals.
   if (!row.deleted)
-    for (const slot of config.schedules[data.shift].filter((slot) => slot.kind === 'production')) {
+    for (const slot of scheduleFor(config, row.line, data.shift).filter(
+      (slot) => slot.kind === 'production',
+    )) {
       if (!source.has(slot.id))
         source.set(slot.id, { ...slot, target: null, actual: null, issue: '' });
     }
@@ -293,7 +303,9 @@ export function resolveEntryData(
       outputSource: productionDay
         ? opposite.defaultsSnapshot.outputSource
         : outputSourceFor(config, current?.rowSnapshot || row),
-      capturedAt: productionDay ? opposite.defaultsSnapshot.capturedAt : new Date().toISOString(),
+      capturedAt: productionDay
+        ? opposite.defaultsSnapshot.capturedAt
+        : new Date().toISOString(),
     },
   };
 }

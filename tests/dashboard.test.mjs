@@ -2,7 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { createAuth } from '../auth.mjs';
-import { outputShares, sum, trendSvg, hourlyLabelLayout } from '../public/dashboard.js';
+import {
+  outputShares,
+  sum,
+  trendSvg,
+  hourlyLabelLayout,
+  aggregateMonitorSeries,
+} from '../public/dashboard.js';
 import { translate } from '../public/i18n.js';
 import {
   boardPage,
@@ -152,7 +158,7 @@ test('fullscreen trends use their container geometry and retain readable interva
   for (const value of values) assert.ok(narrow.includes(value.slot.start));
   assert.match(
     trendSvg(values, { ...ctx, trendSize: { width: 1320, height: 130 } }, true),
-    /viewBox="0 0 310 82"/,
+    /viewBox="0 0 1320 130"/,
   );
 });
 
@@ -225,4 +231,48 @@ test('legacy accounts migrate once with new passwords, correct roles and revoked
     hashes,
   );
   db.close();
+});
+
+test('group trends interleave custom line intervals and preserve captured overnight order', () => {
+  const series = [
+    {
+      id: 'late',
+      start: '23:30',
+      end: '00:00',
+      startAt: 100,
+      endAt: 120,
+      target: 10,
+      actual: 8,
+    },
+    {
+      id: 'early',
+      start: '00:00',
+      end: '00:30',
+      startAt: 120,
+      endAt: 140,
+      target: 10,
+      actual: 9,
+    },
+  ];
+  const custom = {
+    id: 'custom',
+    start: '23:45',
+    end: '00:15',
+    startAt: 110,
+    endAt: 130,
+    target: 5,
+    actual: 3,
+  };
+  const grouped = aggregateMonitorSeries(
+    [{ series }, { series: [custom] }],
+    [series[0], series[1], custom],
+  );
+  assert.deepEqual(
+    grouped.map((value) => value.slot.id),
+    ['late', 'custom', 'early'],
+  );
+  assert.deepEqual(
+    grouped.map((value) => value.actual),
+    [8, 3, 9],
+  );
 });

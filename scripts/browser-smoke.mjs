@@ -96,7 +96,8 @@ try {
     await page.locator('[data-save-settings]').first().click();
     await page.waitForFunction(
       () =>
-        document.querySelector('#settings-save-status').textContent === 'All settings are saved.',
+        document.querySelector('#settings-save-status').textContent ===
+        'All settings are saved.',
     );
   };
   const saved = async () =>
@@ -159,7 +160,9 @@ try {
       config.rows.find((row) => row.id === id),
       { line, model: 'Default', job, station, active: true },
     );
-  config.monitoring.groups = [{ id: 'training', name: 'Training example', lines: config.lines }];
+  config.monitoring.groups = [
+    { id: 'training', name: 'Training example', lines: config.lines },
+  ];
   config.monitoring.outputSources = {};
   config.monitoring.unitOutputSources = {};
   let response = await context.request.put(baseURL + '/api/config', { data: config });
@@ -222,7 +225,10 @@ try {
   assert.equal(await page.locator('[data-mapping-model]').inputValue(), model);
   assert.equal(await page.locator('[data-row-field="model"]').count(), 0);
   assert.equal(await page.locator('[data-mapping-line-select]').count(), 0);
-  assert.equal(await page.locator('[data-mapping-suggestion], [data-mapping-template]').count(), 0);
+  assert.equal(
+    await page.locator('[data-mapping-suggestion], [data-mapping-template]').count(),
+    0,
+  );
   assert.equal(await page.locator('[data-configured-mapping]').count(), 0);
   assert.match(await page.locator('.mapping-empty').innerText(), /No stations configured/);
   assert.equal(await page.locator('[data-unit-output-source]').isDisabled(), true);
@@ -328,8 +334,12 @@ try {
   for (const theme of ['green', 'indigo', 'amber', 'rose', 'delta']) {
     await page.locator('#theme-select').selectOption(theme);
     assert.equal(await page.locator('html').getAttribute('data-theme'), theme);
-    assert.equal(await page.locator('.brand img[alt="DELTA"]').evaluate((img) =>
-      img.complete && img.naturalWidth > 0), true);
+    assert.equal(
+      await page
+        .locator('.brand img[alt="DELTA"]')
+        .evaluate((img) => img.complete && img.naturalWidth > 0),
+      true,
+    );
   }
   await page.locator('#collapse-sidebar').click();
   assert.equal(await page.locator('#collapse-sidebar').getAttribute('aria-expanded'), 'false');
@@ -361,7 +371,11 @@ try {
       ...new Set(
         templateRows
           .slice(1)
-          .filter((row) => row[templateRows[0].indexOf('Line')] === 'DEMO-A' && row[templateRows[0].indexOf('Model')] === model)
+          .filter(
+            (row) =>
+              row[templateRows[0].indexOf('Line')] === 'DEMO-A' &&
+              row[templateRows[0].indexOf('Model')] === model,
+          )
           .map((row) => Number(row[templateRows[0].indexOf('Row ID')])),
       ),
     ],
@@ -503,7 +517,10 @@ try {
   await page.locator('[data-mapping-line-filter]').selectOption('DEMO-A');
   await page.locator('[data-mapping-model]').selectOption(otherModel);
   assert.equal(await page.locator(`[data-configured-mapping="${disposable.id}"]`).count(), 0);
-  assert.equal(await page.locator('[data-mapping-suggestion], [data-mapping-template]').count(), 0);
+  assert.equal(
+    await page.locator('[data-mapping-suggestion], [data-mapping-template]').count(),
+    0,
+  );
   assert.deepEqual((await readReport(deletionDate)).records, deletionHistory);
   record(
     'Delete removes saved and unsaved rows; saved deletion stays absent after reload, selects a valid source and preserves reports',
@@ -515,7 +532,9 @@ try {
     (row) => row.active && row.model === otherModel && row.station === 'Pack',
   );
   assert.notEqual(replacement.id, disposable.id);
-  assert.ok(!(await readReport(reportDate)).records.some((row) => row.rowId === replacement.id));
+  assert.ok(
+    !(await readReport(reportDate)).records.some((row) => row.rowId === replacement.id),
+  );
   assert.deepEqual((await readReport(deletionDate)).records, deletionHistory);
   await page
     .locator(`[data-configured-mapping="${replacement.id}"] [data-action="remove-mapping"]`)
@@ -562,7 +581,9 @@ try {
   await page.locator('[data-staffing-model-filter]').selectOption(model);
   const day = page.locator('[data-staff-role="day"]');
   assert.equal(await day.locator('.staff-assigned-list li').count(), 3);
-  assert.ok((await day.locator('[data-staff-job] option').allTextContents()).includes('Empty job'));
+  assert.ok(
+    (await day.locator('[data-staff-job] option').allTextContents()).includes('Empty job'),
+  );
   await day.locator('[data-staff-job]').selectOption('Empty job');
   assert.match(await day.innerText(), /No people in this job yet/);
   await day.locator('[data-action="staff-manage-people"]').click();
@@ -583,9 +604,9 @@ try {
   assert.equal(await page.locator('.issue-preset-settings').count(), 0);
   await page.locator('[data-settings-tab="structure"]').click();
   assert.ok(
-    await page.locator('[data-issue-label]').evaluateAll((inputs) =>
-      inputs.some((input) => input.value === 'Safety stop'),
-    ),
+    await page
+      .locator('[data-issue-label]')
+      .evaluateAll((inputs) => inputs.some((input) => input.value === 'Safety stop')),
   );
   record(
     'People-by-job linkage, same-job teams and the English issue list in Master data remain available',
@@ -629,8 +650,13 @@ try {
   assert.ok(compactHeight <= 140, 'Compact station row height: ' + compactHeight);
   await issueButton(pack.id).click();
   assert.match(await page.locator('.entry-issue-context').innerText(), /PD \/ Pack/);
-  assert.match(await page.locator('.entry-issue-context').innerText(), /Day shift.*08:00–08:20/);
-  assert.ok((await page.locator('[data-issue-preset]').allTextContents()).includes('Safety stop'));
+  assert.match(
+    await page.locator('.entry-issue-context').innerText(),
+    /Day shift.*08:00–08:20/,
+  );
+  assert.ok(
+    (await page.locator('[data-issue-preset]').allTextContents()).includes('Safety stop'),
+  );
   await page.keyboard.press('Escape');
   assert.equal(
     (await readReport(reportDate)).records.length,
@@ -660,8 +686,14 @@ try {
   report = await readReport(reportDate);
   assert.equal(report.records.find((row) => row.rowId === pack.id).slots[0].actual, 11);
   assert.equal(report.records.find((row) => row.rowId === test.id).slots[0].actual, 7);
-  assert.match(await station(pack.id).locator('[data-entry-day-field="target"]').innerText(), /1,?005/);
-  assert.match(await station(test.id).locator('[data-entry-day-field="target"]').innerText(), /1,?015/);
+  assert.match(
+    await station(pack.id).locator('[data-entry-day-field="target"]').innerText(),
+    /1,?005/,
+  );
+  assert.match(
+    await station(test.id).locator('[data-entry-day-field="target"]').innerText(),
+    /1,?015/,
+  );
   assert.equal(
     (await readConfig()).productionUnits.find(
       (unit) => unit.line === 'DEMO-A' && unit.model === model,
@@ -819,20 +851,22 @@ try {
   await page.locator('[data-entry-select-shift="night"]').click();
   assert.equal(await page.locator('[data-entry-mode]').inputValue(), 'shift');
   assert.ok(
-    await page.locator('[data-entry-select-shift="night"]').evaluate((button) =>
-      button.classList.contains('selected'),
-    ),
+    await page
+      .locator('[data-entry-select-shift="night"]')
+      .evaluate((button) => button.classList.contains('selected')),
   );
   assert.ok(
-    await page.locator('[data-entry-field="actual"]').evaluateAll((inputs) =>
-      inputs.every((input) => input.dataset.rowKey.includes('|night|')),
-    ),
+    await page
+      .locator('[data-entry-field="actual"]')
+      .evaluateAll((inputs) =>
+        inputs.every((input) => input.dataset.rowKey.includes('|night|')),
+      ),
   );
   await page.locator('[data-entry-select-shift="day"]').click();
   assert.ok(
-    await page.locator('[data-entry-field="actual"]').evaluateAll((inputs) =>
-      inputs.every((input) => input.dataset.rowKey.includes('|day|')),
-    ),
+    await page
+      .locator('[data-entry-field="actual"]')
+      .evaluateAll((inputs) => inputs.every((input) => input.dataset.rowKey.includes('|day|'))),
   );
   await page.evaluate(() => {
     window.__bpNativeDate = Date;
@@ -899,25 +933,36 @@ try {
   );
   assert.equal(sampleResponse.status(), 200);
   const sampleWorkbook = await sampleResponse.body();
-  const sampleRows = readSpreadsheet('sample.xlsx', sampleWorkbook.toString('base64'))
-    .map((row) => row.map((cell) => cell.value));
+  const sampleRows = readSpreadsheet('sample.xlsx', sampleWorkbook.toString('base64')).map(
+    (row) => row.map((cell) => cell.value),
+  );
   const sampleHeader = sampleRows[0];
   const sampleColumn = (name) => sampleHeader.indexOf(name);
   assert.equal(sampleColumn('Actual'), sampleColumn('Target') + 1);
-  const filledRows = [[pack.id, 155, 55, 'Excel Pack'], [test.id, 144, 44, 'Excel Test']]
-    .map(([id, target, actual, issue]) => {
-      const row = [...sampleRows.find((row, index) => index &&
-        Number(row[sampleColumn('Row ID')]) === id &&
-        row[sampleColumn('Shift')] === 'day')];
-      row[sampleColumn('Target')] = target;
-      row[sampleColumn('Actual')] = actual;
-      row[sampleColumn('Issue')] = issue;
-      return row;
-    });
+  const filledRows = [
+    [pack.id, 155, 55, 'Excel Pack'],
+    [test.id, 144, 44, 'Excel Test'],
+  ].map(([id, target, actual, issue]) => {
+    const row = [
+      ...sampleRows.find(
+        (row, index) =>
+          index &&
+          Number(row[sampleColumn('Row ID')]) === id &&
+          row[sampleColumn('Shift')] === 'day',
+      ),
+    ];
+    row[sampleColumn('Target')] = target;
+    row[sampleColumn('Actual')] = actual;
+    row[sampleColumn('Issue')] = issue;
+    return row;
+  });
   const workbook = writeSpreadsheet([sampleHeader, ...filledRows]);
   if (screenshots) {
     await mkdir(path.join(root, 'docs/examples'), { recursive: true });
-    await writeFile(path.join(root, 'docs/examples/production-import-template.xlsx'), sampleWorkbook);
+    await writeFile(
+      path.join(root, 'docs/examples/production-import-template.xlsx'),
+      sampleWorkbook,
+    );
   }
   await page.locator('.entry-import-scope > summary').click();
   await page.locator('[data-entry-action="open-import"][data-import-shift="day"]').click();
@@ -930,14 +975,23 @@ try {
     () => !document.querySelector('[data-entry-action="apply-import"]').disabled,
   );
   assert.equal(await page.locator('.entry-import-preview section').count(), 2);
-  assert.deepEqual(await page.locator('.entry-import-station small').allTextContents(),
-    ['PD / Pack', 'QA / Test']);
-  assert.ok((await page.locator('.entry-import-shift').allTextContents())
-    .every((label) => label === 'Day shift'));
+  assert.deepEqual(await page.locator('.entry-import-station small').allTextContents(), [
+    'PD / Pack',
+    'QA / Test',
+  ]);
+  assert.ok(
+    (await page.locator('.entry-import-shift').allTextContents()).every(
+      (label) => label === 'Day shift',
+    ),
+  );
   for (const width of [1440, 1024, 768, 390]) {
     await page.setViewportSize({ width, height: 1000 });
-    assert.equal(await page.locator('.entry-import-dialog').evaluate((dialog) =>
-      dialog.scrollWidth > dialog.clientWidth + 1), false);
+    assert.equal(
+      await page
+        .locator('.entry-import-dialog')
+        .evaluate((dialog) => dialog.scrollWidth > dialog.clientWidth + 1),
+      false,
+    );
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
   await screenshot('.entry-import-dialog', 'excel-preview');
@@ -953,10 +1007,11 @@ try {
   await screenshot('.entry-station-values', 'production-cell');
   record('Real XLSX preview and import preserve different station targets, actuals and issues');
   // Keep server-authoritative time deterministic for current-interval metrics.
+  let monitorClock = Date.parse('2026-11-10T08:50:00+07:00');
   await page.route('**/api/records?**', async (route) => {
     const response = await route.fetch();
     const data = await response.json();
-    data.serverTime = Date.parse('2026-11-10T08:50:00+07:00');
+    data.serverTime = monitorClock;
     await route.fulfill({ response, json: data });
   });
   await page.locator('[data-view="overview"]').click();
@@ -975,11 +1030,8 @@ try {
     );
   assert.match(await card.locator('.line-source').innerText(), /Test/);
   assert.equal(
-    (await card.locator('[data-metric="cumulativeActual"] b').innerText()).replaceAll(
-      ',',
-      '',
-    ),
-    '76',
+    (await card.locator('[data-metric="currentActual"] b').innerText()).replaceAll(',', ''),
+    '32',
   );
   await page.locator('[data-view="settings"]').click();
   await page.locator('[data-settings-tab="workforce"]').click();
@@ -991,45 +1043,80 @@ try {
   await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
   assert.match(await card.locator('.line-source').innerText(), /Pack/);
   assert.equal(
-    (await card.locator('[data-metric="cumulativeActual"] b').innerText()).replaceAll(
-      ',',
-      '',
-    ),
-    '77',
+    (await card.locator('[data-metric="currentActual"] b').innerText()).replaceAll(',', ''),
+    '22',
   );
   record(
     'Dashboard output and target use only the chosen station; changing the source takes effect on existing entries',
   );
-  const dayTarget = Number(
-    (await card.locator('[data-metric="dailyTarget"] b').innerText()).replaceAll(
-      ',',
-      '',
-    ),
-  );
   await page.locator('[data-report-scope="all"]').click();
-  await page.waitForFunction(() => document.querySelector('#board-context').textContent.includes('Whole day'));
-  const wholeDayTarget = Number(
-    (await card.locator('[data-metric="dailyTarget"] b').innerText()).replaceAll(
-      ',',
-      '',
-    ),
+  await page.waitForFunction(() =>
+    document.querySelector('#board-context').textContent.includes('Whole day'),
   );
   await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
-  assert.equal(wholeDayTarget, dayTarget);
+  assert.equal(await card.locator('[data-metric="dailyTarget"]').count(), 0);
   assert.equal(await card.locator('[data-metric="currentTarget"] b').innerText(), '122');
   assert.equal(await card.locator('[data-metric="currentActual"] b').innerText(), '22');
-  assert.equal(await card.locator('[data-metric="cumulativeTarget"] b').innerText(), '277');
-  assert.equal(await card.locator('[data-metric="cumulativeGap"] b').innerText(), '-200');
-  await page.locator('[data-report-scope="night"]').click();
-  await page.waitForFunction(() => document.querySelector('#board-context').textContent.includes('Night'));
-  await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
+  assert.equal(await card.locator('[data-metric="currentGap"] b').innerText(), '-100');
+  await page.locator('.dashboard-actions [data-metric-scope="day"]').click();
   assert.equal(await card.locator('[data-metric="dailyTarget"] b').innerText(), '777');
+  const sourceActuals = (
+    await Promise.all(['day', 'night'].map((shift) => readReport(reportDate, shift)))
+  )
+    .flatMap((data) => data.records.filter((record) => record.rowId === pack.id))
+    .flatMap((record) => record.slots.map((slot) => slot.actual))
+    .filter((value) => value != null);
+  const expectedDailyActual = sourceActuals.reduce((total, value) => total + value, 0);
+  assert.equal(
+    Number(
+      (await card.locator('[data-metric="dailyActual"] b').innerText()).replaceAll(',', ''),
+    ),
+    expectedDailyActual,
+  );
+  assert.equal(
+    Number((await card.locator('[data-metric="dailyGap"] b').innerText()).replaceAll(',', '')),
+    expectedDailyActual - 777,
+  );
+  await page.reload();
+  await page.waitForFunction(
+    () => document.querySelectorAll('#line-cards .line-card').length > 0,
+  );
+  assert.equal(
+    await page
+      .locator('.dashboard-actions [data-metric-scope="day"]')
+      .getAttribute('aria-pressed'),
+    'true',
+  );
+  assert.equal(
+    await page
+      .locator('#line-cards .line-card')
+      .first()
+      .locator('[data-metric="dailyActual"]')
+      .count(),
+    1,
+  );
+  await page.locator('#report-date').fill(reportDate);
+  await page.locator('#report-date').dispatchEvent('change');
+  await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
+  await page.locator('.dashboard-actions [data-metric-scope="interval"]').click();
+  assert.equal(await card.locator('[data-metric="currentTarget"] b').innerText(), '122');
+  record(
+    'Interval/Daily switches only the three displayed metrics, uses both shifts for daily totals, and persists after reload',
+  );
+
+  await page.locator('[data-report-scope="night"]').click();
+  await page.waitForFunction(() =>
+    document.querySelector('#board-context').textContent.includes('Night'),
+  );
+  await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
   assert.equal(await card.locator('[data-metric="currentTarget"] b').innerText(), '—');
-  assert.equal(await card.locator('[data-metric="cumulativeActual"] b').innerText(), '—');
+  assert.equal(await card.locator('[data-metric="currentGap"] b').innerText(), '—');
   await page.locator('[data-report-scope="day"]').click();
   await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
   await page.locator('[data-report-scope="all"]').click();
-  await page.waitForFunction(() => document.querySelector('#board-context').textContent.includes('Whole day'));
+  await page.waitForFunction(() =>
+    document.querySelector('#board-context').textContent.includes('Whole day'),
+  );
 
   await page.locator('[data-view="details"]').click();
   assert.equal(
@@ -1039,7 +1126,10 @@ try {
   assert.match(await page.locator('#board-context').innerText(), /Whole day/);
   assert.equal(await page.locator('[data-report-scope="all"]').isVisible(), true);
   await page.locator('#slot-tabs [data-slot]').last().click();
-  assert.match(await page.locator('#records-body .team-cell').first().innerText(), /Blake Night/);
+  assert.match(
+    await page.locator('#records-body .team-cell').first().innerText(),
+    /Blake Night/,
+  );
   await page.locator('[data-view="overview"]').click();
   await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
   if (screenshots) {
@@ -1079,17 +1169,28 @@ try {
     window.__overviewNativeNow = Date.now;
     Date.now = () => window.__overviewNativeNow() + 3600000;
   });
-  await page.waitForFunction(() =>
-    document.querySelector('#line-detail-dialog [data-metric="currentTarget"] b').textContent === '—');
+  await page.waitForFunction(
+    () =>
+      document.querySelector('#line-detail-dialog [data-metric="currentTarget"] b')
+        .textContent === '—',
+  );
   assert.equal(await card.locator('[data-metric="currentTarget"] b').innerText(), '—');
-  assert.equal(await page.locator('#line-detail-dialog [data-metric="cumulativeActual"] b').innerText(), '77');
+  assert.equal(
+    await page.locator('#line-detail-dialog [data-metric="cumulativeActual"] b').innerText(),
+    '77',
+  );
   await page.evaluate(() => {
     Date.now = window.__overviewNativeNow;
     delete window.__overviewNativeNow;
   });
-  await page.waitForFunction(() =>
-    document.querySelector('#line-detail-dialog [data-metric="currentTarget"] b').textContent === '122');
-  record('Overview and open details distinguish interval, daily and cumulative values, exclude future intervals and update at time boundaries without reloading');
+  await page.waitForFunction(
+    () =>
+      document.querySelector('#line-detail-dialog [data-metric="currentTarget"] b')
+        .textContent === '122',
+  );
+  record(
+    'Overview shows only interval target, actual and gap while open details retain daily/cumulative metrics; both update at time boundaries without reloading',
+  );
   assert.equal(await page.locator('.line-modal-station-people').count(), 2);
   assert.match(await page.locator('.line-modal-stations').innerText(), /Alex Day/);
   assert.match(await page.locator('.line-modal-stations').innerText(), /Day shift/);
@@ -1114,9 +1215,9 @@ try {
     const dialogBounds = await page.locator('#line-detail-dialog').boundingBox();
     assert.ok(dialogBounds.x >= 0 && dialogBounds.x + dialogBounds.width <= width + 1);
     assert.equal(
-      await page.locator('#line-detail-content').evaluate(
-        (content) => content.scrollWidth > content.clientWidth + 1,
-      ),
+      await page
+        .locator('#line-detail-content')
+        .evaluate((content) => content.scrollWidth > content.clientWidth + 1),
       false,
     );
   }
@@ -1148,7 +1249,11 @@ try {
               return range.getClientRects().length !== 1 || bounds.right > cell.right + 1;
             }).length,
         );
-        assert.equal(broken, 0, 'Delete action must fit without splitting its label at ' + width);
+        assert.equal(
+          broken,
+          0,
+          'Delete action must fit without splitting its label at ' + width,
+        );
       }
       assert.equal(
         await page.evaluate(
@@ -1222,7 +1327,9 @@ try {
   };
   const bulkApply = async () => {
     await page.locator('[data-entry-action="bulk-save"]').click();
-    await page.waitForFunction(() => document.querySelector('[data-bulk-status]').textContent === 'Saved');
+    await page.waitForFunction(
+      () => document.querySelector('[data-bulk-status]').textContent === 'Saved',
+    );
     assert.equal(await page.locator('.entry-bulk-dialog').isVisible(), true);
     await page.locator('[data-entry-action="bulk-close"]').click();
     await page.locator('.entry-bulk-dialog').waitFor({ state: 'hidden' });
@@ -1423,7 +1530,9 @@ try {
   await bulkOpen();
   await page.locator('[data-bulk-date]').fill('2026-11-15');
   await page.locator('[data-bulk-date]').dispatchEvent('change');
-  await page.waitForFunction(() => !document.querySelector('[data-entry-action="bulk-save"]').disabled);
+  await page.waitForFunction(
+    () => !document.querySelector('[data-entry-action="bulk-save"]').disabled,
+  );
   await page.locator('[data-bulk-field="target"]').fill('41');
   await page.locator('[data-bulk-apply-field="target"]').click();
   assert.equal(await page.locator('.entry-bulk-dialog').isVisible(), true);
@@ -1435,28 +1544,50 @@ try {
     clipboardData.setData('text/plain', '51\n61\n52\n62');
     input.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, clipboardData }));
   });
-  assert.deepEqual(await page.locator('[data-bulk-cell="target"]').evaluateAll((inputs) => inputs.map((input) => input.value)), ['51', '52']);
-  assert.deepEqual(await page.locator('[data-bulk-cell="actual"]').evaluateAll((inputs) => inputs.map((input) => input.value)), ['61', '62']);
+  assert.deepEqual(
+    await page
+      .locator('[data-bulk-cell="target"]')
+      .evaluateAll((inputs) => inputs.map((input) => input.value)),
+    ['51', '52'],
+  );
+  assert.deepEqual(
+    await page
+      .locator('[data-bulk-cell="actual"]')
+      .evaluateAll((inputs) => inputs.map((input) => input.value)),
+    ['61', '62'],
+  );
   await page.locator('[data-bulk-cell="issue"]').last().fill('Individual issue');
   // Click the backdrop: save before closing and navigate to the edited date.
   await page.mouse.click(2, 2);
   await page.locator('.entry-bulk-dialog').waitFor({ state: 'hidden' });
-  await page.waitForFunction(() => document.querySelector('#report-date').value === '2026-11-15');
+  await page.waitForFunction(
+    () => document.querySelector('#report-date').value === '2026-11-15',
+  );
   const dated = (await readReport('2026-11-15')).records;
-  assert.deepEqual(dated.map((row) => [row.slots[0].target, row.slots[0].actual]).sort(), [[51, 61], [52, 62]]);
+  assert.deepEqual(dated.map((row) => [row.slots[0].target, row.slots[0].actual]).sort(), [
+    [51, 61],
+    [52, 62],
+  ]);
   assert.ok(dated.some((row) => row.slots[0].issue === 'Individual issue'));
   assert.ok(dated.some((row) => row.slots[0].issue === 'Equipment downtime'));
   await page.locator('#report-date').fill(batchDate);
   await page.locator('#report-date').dispatchEvent('change');
-  await page.waitForFunction(() => document.querySelectorAll('[data-entry-field="actual"]').length === 6);
-  record('Batch applies stay open; paired paste, quick text, individual issues, editable dates and backdrop autosave persist exact station values');
+  await page.waitForFunction(
+    () => document.querySelectorAll('[data-entry-field="actual"]').length === 6,
+  );
+  record(
+    'Batch applies stay open; paired paste, quick text, individual issues, editable dates and backdrop autosave persist exact station values',
+  );
 
   const resetDate = '2026-11-17';
   await page.locator('#report-date').fill(resetDate);
   await page.locator('#report-date').dispatchEvent('change');
   const resetDefaults = Object.fromEntries(
     await Promise.all(
-      ['day', 'night'].map(async (shift) => [shift, (await readReport(resetDate, shift)).defaults]),
+      ['day', 'night'].map(async (shift) => [
+        shift,
+        (await readReport(resetDate, shift)).defaults,
+      ]),
     ),
   );
   await field(pack.id, 'target').fill('88');
@@ -1477,7 +1608,8 @@ try {
   for (const shift of ['day', 'night']) {
     const cleared = await readReport(resetDate, shift);
     for (const rowId of [pack.id, test.id]) {
-      const effective = cleared.records.find((row) => row.rowId === rowId) || cleared.defaults[rowId];
+      const effective =
+        cleared.records.find((row) => row.rowId === rowId) || cleared.defaults[rowId];
       assert.ok(
         effective.slots.every(
           (slot) =>
@@ -1500,12 +1632,16 @@ try {
   assert.equal(await field(pack.id, 'actual').inputValue(), '');
   await page.locator('#report-date').fill(batchDate);
   await page.locator('#report-date').dispatchEvent('change');
-  await page.waitForFunction(() => document.querySelectorAll('[data-entry-field="actual"]').length === 6);
+  await page.waitForFunction(
+    () => document.querySelectorAll('[data-entry-field="actual"]').length === 6,
+  );
   record(
     'Restore defaults requires confirmation, cancel preserves data, and confirm restores preset Targets while clearing Actual/Issue for every station across both shifts',
   );
 
-  const retainedTest = (await readReport(batchDate)).records.find((row) => row.rowId === test.id);
+  const retainedTest = (await readReport(batchDate)).records.find(
+    (row) => row.rowId === test.id,
+  );
   await page.locator('[data-view="settings"]').click();
   await page.locator('[data-settings-tab="workforce"]').click();
   await page.locator('[data-mapping-line-filter]').selectOption('DEMO-A');
@@ -1567,7 +1703,12 @@ try {
   const variablePasteDraft = structuredClone(beforeVariablePasteConfig);
   for (const row of variablePasteDraft.rows)
     if (row.id === test.id || row.id === pack.id) row.hasOutput = true;
-  const pasteStations = ['Paste station 3', 'Paste station 4', 'Paste station 5', 'Paste station 6'];
+  const pasteStations = [
+    'Paste station 3',
+    'Paste station 4',
+    'Paste station 5',
+    'Paste station 6',
+  ];
   variablePasteDraft.stations.push(...pasteStations);
   variablePasteDraft.rows.push(
     ...pasteStations.map((station, index) => ({
@@ -1599,22 +1740,36 @@ try {
     .locator('[data-entry-station-row]:not([data-entry-no-output])')
     .evaluateAll((rows) => rows.map((row) => Number(row.dataset.entryStationRow)));
   assert.equal(variablePasteOrder.length, 6);
-  await page.locator('[data-entry-field="actual"]').first().evaluate((input) => {
-    const transfer = new DataTransfer();
-    transfer.setData('text/plain', '299');
-    input.dispatchEvent(
-      new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer }),
-    );
-  });
+  await page
+    .locator('[data-entry-field="actual"]')
+    .first()
+    .evaluate((input) => {
+      const transfer = new DataTransfer();
+      transfer.setData('text/plain', '299');
+      input.dispatchEvent(
+        new ClipboardEvent('paste', {
+          bubbles: true,
+          cancelable: true,
+          clipboardData: transfer,
+        }),
+      );
+    });
   assert.equal(await page.locator('[data-entry-field="target"]').first().inputValue(), '299');
   assert.equal(await page.locator('[data-entry-field="actual"]').first().inputValue(), '');
-  await page.locator('[data-entry-field="actual"]').first().evaluate((input) => {
-    const transfer = new DataTransfer();
-    transfer.setData('text/plain', '5\t0\n5\t0\n5\t0\n5\t12\n5\t0\n5\t0');
-    input.dispatchEvent(
-      new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer }),
-    );
-  });
+  await page
+    .locator('[data-entry-field="actual"]')
+    .first()
+    .evaluate((input) => {
+      const transfer = new DataTransfer();
+      transfer.setData('text/plain', '5\t0\n5\t0\n5\t0\n5\t12\n5\t0\n5\t0');
+      input.dispatchEvent(
+        new ClipboardEvent('paste', {
+          bubbles: true,
+          cancelable: true,
+          clipboardData: transfer,
+        }),
+      );
+    });
   await page.locator('[data-entry-action="save-all"]').click();
   await saved();
   const variablePasteReport = await readReport(variablePasteDate);
@@ -1684,11 +1839,10 @@ try {
   // this isolated fixture, then restore the complete configuration below.
   const scheduleFixture = structuredClone(beforeScheduleChange);
   const scheduleRows = scheduleFixture.rows
-    .filter((row) =>
-      row.active && !row.deleted && row.line === 'DEMO-A' && row.model === model)
+    .filter((row) => row.active && !row.deleted && row.line === 'DEMO-A' && row.model === model)
     .slice(0, 2);
   assert.equal(scheduleRows.length, 2);
-  scheduleRows.forEach((row) => row.hasOutput = true);
+  scheduleRows.forEach((row) => (row.hasOutput = true));
   response = await context.request.put(baseURL + '/api/config', { data: scheduleFixture });
   assert.equal(response.status(), 200, await response.text());
   const scheduleConfig = await response.json();
@@ -1760,8 +1914,193 @@ try {
     'Batch entry uses current CONFIG after schedule changes and saves new slot IDs while preserving every original historical value',
   );
 
+  {
+    const beforeLineSchedules = await readConfig();
+    const lineScheduleDate = '2026-11-25';
+    const scheduleRow = beforeLineSchedules.rows.find(
+      (row) =>
+        row.active &&
+        !row.deleted &&
+        row.hasOutput !== false &&
+        row.line === 'DEMO-A' &&
+        row.model === model,
+    );
+    assert.ok(scheduleRow);
+    await page.goto(baseURL + '/settings/master-data');
+    await page.locator('#schedule-line-select').selectOption('DEMO-A');
+    await page.locator('[data-action="copy-schedule-template"]').click();
+    await page
+      .locator('[data-time-field="end"][data-shift-key="day"][data-index="0"]')
+      .fill('08:10');
+    await page
+      .locator('[data-time-field="end"][data-shift-key="day"][data-index="0"]')
+      .dispatchEvent('change');
+    await page
+      .locator('[data-time-field="start"][data-shift-key="day"][data-index="1"]')
+      .fill('08:10');
+    await page
+      .locator('[data-time-field="start"][data-shift-key="day"][data-index="1"]')
+      .dispatchEvent('change');
+    await saveSettings();
+    const customizedSchedules = await readConfig();
+    assert.deepEqual(customizedSchedules.schedules, beforeLineSchedules.schedules);
+    assert.equal(customizedSchedules.lineSchedules['DEMO-A'].day[0].end, '08:10');
+    assert.equal(customizedSchedules.lineSchedules['DEMO-A'].day[1].start, '08:10');
+    assert.equal(customizedSchedules.lineSchedules['DEMO-B'], undefined);
+    await page.locator('[data-action="copy-schedule-template"]').click();
+    await page.locator('#confirm-no').click();
+    assert.equal(
+      await page
+        .locator('[data-time-field="end"][data-shift-key="day"][data-index="0"]')
+        .inputValue(),
+      '08:10',
+    );
+    const invalidSchedule = structuredClone(customizedSchedules);
+    invalidSchedule.lineSchedules['DEMO-A'].day[1].start = '08:05';
+    const rejectedSchedule = await context.request.put(baseURL + '/api/config', {
+      data: invalidSchedule,
+    });
+    assert.equal(rejectedSchedule.status(), 400);
+    assert.equal((await rejectedSchedule.json()).code, 'errOverlap');
+    assert.equal((await readConfig()).version, customizedSchedules.version);
+    await page.locator('#schedule-line-select').selectOption('');
+    await page
+      .locator('[data-time-field="end"][data-shift-key="night"][data-index="0"]')
+      .fill('21:30');
+    await page
+      .locator('[data-time-field="end"][data-shift-key="night"][data-index="0"]')
+      .dispatchEvent('change');
+    await saveSettings();
+    const changedTemplate = await readConfig();
+    assert.equal(changedTemplate.schedules.night[0].end, '21:30');
+    assert.equal(
+      changedTemplate.lineSchedules['DEMO-A'].night[0].end,
+      beforeLineSchedules.schedules.night[0].end,
+    );
+    await page
+      .locator('[data-time-field="end"][data-shift-key="night"][data-index="0"]')
+      .fill(beforeLineSchedules.schedules.night[0].end);
+    await page
+      .locator('[data-time-field="end"][data-shift-key="night"][data-index="0"]')
+      .dispatchEvent('change');
+    await saveSettings();
+    await page.locator('#schedule-line-select').selectOption('DEMO-A');
+    const invalidPreview = await context.request.post(baseURL + '/api/import/preview', {
+      data: {
+        date: lineScheduleDate,
+        shift: 'day',
+        fileName: 'wrong-line-interval.csv',
+        base64: Buffer.from(
+          `Row ID,Time slot,Actual\n${scheduleRow.id},08:00-08:20,1`,
+        ).toString('base64'),
+      },
+    });
+    assert.equal(invalidPreview.status(), 200);
+    assert.ok((await invalidPreview.json()).errors.length > 0);
+
+    for (const width of [1440, 1024, 768, 390]) {
+      await page.setViewportSize({ width, height: 1000 });
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+        false,
+      );
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    if (screenshots)
+      await page.locator('#structure-schedule').evaluate((node) => node.scrollIntoView());
+    await screenshot('#settings-body', 'line-schedules');
+    const customReport = await readReport(lineScheduleDate);
+    const customSlot = customizedSchedules.lineSchedules['DEMO-A'].day[0];
+    assert.equal(customReport.defaults[scheduleRow.id].slots[0].id, customSlot.id);
+    assert.equal(customReport.defaults[scheduleRow.id].slots[0].end, '08:10');
+    for (const row of customizedSchedules.rows.filter(
+      (row) => row.active && row.line === 'DEMO-A' && row.hasOutput !== false,
+    ))
+      assert.equal(customReport.defaults[row.id].slots[0].id, customSlot.id);
+    await page.goto(baseURL + '/entry');
+    await page.locator('[data-entry-line]').selectOption('DEMO-A');
+    await page.locator('[data-entry-model-filter]').selectOption(model);
+    await page.locator('#report-date').fill(lineScheduleDate);
+    await page.locator('#report-date').dispatchEvent('change');
+    await page.locator('[data-entry-action="bulk-open"]').first().click();
+    await page.waitForFunction(
+      () =>
+        document.querySelectorAll('[data-bulk-row]').length > 0 &&
+        !document.querySelector('[data-entry-action="bulk-refresh"]').disabled,
+    );
+    await page
+      .locator('[data-bulk-slot]')
+      .selectOption(JSON.stringify(['day', '08:00', '08:10']));
+    await page.locator('[data-bulk-field="target"]').fill('80');
+    await page.locator('[data-bulk-field="actual"]').fill('7');
+    await bulkApply();
+    let lineReport = await readReport(lineScheduleDate);
+    const savedLine = lineReport.records.find((record) => record.rowId === scheduleRow.id);
+    assert.equal(savedLine.slots.find((slot) => slot.id === customSlot.id).actual, 7);
+    const templateResponse = await context.request.get(
+      `${baseURL}/api/import/template?date=${lineScheduleDate}&shift=all`,
+    );
+    assert.equal(templateResponse.status(), 200);
+    const templateRows = readSpreadsheet(
+      'per-line.xlsx',
+      (await templateResponse.body()).toString('base64'),
+    ).map((row) => row.map((cell) => cell.value));
+    const header = templateRows[0],
+      column = (name) => header.indexOf(name);
+    const customExcelRow = templateRows.find(
+      (row, index) =>
+        index &&
+        Number(row[column('Row ID')]) === scheduleRow.id &&
+        row[column('Shift')] === 'day',
+    );
+    assert.match(customExcelRow[column('Time slot')], /08:00.*08:10/);
+    customExcelRow[column('Target')] = 81;
+    customExcelRow[column('Actual')] = 9;
+    const workbook = writeSpreadsheet([header, customExcelRow]);
+    await page.locator('.entry-import-scope > summary').click();
+    await page.locator('[data-entry-action="open-import"][data-import-shift="day"]').click();
+    await page
+      .locator('[data-entry-file]')
+      .setInputFiles({
+        name: 'per-line.xlsx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        buffer: workbook,
+      });
+    await page.waitForFunction(
+      () => !document.querySelector('[data-entry-action="apply-import"]').disabled,
+    );
+    await page.locator('[data-entry-action="apply-import"]').click();
+    await page.locator('.entry-import-result .entry-success').waitFor();
+    await page.locator('[data-entry-action="close-import"]').click();
+    lineReport = await readReport(lineScheduleDate);
+    const beforeInherit = lineReport.records;
+    assert.equal(
+      beforeInherit
+        .find((record) => record.rowId === scheduleRow.id)
+        .slots.find((slot) => slot.id === customSlot.id).actual,
+      9,
+    );
+    await page.goto(baseURL + '/settings/master-data');
+    await page.locator('#schedule-line-select').selectOption('DEMO-A');
+    await page.locator('[data-action="inherit-schedule"]').click();
+    await page.locator('#confirm-yes').click();
+    await saveSettings();
+    const inheritedSchedules = await readConfig();
+    assert.equal(inheritedSchedules.lineSchedules['DEMO-A'], undefined);
+    assert.deepEqual((await readReport(lineScheduleDate)).records, beforeInherit);
+    response = await context.request.put(baseURL + '/api/config', {
+      data: { ...beforeLineSchedules, version: inheritedSchedules.version },
+    });
+    assert.equal(response.status(), 200, await response.text());
+    record(
+      'Per-line schedules copy and edit the template without changing other lines, drive station defaults and batch entry, round-trip Excel, and retain saved history when returning to template inheritance',
+    );
+  }
+
   // Exercise a realistic 24-hour schedule in the actual renderer and browser.
   // Configuration and data live only in this script's disposable database.
+  const denseReportDate = '2026-12-20';
+  monitorClock = Date.parse(denseReportDate + 'T08:50:00+07:00');
   const beforeDenseChart = await readConfig();
   const denseChartConfig = structuredClone(beforeDenseChart);
   const testLines = Array.from({ length: 7 }, (_, index) => `DEMO-${index + 1}`);
@@ -1801,8 +2140,34 @@ try {
   }
   response = await context.request.put(baseURL + '/api/config', { data: denseChartConfig });
   assert.equal(response.status(), 200, await response.text());
+  const savedDenseConfig = await response.json();
+  // Distinct series make the guide show real curves and catch accidental
+  // stretching/blank-chart regressions in the larger per-line plot area.
+  for (const [lineIndex, line] of testLines.entries()) {
+    const row = savedDenseConfig.rows.find((row) => row.active && row.line === line);
+    for (const shift of ['day', 'night']) {
+      response = await context.request.put(baseURL + `/api/entry/records/${row.id}`, {
+        data: {
+          date: denseReportDate,
+          shift,
+          version: 0,
+          stationEntry: true,
+          configVersion: savedDenseConfig.version,
+          slots: savedDenseConfig.schedules[shift].map((slot, index) => ({
+            id: slot.id,
+            target: 14,
+            actual: Math.max(
+              0,
+              Math.round(12 + lineIndex + Math.sin(index * 0.65 + lineIndex) * 6),
+            ),
+          })),
+        },
+      });
+      assert.equal(response.status(), 200, await response.text());
+    }
+  }
   await page.goto(baseURL + '/overview');
-  await page.locator('#report-date').fill('2026-12-20');
+  await page.locator('#report-date').fill(denseReportDate);
   await page.locator('#report-date').dispatchEvent('change');
   await page.locator('[data-report-scope="all"]').click();
   const assertDenseTrend = async () => {
@@ -1821,7 +2186,8 @@ try {
         ),
         readable: labels.every((label) => label.height >= 9),
         scrollable: chart.scrollWidth > chart.clientWidth,
-        pageOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        pageOverflow:
+          document.documentElement.scrollWidth > document.documentElement.clientWidth,
         viewport: innerWidth,
         chartWidth: chart.clientWidth,
         svg: chart.querySelector('svg')?.outerHTML.slice(0, 220),
@@ -1834,6 +2200,23 @@ try {
     assert.equal(geometry.readable, true);
     assert.equal(geometry.scrollable, true);
     assert.equal(geometry.pageOverflow, false);
+    const linePlots = await page.locator('#line-cards .line-trend').evaluateAll((plots) =>
+      plots.map((plot) => {
+        const box = plot.getBoundingClientRect(),
+          view = plot.querySelector('svg').viewBox.baseVal;
+        return {
+          width: box.width,
+          height: box.height,
+          fills:
+            Math.abs(box.width - view.width) <= 1 && Math.abs(box.height - view.height) <= 1,
+        };
+      }),
+    );
+    assert.ok(
+      linePlots.every((plot) => plot.width >= 180 && plot.height >= 30 && plot.fills),
+      JSON.stringify(linePlots),
+    );
+
     await page.locator('#group-trend .trend-hit').last().focus();
     assert.ok(await page.locator('#group-trend').evaluate((chart) => chart.scrollLeft > 0));
   };
@@ -1847,7 +2230,21 @@ try {
   await page.locator('#language-select').selectOption('en');
   await page.setViewportSize({ width: 1440, height: 1000 });
   await assertDenseTrend();
-  const beforeRefreshScroll = await page.locator('#group-trend').evaluate((chart) => chart.scrollLeft);
+  for (const [width, height] of [
+    [2560, 1440],
+    [1920, 1080],
+    [1536, 864],
+    [1440, 900],
+    [1366, 768],
+    [1280, 720],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await assertDenseTrend();
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const beforeRefreshScroll = await page
+    .locator('#group-trend')
+    .evaluate((chart) => chart.scrollLeft);
   await Promise.all([
     page.waitForResponse(
       (response) =>
@@ -1856,7 +2253,9 @@ try {
     page.locator('#refresh-now').click(),
   ]);
   await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
-  const afterRefreshScroll = await page.locator('#group-trend').evaluate((chart) => chart.scrollLeft);
+  const afterRefreshScroll = await page
+    .locator('#group-trend')
+    .evaluate((chart) => chart.scrollLeft);
   assert.ok(beforeRefreshScroll > 100);
   assert.ok(Math.abs(afterRefreshScroll - beforeRefreshScroll) <= 1);
   await page.locator('#group-trend').evaluate((chart) => (chart.scrollLeft = 0));
@@ -1876,57 +2275,94 @@ try {
   for (const language of ['en', 'zh', 'th']) {
     await page.locator('#language-select').selectOption(language);
     await page.locator('#enter-fullscreen').click();
-    for (const [width, height] of [
-      [1920, 1080],
-      [1440, 900],
-      [1366, 768],
-      [1024, 768],
-    ]) {
-      await page.setViewportSize({ width, height });
-      await page.waitForFunction(
-        () => document.querySelectorAll('#line-cards .line-card').length === 7,
-      );
-      const compact = await page.locator('#line-cards').evaluate((list) => {
-        const cards = [...list.children].map((card) => card.getBoundingClientRect());
-        const box = list.getBoundingClientRect();
-        return {
-          count: cards.length,
-          listHeight: box.height,
-          rowHeight: cards[0].height,
-          visible: cards.every(
-            (card) => card.top >= box.top - 1 && card.bottom <= box.bottom + 1,
-          ),
-        };
-      });
-      assert.deepEqual(
-        await page
-          .locator('#line-cards .line-card')
-          .first()
-          .locator('.production-metric')
-          .evaluateAll((metrics) => metrics.map((item) => item.dataset.metric)),
-        [
-          'dailyTarget',
-          'currentTarget',
-          'currentActual',
-          'cumulativeTarget',
-          'cumulativeActual',
-          'cumulativeGap',
-        ],
-      );
-      assert.equal(compact.count, 7);
-      assert.equal(compact.visible, true, JSON.stringify({ width, height, ...compact }));
+    for (const metricScope of ['interval', 'day']) {
+      await page.locator(`.board-actions [data-metric-scope="${metricScope}"]`).click();
+      for (const [width, height] of [
+        [2560, 1440],
+        [1920, 1080],
+        [1536, 864],
+        [1440, 900],
+        [1366, 768],
+        [1280, 720],
+        [1024, 768],
+      ]) {
+        await page.setViewportSize({ width, height });
+        await page.waitForFunction(
+          () => document.querySelectorAll('#line-cards .line-card').length === 7,
+        );
+        const compact = await page.locator('#line-cards').evaluate((list) => {
+          const elements = [...list.children];
+          const cards = elements.map((card) => card.getBoundingClientRect());
+          const box = list.getBoundingClientRect();
+          return {
+            count: cards.length,
+            contentFits: elements.every((card, index) =>
+              [
+                ...card.querySelectorAll(
+                  '.line-card-top, .line-card-values, .line-card-status, .line-trend',
+                ),
+              ].every((element) => {
+                const rect = element.getBoundingClientRect(),
+                  box = cards[index];
+                return rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1;
+              }),
+            ),
+            listHeight: box.height,
+            rowHeight: cards[0].height,
+            visible: cards.every(
+              (card) => card.top >= box.top - 1 && card.bottom <= box.bottom + 1,
+            ),
+          };
+        });
+        assert.deepEqual(
+          await page
+            .locator('#line-cards .line-card')
+            .first()
+            .locator('.production-metric')
+            .evaluateAll((metrics) => metrics.map((item) => item.dataset.metric)),
+          metricScope === 'day'
+            ? ['dailyTarget', 'dailyActual', 'dailyGap']
+            : ['currentTarget', 'currentActual', 'currentGap'],
+        );
+        assert.equal(compact.count, 7);
+        assert.equal(
+          compact.contentFits,
+          true,
+          JSON.stringify({ language, metricScope, width, height, ...compact }),
+        );
+        assert.equal(compact.visible, true, JSON.stringify({ width, height, ...compact }));
+        const plots = await page.locator('#line-cards .line-trend').evaluateAll((nodes) =>
+          nodes.map((plot) => {
+            const box = plot.getBoundingClientRect(),
+              svg = plot.querySelector('svg');
+            const view = svg.viewBox.baseVal;
+            return {
+              width: box.width,
+              height: box.height,
+              fills:
+                Math.abs(view.width - box.width) <= 1 &&
+                Math.abs(view.height - box.height) <= 1,
+            };
+          }),
+        );
+        assert.ok(
+          plots.every((plot) => plot.width >= 300 && plot.height >= 30 && plot.fills),
+          JSON.stringify({ width, height, plots }),
+        );
+      }
     }
     await page.locator('#exit-fullscreen').click();
   }
   await page.locator('#language-select').selectOption('en');
   await page.locator('#enter-fullscreen').click();
+  await page.locator('.board-actions [data-metric-scope="interval"]').click();
   if (screenshots) {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.locator('#group-trend').evaluate((chart) => (chart.scrollLeft = 0));
     await page.screenshot({ path: path.join(root, 'docs/images/seven-line-board.png') });
   }
   record(
-    'The compact fullscreen board keeps seven configured lines visible together on desktop, with daily, interval and cumulative metrics in order',
+    'The compact fullscreen board keeps seven configured lines visible together on desktop, with large container-sized line trends and three switchable Interval/Daily metrics',
   );
   await page.locator('#exit-fullscreen').click();
   const latestDenseConfig = await readConfig();
@@ -1934,6 +2370,7 @@ try {
     data: { ...beforeDenseChart, version: latestDenseConfig.version },
   });
   assert.equal(response.status(), 200, await response.text());
+  monitorClock = Date.parse('2026-11-10T08:50:00+07:00');
   await page.goto(baseURL + '/overview');
   await page.setViewportSize({ width: 1440, height: 1000 });
   record(

@@ -26,6 +26,7 @@ const guides = {
         title: '1–8 · Configure the production workspace',
         paragraphs: [
           '1. Master data & shift times: maintain Lines, Models, Jobs, Stations and one English issue quick-text list. Choose Line and Model from dropdowns to add each allowed combination; a line may have several models. Define non-overlapping production and break intervals for both shifts.',
+          'Choose Shared schedule template or a line in Master data. Edit the current template, or copy/edit it for one line. All models on that line share its day/night breaks. Template changes affect inheriting lines; custom schedules stay independent. Follow template again asks before replacing a custom draft. Save settings applies the line schedule to targets, entry, Excel and monitoring; saved history keeps its original times.',
           '2. Daily targets: each line/model has one daily preset. Every station starts with that preset divided by production minutes across both shifts, excluding breaks. People and station mappings are not prerequisites for setting the preset.',
           '3. People by job: the complete master job list includes empty jobs. Add or activate people under the correct job. Removing a job deletes its directory people and assignments when settings are saved; captured historical names remain.',
           '4. Assign people to lines: choose Line and Model, then Job in Day, Night or Owners. Tick multiple names and Add selected. The same job may have several people in either shift. Clear selection only clears pending ticks; X removes an assigned person. Empty-job guidance opens that roster.',
@@ -73,7 +74,7 @@ const guides = {
       {
         title: 'Overview, details and full-screen board',
         paragraphs: [
-          'Overview defaults to Whole day. Cards and group totals show Daily target, Interval target/actual, Target/Actual to now and Cumulative gap. Daily target always covers both shifts; cumulative values include the full target of intervals started by now, excluding future intervals. Missing values stay —, and shortfall alerts use the same cumulative comparison. Whole day / Day / Night is available above both Overview and Production details. Each line/model uses its selected output station; group totals never double-count every station.',
+          'Overview defaults to Whole day. Use Interval / Daily beside the title or in the fullscreen header; your choice persists after refresh. Interval shows the active target, actual and gap. Daily shows the complete two-shift target, reported actual and gap, regardless of the shift filter. Missing values stay —. Large per-line curves adapt to their containers. Alerts and output share retain their cumulative rules. Whole day / Day / Night is available above both Overview and Production details. Each line/model uses its selected output station; group totals never double-count every station.',
           'Normal line clicks open details. Full screen clicks open a station-detail dialog; X or Esc returns to the same group/page. Its header follows the active colour theme and keeps line, model, owner and the six interval/daily/cumulative metrics together. Each station labels Day and Night personnel separately.',
           'The group trend keeps every time label readable; dense schedules scroll horizontally inside the chart, including fullscreen. Hover or Tab to an interval to see its values. Refresh keeps the scroll position. Display options independently toggle group trend and output share. Missing output remains blank. The fullscreen board uses seven compact desktop rows per page, including with both charts enabled. Smaller screens scroll the list; additional units use pagination.',
         ],
@@ -124,6 +125,7 @@ const guides = {
         title: '第 1～8 步：依現場順序設定',
         paragraphs: [
           '1. 基礎資料與班別時間：維護 Lines、Models、Jobs、Stations 及單一英文異常快捷文字清單。下拉選產線與 Model 新增配對，同線可有多個 Model；設定兩班生產及休息時段，時間不可重疊。',
+          '基礎資料的班表範圍可選共用範本或產線。共用範本可調整，產線可複製或直接修改成獨立班表；同線所有 Model 共用早晚班與休息設定。範本變更只影響沿用的產線，恢復沿用前會確認取代自訂草稿。儲存設定後，目標、填報、Excel 與監控依該線班表，歷史時段與數值保留。',
           '2. 產線日目標：每組產線／Model 有一個日目標預設，各站依相同預設與生產分鐘分配自己的時段目標，排除休息。尚無人員或站點也可先設定。',
           '3. 依職務建立人員：完整職務清單包含空職務，新增或啟用正確職務的人員。刪職務會在儲存設定時刪除所屬名冊及分配，歷史填報保留當時姓名。',
           '4. 產線人員分配：選 Line、Model，再在早班、晚班或 OWNER 選職務，勾選多人並新增。同職務每班可多人；清除勾選只清待加入選擇，下方已分配者用 X 移除。空職務提示可直接開名冊。',
@@ -171,7 +173,7 @@ const guides = {
       {
         title: '總覽、細節與全螢幕看板',
         paragraphs: [
-          '總覽預設「全天」。卡片與合計依序顯示每日目標、時段目標／實績、累計目標／實績／差額；每日目標固定涵蓋雙班，累計只計到目前已開始時段（含目前時段完整目標），不扣未來目標；缺值顯示 —，缺口警示採相同累計比較。生產總覽與生產細節上方都可切換全天／早班／晚班。每組產線／Model 仍只使用所選來源站，避免重複計產量。',
+          '總覽預設「全天」。標題旁或全螢幕頂部可切「時段／每日」，重新整理保留選擇；時段顯示目前目標、實績、差額，每日顯示雙班完整目標、已填實績及差額，不受早晚班篩選影響。各產線大曲線隨容器調整；缺值顯示 —，警示與占比維持累計規則。生產總覽與生產細節上方都可切換全天／早班／晚班。每組產線／Model 仍只使用所選來源站，避免重複計產量。',
           '全螢幕明細頂部沿用目前主題配色，集中產線、機種、負責人及六項時段／全日／累計數字；各站人員分早班、晚班標示。X 或 Esc 關閉後保留分組與頁次。',
           '分組總產量趨勢保留每個時段名稱與間距；時段較多時在圖表內左右捲動，全螢幕也適用。滑鼠停留或 Tab 聚焦查看數值，刷新保留捲動位置。顯示選項可分別控制趨勢與占比；未填報保持空白。全螢幕固定每頁七組，桌面以單列精簡卡片顯示；較小螢幕可捲動，超過七組用頁次切換。',
         ],
@@ -223,6 +225,7 @@ const guides = {
         title: 'ขั้นตอนที่ 1–8 · ตั้งค่าตามลำดับงาน',
         paragraphs: [
           '1. ข้อมูลหลักและเวลากะ: สร้าง Lines, Models, Jobs, Stations และรายการข้อความปัญหาภาษาอังกฤษ เลือกสายและ Model เพื่อเพิ่มคู่ สายเดียวมีหลาย Model ได้ กำหนดเวลาผลิตและพักสองกะไม่ให้ซ้อนกัน',
+          'เลือกแม่แบบตารางเวลากลางหรือสายในการตั้งค่าข้อมูลหลัก แก้แม่แบบหรือคัดลอกเพื่อกำหนดเวลาผลิตและพักแยกสำหรับสายเดียว ทุก Model ในสายใช้เวลาเดียวกัน สายที่ใช้แม่แบบเปลี่ยนตามแม่แบบ ส่วนตารางเฉพาะไม่เปลี่ยน การกลับไปใช้แม่แบบขอยืนยันก่อน บันทึกแล้วเป้าหมาย การกรอก Excel และการติดตามใช้ตารางของสายนั้น ประวัติเก็บเวลาเดิม',
           '2. เป้าหมายรายวัน: แต่ละคู่สาย/Model มีค่าเริ่มต้นหนึ่งค่า แต่ละสถานีแบ่งเป้าหมายของตนตามนาทีผลิตสองกะโดยไม่รวมพัก ตั้งได้ก่อนมีบุคลากรหรือสถานี',
           '3. บุคลากรตามหน้าที่: รายการหน้าที่ทั้งหมดรวมหน้าที่ว่าง เพิ่มหรือเปิดใช้คนในหน้าที่ถูกต้อง ลบหน้าที่จะลบคนและการมอบหมายเมื่อบันทึก รายงานเดิมคงชื่อเดิม',
           '4. มอบหมายบุคลากร: เลือก Line, Model และหน้าที่ในกะเช้า กลางคืนหรือผู้รับผิดชอบ ติ๊กหลายคนแล้วเพิ่ม หน้าที่เดียวมีหลายคนได้ ล้างที่เลือกไม่ลบคนที่เพิ่มแล้ว ใช้ X นำออก ปุ่มในรายการว่างเปิดหน้าบุคลากร',
@@ -270,7 +273,7 @@ const guides = {
       {
         title: 'ภาพรวม รายละเอียด และกระดานเต็มหน้าจอ',
         paragraphs: [
-          'ภาพรวมเริ่มต้นที่ทั้งวัน แสดงเป้ารายวัน เป้า/ผลจริงช่วงปัจจุบัน เป้า/ผลจริงสะสม และผลต่างสะสม เป้ารายวันรวมสองกะ ส่วนสะสมรวมเฉพาะช่วงที่เริ่มแล้วโดยใช้เป้าเต็มช่วง ไม่รวมอนาคต ไม่มีข้อมูลแสดง — และแจ้งเตือนใช้ผลต่างสะสมเดียวกัน ทั้งหน้าภาพรวมและรายละเอียดเลือกทั้งวัน/กะเช้า/กะกลางคืนได้ แต่ละสาย/Model ยังใช้สถานีแหล่งผลผลิตเดียวเพื่อไม่ให้นับซ้ำ',
+          'ภาพรวมเริ่มต้นที่ทั้งวัน สลับช่วงเวลา/รายวันข้างชื่อหน้าหรือด้านบนเต็มจอ จำตัวเลือกหลังรีเฟรช ช่วงเวลาแสดงเป้า ผลจริงและผลต่างปัจจุบัน รายวันแสดงเป้าเต็มวัน ผลจริงและผลต่างรวมสองกะโดยไม่ขึ้นกับตัวกรองกะ กราฟแต่ละสายขยายตามพื้นที่ ไม่มีข้อมูลแสดง — การแจ้งเตือนและสัดส่วนยังใช้ข้อมูลสะสม ทั้งหน้าภาพรวมและรายละเอียดเลือกทั้งวัน/กะเช้า/กะกลางคืนได้ แต่ละสาย/Model ยังใช้สถานีแหล่งผลผลิตเดียวเพื่อไม่ให้นับซ้ำ',
           'หน้าต่างเต็มหน้าจอใช้สีตามธีมและรวมสาย Model ผู้รับผิดชอบ และหกค่าของช่วงปัจจุบัน รายวัน และสะสมไว้ด้านบน การ์ดแต่ละสถานีแยกบุคลากรกะเช้าและกะกลางคืน X หรือ Esc กลับกลุ่ม/หน้าเดิม',
           'กราฟรวมรักษาระยะห่างของป้ายเวลาทุกช่วง หากมีหลายช่วงให้เลื่อนแนวนอนในกราฟ รวมถึงเต็มหน้าจอ ชี้เมาส์หรือกด Tab เพื่อดูค่า รีเฟรชเก็บตำแหน่งเลื่อนเดิม ตัวเลือกเปิดแนวโน้มและสัดส่วนแยกกัน ไม่กรอกไม่ถือเป็นศูนย์ เต็มหน้าจอแสดงเจ็ดคู่ต่อหน้าด้วยการ์ดแถวเดียวบนเดสก์ท็อป หน้าจอเล็กเลื่อนรายการได้ ใช้ปุ่มเปลี่ยนหน้าเมื่อเกินเจ็ดคู่',
         ],
@@ -301,6 +304,7 @@ const guides = {
 const exampleScreens = [
   [
     'setup-order',
+    'line-schedules',
     'models-and-lines',
     'issue-quick-text',
     'daily-targets',
@@ -330,6 +334,7 @@ const exampleLabels = {
       'models-and-lines': 'Line/model dropdown pairing',
       'issue-quick-text': 'English issue quick text in Master data',
       'daily-targets': 'One default target per line + model',
+      'line-schedules': 'Shared schedule template and per-line day/night breaks',
       'people-by-job': 'People filtered by job',
       'line-people': 'Line teams and owners',
       'line-configuration': 'Integrated station configuration and output source',
@@ -343,7 +348,7 @@ const exampleLabels = {
       'line-details':
         'Theme-aware fullscreen details with owner, totals and day/night personnel',
       'production-overview': 'Production overview with DELTA branding and theme controls',
-      'seven-line-board': 'Compact fullscreen board with seven lines per page',
+      'seven-line-board': 'Seven lines with large trends and Interval/Daily switch',
       'group-trend-dense': 'Dense whole-day trend: scroll horizontally to view every interval',
     },
   },
@@ -354,6 +359,7 @@ const exampleLabels = {
       'models-and-lines': '下拉配對產線與 Model',
       'issue-quick-text': '基礎資料的英文異常快捷文字',
       'daily-targets': '每組產線＋Model 一個預設日目標',
+      'line-schedules': '共用班表範本與各產線獨立休息時段',
       'people-by-job': '依職務篩選人員',
       'line-people': '產線兩班與負責人',
       'line-configuration': '整合站點配置與產量來源',
@@ -366,7 +372,7 @@ const exampleLabels = {
       'excel-preview': 'Excel 匯入預覽',
       'line-details': '跟隨主題的全螢幕明細與各站早晚班人員',
       'production-overview': '台達品牌與主題配色的生產總覽',
-      'seven-line-board': '全螢幕每頁七條線的精簡看板',
+      'seven-line-board': '七條產線大曲線與時段／每日切換',
       'group-trend-dense': '全天多時段趨勢：左右捲動查看所有時段',
     },
   },
@@ -377,6 +383,7 @@ const exampleLabels = {
       'models-and-lines': 'จับคู่สาย / Model',
       'issue-quick-text': 'ข้อความปัญหาภาษาอังกฤษในข้อมูลหลัก',
       'daily-targets': 'เป้าหมายต่อสาย + Model',
+      'line-schedules': 'แม่แบบตารางเวลากลางและเวลาพักแยกตามสาย',
       'people-by-job': 'บุคลากรตามหน้าที่',
       'line-people': 'ทีมและผู้รับผิดชอบ',
       'line-configuration': 'บุคลากรอัตโนมัติ',
@@ -389,7 +396,7 @@ const exampleLabels = {
       'excel-preview': 'ตัวอย่างนำเข้า Excel',
       'line-details': 'รายละเอียดเต็มจอตามธีม พร้อมยอดรวมและบุคลากรแยกกะ',
       'production-overview': 'ภาพรวมการผลิตพร้อมสัญลักษณ์ DELTA และธีมสี',
-      'seven-line-board': 'กระดานเต็มจอแบบกะทัดรัด เจ็ดสายต่อหน้า',
+      'seven-line-board': 'กราฟใหญ่เจ็ดสาย พร้อมสลับช่วงเวลา/รายวัน',
       'group-trend-dense': 'กราฟทั้งวันหลายช่วงเวลา เลื่อนแนวนอนเพื่อดูทุกช่วง',
     },
   },

@@ -1,3 +1,4 @@
+import { scheduleFor } from './public/production-schedules.js';
 import { sameProduction, unitFor, stationHasOutput } from './public/production-models.js';
 /**
  * Match a production interval by its captured boundaries. IDs may change when
@@ -58,7 +59,7 @@ export function planStationInterval(data, config, versions, fail) {
   if (expected.size !== changes.length) fail(409, 'errConflict');
   // Batch entry always addresses the configured interval. Saved history is
   // preserved by writeRecord; it is neither a prerequisite nor a mapping source.
-  const configured = (config.schedules?.[data.shift] || []).filter(
+  const configured = scheduleFor(config, data.line, data.shift).filter(
     (slot) =>
       slot.kind === 'production' &&
       slot.start === data.interval.start &&
@@ -114,7 +115,10 @@ export function planLineOutput(sourceId, changes, expected, rows, records, defau
         const patch = { id: slot.id };
         for (const field of ['target', 'actual']) {
           if (!Object.hasOwn(change, field)) continue;
-          if (!Object.hasOwn(before, field) || (before[field] ?? null) !== (slot[field] ?? null))
+          if (
+            !Object.hasOwn(before, field) ||
+            (before[field] ?? null) !== (slot[field] ?? null)
+          )
             fail(409, 'errConflict');
           patch[field] = change[field];
         }

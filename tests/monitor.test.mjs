@@ -50,6 +50,7 @@ test('overview counts separate the active interval and cumulative totals from fu
   assert.deepEqual(overviewMetrics(series, at('08:30')), {
     currentTarget: 100,
     currentActual: 90,
+    currentGap: -10,
     cumulativeTarget: 100,
     cumulativeActual: 90,
     cumulativeGap: -10,
@@ -57,6 +58,7 @@ test('overview counts separate the active interval and cumulative totals from fu
   assert.deepEqual(overviewMetrics(series, at('09:05')), {
     currentTarget: null,
     currentActual: null,
+    currentGap: null,
     cumulativeTarget: 100,
     cumulativeActual: 90,
     cumulativeGap: -10,
@@ -78,6 +80,8 @@ test('overview counts separate the active interval and cumulative totals from fu
     null,
   );
   assert.equal(overviewMetrics([{ ...series[0], actual: 0 }], at('08:30')).cumulativeActual, 0);
+  assert.equal(overviewMetrics([{ ...series[0], actual: 0 }], at('08:30')).currentGap, -100);
+  assert.equal(overviewMetrics([{ ...series[0], target: null }], at('08:30')).currentGap, null);
 });
 
 test('overview timing follows overnight windows and alarms exclude future entered values', () => {

@@ -58,7 +58,12 @@ test('configuration shows only its current pair without old suggestions or delet
       dailyTarget: 300,
       staffing: { day: ['pd'], night: ['pd'], owners: ['qa'] },
     },
-    { line: 'A', model: 'Other', dailyTarget: 400, staffing: { day: [], night: [], owners: [] } },
+    {
+      line: 'A',
+      model: 'Other',
+      dailyTarget: 400,
+      staffing: { day: [], night: [], owners: [] },
+    },
   ];
   draft.rows = [
     { ...draft.rows[0], model: 'Default', active: false },
@@ -212,7 +217,12 @@ test('line targets and mappings depend on their own master data, never complete 
   draft.personnel = [{ id: 'one', job: 'PD', name: 'One person', active: true }];
   assert.equal(setupAccess(draft).staffing.enabled, true);
   assert.equal(setupReadiness(draft).staffing, false);
-  draft.schedules.night.push({ id: 'overlap', kind: 'production', start: '08:30', end: '09:30' });
+  draft.schedules.night.push({
+    id: 'overlap',
+    kind: 'production',
+    start: '08:30',
+    end: '09:30',
+  });
   access = setupAccess(draft);
   assert.equal(access.personnel.enabled, true);
   assert.equal(access.workforce.enabled, true);
@@ -223,7 +233,14 @@ test('line targets and mappings depend on their own master data, never complete 
 
 test('batch line configuration skips duplicates, reactivates stable archived IDs, and rejects invalid pairs atomically', () => {
   const draft = fixture();
-  draft.rows.push({ id: 42, line: 'A', job: 'QA', station: 'Test', active: false, dailyTarget: 9 });
+  draft.rows.push({
+    id: 42,
+    line: 'A',
+    job: 'QA',
+    station: 'Test',
+    active: false,
+    dailyTarget: 9,
+  });
   const result = addBatchMappings(
     draft,
     ['A', 'B', 'B', 'unknown'],
@@ -274,7 +291,11 @@ test('job-matched teams and line owners use active personnel only', () => {
 
 test('Excel paste preflights the full rectangle, preserves blanks and zero, and rejects unavailable or invalid cells', () => {
   const grid = [0, 1].map((row) =>
-    [0, 1].map((column) => ({ rowKey: `row-${row}`, slotId: `slot-${column}`, field: 'actual' })),
+    [0, 1].map((column) => ({
+      rowKey: `row-${row}`,
+      slotId: `slot-${column}`,
+      field: 'actual',
+    })),
   );
   const plan = planEntryPaste('0\t20\r\n\t4\r\n', grid, 0, 0);
   assert.equal(plan.valid, true);
@@ -301,13 +322,7 @@ test('main entry rectangle maps adjacent Target/Actual columns and rows to stati
       ),
     ]),
   );
-  const plan = planEntryPaste(
-    '10\t20\t11\t21\n30\t40\t31\t41',
-    paired.actual,
-    0,
-    0,
-    paired,
-  );
+  const plan = planEntryPaste('10\t20\t11\t21\n30\t40\t31\t41', paired.actual, 0, 0, paired);
   assert.equal(plan.valid, true);
   assert.deepEqual(
     plan.edits.map(({ rowKey, slotId, field, value }) => [rowKey, slotId, field, value]),
@@ -427,7 +442,12 @@ test('automatic interval selection uses Bangkok time, excludes breaks and retain
     id: 'n',
   });
   assert.equal(currentEntrySlot(context, new Date('2026-11-06T02:00:00Z')), null);
-  context.config.schedules.day.push({ id: 'break', kind: 'break', start: '09:00', end: '09:10' });
+  context.config.schedules.day.push({
+    id: 'break',
+    kind: 'break',
+    start: '09:00',
+    end: '09:10',
+  });
   assert.equal(currentEntrySlot(context, new Date('2026-11-05T02:05:00Z')), null);
 });
 
@@ -461,18 +481,49 @@ test('group charts aggregate stable interval IDs instead of combining unrelated 
   );
 });
 
-test('fullscreen line details retain historical interval labels, assigned staff and escaped issue text', () => {
+test('fullscreen line details retain historical interval labels, assigned staff and escaped issue text', (t) => {
   const config = fixture();
   const content = { innerHTML: '' },
-    close = {};
+    close = {},
+    plot = { innerHTML: '', clientWidth: 840, clientHeight: 280, scrollLeft: 0 };
+  const nativeStyle = globalThis.getComputedStyle,
+    nativeObserver = globalThis.ResizeObserver;
+  let disconnected = false;
+  globalThis.getComputedStyle = () => ({
+    paddingLeft: '0',
+    paddingRight: '0',
+    getPropertyValue: () => '280px',
+  });
+  globalThis.ResizeObserver = class {
+    observe() {}
+    disconnect() {
+      disconnected = true;
+    }
+  };
+  t.after(() => {
+    if (nativeStyle) globalThis.getComputedStyle = nativeStyle;
+    else delete globalThis.getComputedStyle;
+    if (nativeObserver) globalThis.ResizeObserver = nativeObserver;
+    else delete globalThis.ResizeObserver;
+  });
+  let onClose;
   const dialog = {
     open: false,
-    querySelector: (selector) => (selector === '#line-detail-content' ? content : close),
+    querySelector: (selector) =>
+      selector === '#line-detail-content'
+        ? content
+        : selector === '.line-modal-plot'
+          ? plot
+          : close,
+    addEventListener: (name, handler) => {
+      if (name === 'close') onClose = handler;
+    },
     showModal() {
       this.open = true;
     },
     close() {
       this.open = false;
+      onClose?.();
     },
   };
   const esc = (value) =>
@@ -515,9 +566,10 @@ test('fullscreen line details retain historical interval labels, assigned staff 
   assert.ok(content.innerHTML.includes('line-modal-shift-people'));
   assert.ok(content.innerHTML.includes('<small>day</small>'));
   assert.ok(!content.innerHTML.includes('line-modal-people'));
-  assert.ok(content.innerHTML.includes('viewBox="0 0 1040 320"'));
+  assert.ok(plot.innerHTML.includes('viewBox="0 0 840 280"'));
   assert.ok(content.innerHTML.includes('&lt;script&gt;unsafe&lt;/script&gt;'));
   assert.ok(!content.innerHTML.includes('<script>'));
   close.onclick();
   assert.equal(dialog.open, false);
+  assert.equal(disconnected, true);
 });

@@ -1,3 +1,4 @@
+import { scheduleFor, schedulesForLine } from './production-schedules.js';
 import {
   modelOf,
   productionKey,
@@ -16,7 +17,7 @@ export function linesForGroup(config, groupId, extra = []) {
   );
 }
 export function currentScheduleInterval(config, date, shift, now = Date.now()) {
-  const slots = config.schedules[shift],
+  const slots = scheduleFor(config, null, shift),
     anchor = slots[0]?.start || '00:00',
     base = Date.parse(date + 'T00:00:00+07:00');
   const minutes = (value) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3));
@@ -130,7 +131,7 @@ function intervalWindow(slot, date, anchor) {
 }
 
 export function productionWindows(config, date, shift) {
-  const slots = config.schedules[shift];
+  const slots = scheduleFor(config, null, shift);
   const anchor = slots[0]?.start || '00:00';
   return slots
     .filter((slot) => slot.kind === 'production')
@@ -166,6 +167,10 @@ export function overviewMetrics(series, now) {
   return {
     currentTarget: current?.target ?? null,
     currentActual: current?.actual ?? null,
+    currentGap:
+      current?.target == null || current?.actual == null
+        ? null
+        : current.actual - current.target,
     cumulativeTarget,
     cumulativeActual,
     cumulativeGap:
@@ -198,9 +203,6 @@ export function buildLineMonitor(
   for (const record of map.values())
     if (!isDefault(record) && record.rowSnapshot)
       definitions.set(record.rowId, record.rowSnapshot);
-  const windows = productionWindows(config, date, shift),
-    active = windows.some((w) => now >= w.startAt && now < w.endAt),
-    firstStart = Math.min(...windows.map((w) => w.startAt));
   const monitoring = config.monitoring || defaultMonitoring(config),
     weights = { red: 4, yellow: 3, purple: 2, blue: 1 };
   const units = [
@@ -213,6 +215,10 @@ export function buildLineMonitor(
   ];
   return units.map((unit) => {
     const line = unit.line;
+    const lineConfig = { ...config, schedules: schedulesForLine(config, line) };
+    const windows = productionWindows(lineConfig, date, shift);
+    const active = windows.some((window) => now >= window.startAt && now < window.endAt);
+    const firstStart = Math.min(...windows.map((window) => window.startAt));
     const lineRows = [...definitions.values()].filter(
         (row) => sameProduction(row, unit) && stationHasOutput(row, config),
       ),
@@ -260,7 +266,7 @@ export function buildLineMonitor(
       // original first interval anchors midnight, preserving historical dates.
       const anchor =
         record.slots.find((slot) => slot.start)?.start ||
-        config.schedules[shift][0]?.start ||
+        scheduleFor(config, line, shift)[0]?.start ||
         '00:00';
       for (const slot of record.slots)
         if (slot.kind !== 'break') {
@@ -316,6 +322,7 @@ export function buildLineMonitor(
     const rule = matches[0] || null;
     return {
       line,
+      periodState: monitoringPeriodState(lineConfig, date, shift, now),
       model: modelOf(unit),
       key: config.models ? productionKey(unit) : line,
       label: config.models ? productionLabel(unit) : line,

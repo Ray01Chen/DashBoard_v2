@@ -1,3 +1,4 @@
+import { scheduleFor, schedulesForLine } from './production-schedules.js';
 import {
   modelOf,
   productionKey,
@@ -84,7 +85,8 @@ const messages = {
     restoreDefaultsDescription:
       'Restore Target from the daily preset and clear Actual and Issue for every station in {line} · {model} on {date}, across both shifts? This cannot be undone.',
     restoreDefaultsConfirm: 'Restore defaults',
-    restoreDefaultsFailed: 'Unable to restore production defaults. Review pending or conflicting station changes.',
+    restoreDefaultsFailed:
+      'Unable to restore production defaults. Review pending or conflicting station changes.',
     autosave: 'Autosave',
     noRows: 'No stations are available for this selection.',
     loading: 'Loading…',
@@ -117,7 +119,8 @@ const messages = {
     sheetMode: 'Single-interval spreadsheet',
     interval: 'Time slot',
     noSlot: 'No production interval is configured.',
-    noCurrentSlot: 'The selected production date has no active interval at the current Bangkok time.',
+    noCurrentSlot:
+      'The selected production date has no active interval at the current Bangkok time.',
     discard: 'Discard my unsaved changes',
     dayMode: 'Whole-day spreadsheet',
     total: 'Total',
@@ -132,12 +135,14 @@ const messages = {
     day: 'Day shift',
     night: 'Night shift',
     retryLoad: 'Try again',
-    configChanged: 'Production settings changed. Refresh the report before loading both shifts.',
+    configChanged:
+      'Production settings changed. Refresh the report before loading both shifts.',
   },
   zh: {
     bulkApplyIssue: '套用異常',
     wholeDay: '一整天',
-    pasteHint: '直接照表貼上：單數欄是目標、雙數欄是實績，每列是下一站；單欄資料才依列交錯目標／實績。超出容量不貼上。',
+    pasteHint:
+      '直接照表貼上：單數欄是目標、雙數欄是實績，每列是下一站；單欄資料才依列交錯目標／實績。超出容量不貼上。',
     bulkDateInvalid: '請選擇有效的生產日期。',
     bulkApplyActual: '套用實績',
     bulkApplyTarget: '套用目標',
@@ -231,8 +236,7 @@ const messages = {
     dayMode: '整日雙班試算表',
     total: '合計',
     productionDate: '生產日期',
-    importScope:
-      '可選整日雙班或單班範本／匯入；午夜後的晚班時段仍屬於所選生產日期。',
+    importScope: '可選整日雙班或單班範本／匯入；午夜後的晚班時段仍屬於所選生產日期。',
     pastePending: '已貼上，等待自動儲存。',
     invalidPaste:
       '未貼上資料。請使用合法整數或空白的矩形範圍，且不得超出 Target 或 Actual 可填區。',
@@ -246,7 +250,8 @@ const messages = {
   th: {
     bulkApplyIssue: 'ใช้ปัญหากับทุกสถานี',
     wholeDay: 'ทั้งวัน',
-    pasteHint: 'วางตามตาราง: คอลัมน์คี่เป็น Target คอลัมน์คู่เป็น Actual แต่ละแถวคือสถานีถัดไป ถ้ามีคอลัมน์เดียวจึงสลับ Target/Actual ตามแถว ส่วนเกินจะไม่ถูกวาง',
+    pasteHint:
+      'วางตามตาราง: คอลัมน์คี่เป็น Target คอลัมน์คู่เป็น Actual แต่ละแถวคือสถานีถัดไป ถ้ามีคอลัมน์เดียวจึงสลับ Target/Actual ตามแถว ส่วนเกินจะไม่ถูกวาง',
     bulkDateInvalid: 'เลือกวันที่ผลิตที่ถูกต้อง',
     bulkApplyActual: 'ใช้ผลจริง',
     bulkApplyTarget: 'ใช้เป้าหมาย',
@@ -255,7 +260,8 @@ const messages = {
     savedHistory: 'ข้อมูลการผลิตเดิม (อ่านอย่างเดียว)',
     noOutput: 'ไม่มีผลผลิต · ไม่ต้องบันทึก',
     noOutputHint: 'ยังแสดงสถานี ผลผลิตและปัญหาเดิมดูได้อย่างเดียว',
-    bulkNoOutput: 'คู่นี้ไม่มีสถานีที่เปิดใช้และมีผลผลิต เลือกคู่อื่นหรือให้ผู้จัดการแก้การตั้งค่า',
+    bulkNoOutput:
+      'คู่นี้ไม่มีสถานีที่เปิดใช้และมีผลผลิต เลือกคู่อื่นหรือให้ผู้จัดการแก้การตั้งค่า',
     bulkOpen: 'กรอกทั้งสายตามช่วง',
     bulkTitle: 'แก้เป้าหมายและผลจริงตามช่วง',
     bulkRefresh: 'โหลดตัวอย่างใหม่',
@@ -305,7 +311,8 @@ const messages = {
     restoreDefaultsDescription:
       'คืน Target จากเป้ารายวันและล้าง Actual กับปัญหาของทุกสถานีทั้งสองกะสำหรับ {line} · {model} วันที่ {date} หรือไม่ การดำเนินการนี้ย้อนกลับไม่ได้',
     restoreDefaultsConfirm: 'คืนค่าเริ่มต้น',
-    restoreDefaultsFailed: 'คืนค่าเริ่มต้นรายงานไม่ได้ โปรดจัดการข้อมูลที่ยังไม่บันทึกหรือขัดแย้งก่อน',
+    restoreDefaultsFailed:
+      'คืนค่าเริ่มต้นรายงานไม่ได้ โปรดจัดการข้อมูลที่ยังไม่บันทึกหรือขัดแย้งก่อน',
     autosave: 'บันทึกอัตโนมัติ',
     noRows: 'ไม่มีสถานีสำหรับตัวเลือกนี้',
     loading: 'กำลังโหลด…',
@@ -416,7 +423,8 @@ export function planEntryPaste(tsv, grid, row, column, pairedGrids = null) {
   const lines = String(tsv).replace(/\r\n?/g, '\n').replace(/\n$/, '').split('\n');
   const values = lines.map((line) => line.split('\t'));
   const width = values[0].length;
-  if (values.some((line) => line.length !== width)) return { valid: false, reason: 'rectangle' };
+  if (values.some((line) => line.length !== width))
+    return { valid: false, reason: 'rectangle' };
   const field = grid[row]?.[column]?.field;
   if (!['actual', 'target'].includes(field)) return { valid: false, reason: 'destination' };
   const edits = [],
@@ -431,8 +439,7 @@ export function planEntryPaste(tsv, grid, row, column, pairedGrids = null) {
           : 'actual'
         : field;
       const destination = paired ? pairedGrids[destinationField] : grid;
-      const destinationRow =
-        row + (paired ? (adjacentFields ? y : Math.floor(y / 2)) : y);
+      const destinationRow = row + (paired ? (adjacentFields ? y : Math.floor(y / 2)) : y);
       const destinationColumn =
         column + (paired ? (adjacentFields ? Math.floor(x / 2) : x) : x);
       // The production grid follows spreadsheet edge behavior: paste the part
@@ -496,7 +503,7 @@ export function entryTotal(slots, field) {
 }
 
 /** Production-date times use the application's Bangkok clock, including overnight slots. */
-export function currentEntrySlot(context, now = new Date()) {
+export function currentEntrySlot(context, now = new Date(), line = context.line) {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Bangkok',
@@ -518,11 +525,12 @@ export function currentEntrySlot(context, now = new Date()) {
     const [hours, minutes] = value.split(':').map(Number);
     return hours * 60 + minutes;
   };
-  const anchor = time(context.config.schedules.day[0]?.start || '00:00');
+  const schedules = schedulesForLine(context.config, line);
+  const anchor = time(schedules.day[0]?.start || '00:00');
   for (const shift of ['day', 'night']) {
     let previous = -1,
       offset = 0;
-    for (const slot of context.config.schedules[shift]) {
+    for (const slot of schedules[shift]) {
       const clock = time(slot.start);
       if (previous < 0 && shift === 'night' && clock < anchor) offset = 1440;
       else if (clock < previous) offset += 1440;
@@ -660,7 +668,8 @@ export function createEntryAutosaveQueue({
         return true;
       } catch (error) {
         entry.error = error;
-        entry.status = conflictCodes.has(error.code) || error.status === 409 ? 'conflict' : 'error';
+        entry.status =
+          conflictCodes.has(error.code) || error.status === 409 ? 'conflict' : 'error';
         return false;
       } finally {
         entry.running = null;
@@ -795,7 +804,11 @@ export function entryProductionUnits(config, rows = []) {
 export function missingConfigurationMarkup({ config, units, esc, text, canConfigure = false }) {
   return units
     .map((unit) => {
-      const slots = allocateDailyTarget(config, lineDailyTarget(config, unit.line, modelOf(unit)));
+      const slots = allocateDailyTarget(
+        config,
+        lineDailyTarget(config, unit.line, modelOf(unit)),
+        unit.line,
+      );
       return (
         '<section class="panel entry-setup-required" data-entry-setup-unit="' +
         esc(productionKey(unit)) +
@@ -928,7 +941,7 @@ export function createEntryController({
     );
     for (const slot of record?.slots || []) slots.set(slot.id, { ...slot });
     // A slow defaults request must not prevent entering the configured shift.
-    for (const slot of context.config.schedules[context.shift].filter(
+    for (const slot of scheduleFor(context.config, row.line, context.shift).filter(
       (slot) => slot.kind === 'production',
     )) {
       if (!slots.has(slot.id))
@@ -1046,7 +1059,9 @@ export function createEntryController({
     for (const element of mount.querySelectorAll('[data-entry-total]')) {
       const entry = queue.get(element.dataset.rowKey);
       if (entry)
-        element.textContent = number(entryTotal(entry.latest.slots, element.dataset.entryTotal));
+        element.textContent = number(
+          entryTotal(entry.latest.slots, element.dataset.entryTotal),
+        );
     }
     for (const element of mount.querySelectorAll('[data-entry-day-total]')) {
       if (Object.keys(contextsFor(getContext())).length < 2) {
@@ -1056,7 +1071,9 @@ export function createEntryController({
       const slots = [element.dataset.dayKey, element.dataset.nightKey].flatMap(
         (key) => queue.get(key)?.latest.slots || [],
       );
-      element.textContent = number(entryTotal(slots, element.dataset.entryDayField || 'target'));
+      element.textContent = number(
+        entryTotal(slots, element.dataset.entryDayField || 'target'),
+      );
     }
     // Errors can arise after the row was rendered, so expose recovery controls
     // without replacing inputs under a user's cursor.
@@ -1189,7 +1206,10 @@ export function createEntryController({
     const locked = editor.busy || editor.loading;
     for (const input of bulkDialog.querySelectorAll('input, select')) input.disabled = locked;
     for (const input of bulkDialog.querySelectorAll('[data-bulk-field], [data-bulk-cell]')) {
-      const parsed = parseBulkValue(input.dataset.bulkCell || input.dataset.bulkField, input.value);
+      const parsed = parseBulkValue(
+        input.dataset.bulkCell || input.dataset.bulkField,
+        input.value,
+      );
       input.toggleAttribute('aria-invalid', !parsed.valid);
       if (!parsed.valid) input.setAttribute('aria-invalid', 'true');
     }
@@ -1209,10 +1229,20 @@ export function createEntryController({
       (input) => parseBulkValue(input.dataset.bulkField, input.value).valid,
     );
     save.disabled =
-      locked || editor.needsRefresh || !editor.rows.length || !bulkChanges().valid || !validBars;
+      locked ||
+      editor.needsRefresh ||
+      !editor.rows.length ||
+      !bulkChanges().valid ||
+      !validBars;
     save.textContent = text(editor.busy ? 'saving' : 'saveNow');
     bulkDialog.querySelector('[data-bulk-status]').textContent = text(
-      editor.busy ? 'saving' : editor.loading ? 'loading' : bulkHasChanges() ? 'pending' : 'saved',
+      editor.busy
+        ? 'saving'
+        : editor.loading
+          ? 'loading'
+          : bulkHasChanges()
+            ? 'pending'
+            : 'saved',
     );
     bulkDialog.querySelector('[data-entry-action="bulk-close"]').disabled = editor.busy;
     const refresh = bulkDialog.querySelector('[data-entry-action="bulk-refresh"]');
@@ -1220,10 +1250,10 @@ export function createEntryController({
     refresh.hidden = !editor.needsRefresh;
   }
 
-  function bulkIntervals() {
+  function bulkIntervals(unit) {
     return ['day', 'night'].flatMap((shift) =>
-      getContext()
-        .config.schedules[shift].filter((slot) => slot.kind === 'production')
+      scheduleFor(getContext().config, unit.line, shift)
+        .filter((slot) => slot.kind === 'production')
         .map((slot) => ({ ...slot, shift })),
     );
   }
@@ -1278,7 +1308,7 @@ export function createEntryController({
         if (responses.some(([, data]) => data.configVersion !== config.version))
           throw new Error(text('configChanged'));
         editor.configVersion = config.version;
-        const options = bulkIntervals();
+        const options = bulkIntervals(editor.unit);
         const selected =
           options.find(
             (slot) =>
@@ -1302,7 +1332,10 @@ export function createEntryController({
         const saved = new Map(data.records.map((record) => [record.rowId, record]));
         const rows = config.rows.filter(
           (row) =>
-            row.active && !row.deleted && stationHasOutput(row) && sameProduction(row, editor.unit),
+            row.active &&
+            !row.deleted &&
+            stationHasOutput(row) &&
+            sameProduction(row, editor.unit),
         );
         if (!rows.length) throw new Error(text('bulkNoOutput'));
         const next = rows.map((row) => {
@@ -1318,6 +1351,7 @@ export function createEntryController({
           const defaultSlot = allocateDailyTarget(
             config,
             lineDailyTarget(config, row.line, modelOf(row)),
+            row.line,
           ).find((slot) => slot.id === selected.id);
           return {
             row,
@@ -1359,7 +1393,9 @@ export function createEntryController({
     const editor = bulkEditor;
     if (!editor || editor.busy || editor.loading || !editor.rows.length) return false;
     const fields = field ? [field] : bulkFields;
-    const inputs = fields.map((name) => bulkDialog.querySelector(`[data-bulk-field="${name}"]`));
+    const inputs = fields.map((name) =>
+      bulkDialog.querySelector(`[data-bulk-field="${name}"]`),
+    );
     if (inputs.some((input) => !parseBulkValue(input.dataset.bulkField, input.value).valid)) {
       updateBulkControls();
       return false;
@@ -1489,7 +1525,9 @@ export function createEntryController({
       .split('\n')
       .map((row) => row.split('\t'));
     const width = cells[0].length;
-    const start = editor.rows.findIndex((row) => String(row.row.id) === input.dataset.bulkRowId);
+    const start = editor.rows.findIndex(
+      (row) => String(row.row.id) === input.dataset.bulkRowId,
+    );
     const edits = [];
     if (width > 2 || cells.some((row) => row.length !== width)) {
       bulkDialog.querySelector('[data-bulk-error]').textContent = text('invalidPaste');
@@ -1593,7 +1631,13 @@ export function createEntryController({
       <div class="entry-bulk-selectors"><label>${esc(text('productionDate'))}<input type="date" data-bulk-date value="${esc(context.date)}"></label><label>${esc(text('line'))}<select data-bulk-line>${lines.map((value) => `<option value="${esc(value)}">${esc(value)}</option>`).join('')}</select></label><label>${esc(text('bulkProduct'))}<select data-bulk-model></select></label><label>${esc(text('interval'))}<select data-bulk-slot></select></label></div>
       <div class="entry-bulk-values">${bulkFields.map((field) => `<div><label>${esc(text(field))}<input type="text" ${field === 'issue' ? '' : 'inputmode="numeric"'} maxlength="${field === 'issue' ? 2000 : 12}" autocomplete="off" data-bulk-field="${field}" aria-label="${esc(text(field))}"></label><div class="entry-bulk-field-actions"><button type="button" class="button" data-entry-action="bulk-apply" data-bulk-apply-field="${field}">${esc(text(field === 'target' ? 'bulkApplyTarget' : field === 'actual' ? 'bulkApplyActual' : 'bulkApplyIssue'))}</button></div></div>`).join('')}</div>
       <div class="entry-bulk-secondary-actions"><button type="button" class="button" data-entry-action="bulk-default-target"><span aria-hidden="true">↻</span>${esc(text('bulkUseDefaultTargets'))}</button></div>
-      <div class="entry-bulk-quick-text">${issuePresets(context.config).filter((item) => item.active).map((item) => `<button type="button" class="button" data-entry-action="bulk-issue-preset" data-issue-preset="${esc(item.id)}">${esc(issueLabel(item))}</button>`).join('')}</div>
+      <div class="entry-bulk-quick-text">${issuePresets(context.config)
+        .filter((item) => item.active)
+        .map(
+          (item) =>
+            `<button type="button" class="button" data-entry-action="bulk-issue-preset" data-issue-preset="${esc(item.id)}">${esc(issueLabel(item))}</button>`,
+        )
+        .join('')}</div>
       <div class="entry-bulk-preview" data-bulk-preview></div><p class="entry-error" data-bulk-error role="alert"></p><div class="entry-bulk-actions"><span data-bulk-status role="status"></span><div><button type="button" class="button" data-entry-action="bulk-refresh" hidden>${esc(text('bulkRefresh'))}</button><button type="button" class="button primary" data-entry-action="bulk-save">${esc(text('saveNow'))}</button></div></div>`;
     bulkScopeControls();
     bulkDialog.showModal();
@@ -1641,7 +1685,9 @@ export function createEntryController({
       );
       if (!item) return;
       const prefix =
-        input.selectionStart && !/\s$/.test(input.value.slice(0, input.selectionStart)) ? '\n' : '';
+        input.selectionStart && !/\s$/.test(input.value.slice(0, input.selectionStart))
+          ? '\n'
+          : '';
       const insertion = prefix + issueLabel(item) + ': ';
       if (
         input.value.length - (input.selectionEnd - input.selectionStart) + insertion.length >
@@ -1685,7 +1731,7 @@ export function createEntryController({
 
   function intervalsFor(context, rows) {
     const slots = new Map(
-      context.config.schedules[context.shift]
+      scheduleFor(context.config, rows[0]?.line || line, context.shift)
         .filter((slot) => slot.kind === 'production')
         .map((slot) => [slot.id, slot]),
     );
@@ -1850,20 +1896,22 @@ export function createEntryController({
         : [],
     );
     const units = [...new Map(visible.map((row) => [productionKey(row), row])).values()];
-    const current = currentEntrySlot(context);
+    const current = currentEntrySlot(context, new Date(), line);
     const body = units
       .map((unit) => {
         const stations = visible.filter((row) => sameProduction(row, unit));
         const rows = stations
           .map((row) => {
-            if (!stationHasOutput(row, context.config)) return noOutputRow(row, columns, contexts);
+            if (!stationHasOutput(row, context.config))
+              return noOutputRow(row, columns, contexts);
             const rowIndex = visible
               .filter((row) => stationHasOutput(row, context.config))
               .indexOf(row);
             const entries = Object.fromEntries(
               ['day', 'night'].map((shift) => {
                 const ctx = contexts[shift];
-                if (!ctx || !rowsFor(ctx).some((item) => item.id === row.id)) return [shift, null];
+                if (!ctx || !rowsFor(ctx).some((item) => item.id === row.id))
+                  return [shift, null];
                 const key = keyFor(ctx, row.id);
                 return [shift, { key, entry: queue.ensure(key, rowPayload(ctx, row)) }];
               }),
@@ -1925,7 +1973,9 @@ export function createEntryController({
                   .join('');
                 return (
                   '<td class="entry-matrix-cell entry-station-values ' +
-                  (current?.shift === shift && current.id === slot.id ? 'entry-current-slot' : '') +
+                  (current?.shift === shift && current.id === slot.id
+                    ? 'entry-current-slot'
+                    : '') +
                   '">' +
                   '<div class="entry-count-pair">' +
                   fields +
@@ -2056,12 +2106,19 @@ export function createEntryController({
   /** Preview uses the server's station/shift order, with editable fields together. */
   function importPreviewStation(row) {
     const shift = row.shift || importState.scope?.shift;
-    const changes = (row.changes || []).map((change) => {
-      const fields = ['target', 'actual', 'issue'].filter((field) => Object.hasOwn(change, field));
-      return `<p><strong>${esc(change.start || change.slotId)}${change.end ? '–' + esc(change.end) : ''}</strong>${fields.map((field) =>
-        `<span>${esc(text(field))}: ${field === 'issue' ? esc(change.issue || text('emptyValue')) : esc(number(change[field]))}</span>`,
-      ).join('')}</p>`;
-    }).join('');
+    const changes = (row.changes || [])
+      .map((change) => {
+        const fields = ['target', 'actual', 'issue'].filter((field) =>
+          Object.hasOwn(change, field),
+        );
+        return `<p><strong>${esc(change.start || change.slotId)}${change.end ? '–' + esc(change.end) : ''}</strong>${fields
+          .map(
+            (field) =>
+              `<span>${esc(text(field))}: ${field === 'issue' ? esc(change.issue || text('emptyValue')) : esc(number(change[field]))}</span>`,
+          )
+          .join('')}</p>`;
+      })
+      .join('');
     return `<section><header class="entry-import-station"><div><h3>${productionIdentityMarkup(row, esc, { singleLine: true })}</h3><small>${esc([row.job, row.station].filter(Boolean).join(' / ') || row.rowId)}</small></div>${shift ? `<span class="entry-import-shift">${esc(text(shift))}</span>` : ''}</header>${changes}</section>`;
   }
 
@@ -2101,7 +2158,7 @@ export function createEntryController({
     }
     scope = nextScope;
     if (!selectedShift) {
-      const current = currentEntrySlot(context);
+      const current = currentEntrySlot(context, new Date(), line);
       selectedShift = current?.shift || context.shift;
       selectedSlot = current?.id || '';
     }
@@ -2120,8 +2177,12 @@ export function createEntryController({
     const lines = [...new Set(units.map((unit) => unit.line))];
     if (line === null || (line && !lines.includes(line)))
       line =
-        units.find((unit) => rows.some((row) => sameProduction(row, unit)))?.line || lines[0] || '';
-    const models = [...new Set(units.filter((unit) => !line || unit.line === line).map(modelOf))];
+        units.find((unit) => rows.some((row) => sameProduction(row, unit)))?.line ||
+        lines[0] ||
+        '';
+    const models = [
+      ...new Set(units.filter((unit) => !line || unit.line === line).map(modelOf)),
+    ];
     if (model === null || (model && !models.includes(model)))
       model =
         models.find((value) =>
@@ -2179,7 +2240,10 @@ export function createEntryController({
     if (!scroller) return;
     // Measure the actual report viewport, including sidebar and scrollbar,
     // instead of guessing its width from the browser viewport.
-    mount.style.setProperty('--entry-heading-width', `${Math.max(0, scroller.clientWidth - 22)}px`);
+    mount.style.setProperty(
+      '--entry-heading-width',
+      `${Math.max(0, scroller.clientWidth - 22)}px`,
+    );
   }
   const sizeObserver =
     typeof ResizeObserver === 'function' ? new ResizeObserver(updateUnitHeadings) : null;
@@ -2259,14 +2323,20 @@ export function createEntryController({
           base64: btoa(binary),
         }),
       });
-      if (request !== importRequest || selectedScope !== contextScope(getContext()) || destroyed)
+      if (
+        request !== importRequest ||
+        selectedScope !== contextScope(getContext()) ||
+        destroyed
+      )
         return;
       importState.preview = preview;
     } catch (error) {
       if (request !== importRequest || destroyed) return;
       importState.error = error.message || text('network');
       if (
-        ['errImport', 'errImportExpired', 'errConflict', 'errConfigConflict'].includes(error.code)
+        ['errImport', 'errImportExpired', 'errConflict', 'errConfigConflict'].includes(
+          error.code,
+        )
       )
         importState.preview = null;
     } finally {
@@ -2305,14 +2375,21 @@ export function createEntryController({
       });
       const host = getContext();
       for (const saved of result.records || []) {
-        const recordScope = { date: capturedScope.date, shift: saved.shift || capturedScope.shift };
+        const recordScope = {
+          date: capturedScope.date,
+          shift: saved.shift || capturedScope.shift,
+        };
         const context =
           host.date === recordScope.date ? contextsFor(host)[recordScope.shift] : null;
         const key = keyFor(recordScope, saved.rowId);
         localSaved.set(key, saved);
         const row = context && rowsFor(context).find((value) => value.id === saved.rowId);
         if (row) queue.rebase(key, rowPayload(context, row), false);
-        onSaved(saved, { key, imported: true, payload: { ...recordScope, rowId: saved.rowId } });
+        onSaved(saved, {
+          key,
+          imported: true,
+          payload: { ...recordScope, rowId: saved.rowId },
+        });
       }
       if (request !== importRequest || destroyed) return;
       importState.preview = null;
@@ -2324,7 +2401,9 @@ export function createEntryController({
       importState.error = error.message || text('network');
       // A rejected/version-stale token needs a fresh preview, not another Apply.
       if (
-        ['errImport', 'errImportExpired', 'errConflict', 'errConfigConflict'].includes(error.code)
+        ['errImport', 'errImportExpired', 'errConflict', 'errConfigConflict'].includes(
+          error.code,
+        )
       )
         importState.preview = null;
     } finally {
@@ -2346,7 +2425,9 @@ export function createEntryController({
         shift: context.shift,
         lang: language(),
       });
-      const response = await fetch(`/api/import/template?${query}`, { credentials: 'same-origin' });
+      const response = await fetch(`/api/import/template?${query}`, {
+        credentials: 'same-origin',
+      });
       if (!response.ok) {
         if (response.status === 401) await api('/api/auth/me');
         throw new Error(text('network'));
@@ -2475,7 +2556,8 @@ export function createEntryController({
       slot[edit.field] = edit.value;
     }
     // No DOM/queue/invalid mutation occurs until the entire destination rectangle is checked.
-    for (const edit of plan.edits) invalid.delete(`${edit.rowKey}|${edit.slotId}|${edit.field}`);
+    for (const edit of plan.edits)
+      invalid.delete(`${edit.rowKey}|${edit.slotId}|${edit.field}`);
     for (const [key, draft] of drafts) {
       queue.update(key, draft);
       queue.pause(
@@ -2524,7 +2606,9 @@ export function createEntryController({
         closeIssue();
       return;
     }
-    const slotButton = event.target.closest('[data-entry-shift-slot], [data-entry-select-shift]');
+    const slotButton = event.target.closest(
+      '[data-entry-shift-slot], [data-entry-select-shift]',
+    );
     if (slotButton) {
       selectedShift = slotButton.dataset.slotShift || slotButton.dataset.entrySelectShift;
       selectedSlot = slotButton.dataset.entryShiftSlot || '';
@@ -2549,8 +2633,9 @@ export function createEntryController({
     }
     if (action === 'bulk-issue-preset') {
       if (!bulkEditor || bulkEditor.busy || bulkEditor.loading) return;
-      const preset = issuePresets(getContext().config).find((item) =>
-        item.id === button.dataset.issuePreset && item.active);
+      const preset = issuePresets(getContext().config).find(
+        (item) => item.id === button.dataset.issuePreset && item.active,
+      );
       if (preset) {
         const input = bulkDialog.querySelector('[data-bulk-field="issue"]');
         input.value = issueLabel(preset);
@@ -2574,7 +2659,7 @@ export function createEntryController({
       return;
     }
     if (action === 'current-slot') {
-      const current = currentEntrySlot(getContext());
+      const current = currentEntrySlot(getContext(), new Date(), line);
       if (!current) return setBanner(text('noCurrentSlot'));
       selectedShift = current.shift;
       selectedSlot = current.id;
@@ -2652,7 +2737,8 @@ export function createEntryController({
     } else if (event.target.matches('[data-entry-mode]')) {
       mode = event.target.value;
       render();
-    } else if (event.target.matches('[data-entry-file]')) void previewFile(event.target.files[0]);
+    } else if (event.target.matches('[data-entry-file]'))
+      void previewFile(event.target.files[0]);
   }
 
   function onFocusOut(event) {
@@ -2749,7 +2835,9 @@ export function createEntryController({
   bulkDialog.addEventListener('input', (event) => {
     const input = event.target;
     if (input.matches('[data-bulk-cell]')) {
-      const row = bulkEditor?.rows.find((item) => String(item.row.id) === input.dataset.bulkRowId);
+      const row = bulkEditor?.rows.find(
+        (item) => String(item.row.id) === input.dataset.bulkRowId,
+      );
       if (row) row.draft[input.dataset.bulkCell] = input.value;
     }
     updateBulkControls();
@@ -2789,7 +2877,7 @@ export function createEntryController({
       line = row.line;
       model = modelOf(row);
       mode = 'shift';
-      selectedShift = currentEntrySlot(context)?.shift || context.shift;
+      selectedShift = currentEntrySlot(context, new Date(), line)?.shift || context.shift;
       scope = contextScope(context);
       render();
       mount

@@ -81,7 +81,8 @@ export const workforceMessages = {
     configureOutputStation: 'Enable a station and check Produces output below',
     outputStationHint:
       'Choose an enabled output-producing station for this line’s dashboard output, target and alerts. Other reporting stations keep their own entries.',
-    noConfiguredStations: 'No stations configured for this line/model. Add Job and Station below.',
+    noConfiguredStations:
+      'No stations configured for this line/model. Add Job and Station below.',
     mappingDeletionHint:
       'Uncheck Active to pause a station and keep it here. Delete removes it from this configuration after Save settings; historical reports remain. Check the output station again if you disable or delete its source.',
     newMappingJob: 'Job for new station mapping',
@@ -293,7 +294,8 @@ export const workforceMessages = {
     noUnits: 'เปิดคู่สาย + Model ในขั้นตอน 1 ก่อน',
     allJobs: 'ทุกหน้าที่',
     peopleTitle: 'บุคลากรตามหน้าที่',
-    peopleDescription: 'เลือกหน้าที่เพื่อสร้างและดูแลบุคลากร แล้วไปขั้นตอนที่ 4 เพื่อมอบหมายให้สาย',
+    peopleDescription:
+      'เลือกหน้าที่เพื่อสร้างและดูแลบุคลากร แล้วไปขั้นตอนที่ 4 เพื่อมอบหมายให้สาย',
     addPerson: 'เพิ่มบุคลากร',
     personName: 'ชื่อบุคลากร',
     personJob: 'หน้าที่',
@@ -446,7 +448,9 @@ export function scheduleReadiness(schedules) {
 /** Matches production defaults: job-filtered active teams, line-level owners. */
 export function mappingStaff(draft, row) {
   const people = new Map(
-    (draft.personnel || []).filter((person) => person.active).map((person) => [person.id, person]),
+    (draft.personnel || [])
+      .filter((person) => person.active)
+      .map((person) => [person.id, person]),
   );
   const staffing = staffingFor(draft, row);
   return Object.fromEntries(
@@ -454,7 +458,9 @@ export function mappingStaff(draft, row) {
       field,
       [...new Set(staffing[field] || [])]
         .map((id) => people.get(id))
-        .filter((person) => person && (field === 'owners' || !row.job || person.job === row.job)),
+        .filter(
+          (person) => person && (field === 'owners' || !row.job || person.job === row.job),
+        ),
     ]),
   );
 }
@@ -494,7 +500,9 @@ export function staffCandidates(draft, unit, field, job) {
  * and line/model combinations retain their existing assignments. */
 export function addStaffAssignments(draft, unit, field, job, personIds) {
   if (!Array.isArray(personIds) || !personIds.length) return false;
-  const available = new Set(staffCandidates(draft, unit, field, job).map((person) => person.id));
+  const available = new Set(
+    staffCandidates(draft, unit, field, job).map((person) => person.id),
+  );
   const ids = [...new Set(personIds)];
   if (ids.some((id) => !available.has(id))) return false;
   const configured = unitFor(draft, unit);
@@ -568,7 +576,9 @@ export function lineModelsMarkup({
       units
         .filter((unit) => !line || unit.line === line)
         .map((unit) => {
-          const owners = (unit.staffing?.owners || []).map((id) => people.get(id)).filter(Boolean);
+          const owners = (unit.staffing?.owners || [])
+            .map((id) => people.get(id))
+            .filter(Boolean);
           return `<tr data-configured-unit="${esc(productionKey(unit))}"><th scope="row">${esc(unit.line)}</th><td>${esc(modelOf(unit))}</td><td>${owners.length ? owners.map((person) => `<span class="unit-owner-name">${esc(person.name)}${person.active ? '' : ` (${esc(text('inactivePerson'))})`}</span>`).join('') : `<span class="muted">${esc(text('ownerNotAssigned'))}</span>`}</td><td><div class="unit-row-actions"><button type="button" class="button" data-action="unit-owner" data-unit-key="${esc(productionKey(unit))}" ${access.enabled ? '' : 'disabled'}>${esc(text('assignOwner'))}</button><button type="button" class="icon-button" data-action="remove-unit" data-unit-key="${esc(productionKey(unit))}" aria-label="${esc(text('removeCombination') + ' · ' + productionLabel(unit))}">${icon('trash')}</button></div></td></tr>`;
         })
         .join('') ||
@@ -599,7 +609,8 @@ export function setupReadiness(draft) {
         draft.productionUnits.every(
           (unit) => draft.lines.includes(unit.line) && draft.models.includes(unit.model),
         ))) &&
-    scheduleReadiness(draft.schedules);
+    scheduleReadiness(draft.schedules) &&
+    Object.values(draft.lineSchedules || {}).every(scheduleReadiness);
   const people = draft.personnel || [];
   const validPeople =
     people.length > 0 &&
@@ -612,7 +623,9 @@ export function setupReadiness(draft) {
         (!person.active || draft.jobs.includes(person.job)),
     ) &&
     new Set(people.map((person) => person.id)).size === people.length;
-  const activeIds = new Set(people.filter((person) => person.active).map((person) => person.id));
+  const activeIds = new Set(
+    people.filter((person) => person.active).map((person) => person.id),
+  );
   const staffing =
     validPeople &&
     productionUnits(draft).length > 0 &&
@@ -662,7 +675,12 @@ export function setupAccess(draft) {
   );
   const needed = {
     structure: [],
-    targets: lines && scheduleReadiness(draft.schedules) ? [] : ['structure'],
+    targets:
+      lines &&
+      scheduleReadiness(draft.schedules) &&
+      Object.values(draft.lineSchedules || {}).every(scheduleReadiness)
+        ? []
+        : ['structure'],
     personnel: jobs ? [] : ['structure'],
     staffing: [...(!lines ? ['structure'] : []), ...(!people ? ['personnel'] : [])],
     workforce: lines && jobs && validCatalog(draft.stations) ? [] : ['structure'],
@@ -814,7 +832,9 @@ export function addBatchMappings(
     for (const unit of units) {
       const key = productionKey(unit);
       const chosen = draft.monitoring.unitOutputSources[key];
-      if (!draft.rows.some((row) => row.active && productionKey(row) === key && row.id === chosen))
+      if (
+        !draft.rows.some((row) => row.active && productionKey(row) === key && row.id === chosen)
+      )
         draft.monitoring.unitOutputSources[key] = outputSourceFor(draft, unit);
     }
   }
@@ -887,7 +907,8 @@ export function lineStaffingMarkup({
   const text = labels(language);
   const units = productionUnits(draft);
   const lines = [...new Set(units.map((unit) => unit.line))];
-  const line = selectedLine === '' || lines.includes(selectedLine) ? selectedLine : lines[0] || '';
+  const line =
+    selectedLine === '' || lines.includes(selectedLine) ? selectedLine : lines[0] || '';
   const models = [...new Set(units.filter((unit) => !line || unit.line === line).map(modelOf))];
   const model = models.includes(selectedModel) ? selectedModel : '';
   const people = new Map((draft.personnel || []).map((person) => [person.id, person]));
@@ -939,7 +960,15 @@ export function lineStaffingMarkup({
               .join('') +
             '</select></label>' +
             '<div class="staff-person-picker">' +
-            staffPickerMarkup({ draft, unit, field, job, personIds: selectedIds, esc, language }) +
+            staffPickerMarkup({
+              draft,
+              unit,
+              field,
+              job,
+              personIds: selectedIds,
+              esc,
+              language,
+            }) +
             '</div>' +
             '<button type="button" class="button" data-action="add-staff-person" ' +
             (selectedIds.length ? '' : 'disabled') +
@@ -1144,7 +1173,9 @@ export function staffSettingsMarkup({
     '</h3><span>' +
     esc(text('targetLabel')) +
     ': ' +
-    esc(unit.dailyTarget ?? lineDailyTarget(draft, unit.line, unit.model) ?? text('targetUnset')) +
+    esc(
+      unit.dailyTarget ?? lineDailyTarget(draft, unit.line, unit.model) ?? text('targetUnset'),
+    ) +
     '</span></div>' +
     '<div class="mapping-output-source"><label>' +
     esc(text('outputStation')) +
@@ -1318,7 +1349,7 @@ export function targetsSettingsMarkup({ draft, esc, language, selectedLine = nul
 function shiftTarget(draft, line, shift, model) {
   const target = lineDailyTarget(draft, line, model);
   if (!Number.isInteger(target) || target < 0 || target > 99999999) return '—';
-  return allocateDailyTarget(draft, target)
+  return allocateDailyTarget(draft, target, line)
     .filter((slot) => slot.shift === shift)
     .reduce((sum, slot) => sum + slot.target, 0);
 }
@@ -1345,7 +1376,8 @@ export function handleWorkforceChange(draft, element) {
       const unit = unitFor(draft, { line: data.lineTarget, model: data.targetModel });
       if (!unit) return false;
       unit.dailyTarget = element.value.trim() === '' ? null : Number(element.value);
-      for (const output of element.closest?.('tr')?.querySelectorAll('[data-target-preview]') || [])
+      for (const output of element.closest?.('tr')?.querySelectorAll('[data-target-preview]') ||
+        [])
         output.textContent = shiftTarget(
           draft,
           data.lineTarget,
@@ -1363,7 +1395,8 @@ export function handleWorkforceChange(draft, element) {
       enumerable: true,
       configurable: true,
     });
-    for (const output of element.closest?.('tr')?.querySelectorAll('[data-target-preview]') || [])
+    for (const output of element.closest?.('tr')?.querySelectorAll('[data-target-preview]') ||
+      [])
       output.textContent = shiftTarget(draft, data.lineTarget, output.dataset.targetPreview);
     return true;
   }

@@ -20,7 +20,9 @@
         <a href="/" class="brand" aria-label="DELTA · BP PULSE"
           ><span class="brand-mark"><img src="/delta-logo.svg#symbol" alt="" /></span
           ><span class="brand-word"
-            ><img src="/delta-logo.svg#wordmark" alt="DELTA" /><small>Smarter. Greener. Together.</small></span
+            ><img src="/delta-logo.svg#wordmark" alt="DELTA" /><small
+              >Smarter. Greener. Together.</small
+            ></span
           ></a
         ><button
           class="icon-button collapse-button"
@@ -42,8 +44,14 @@
       </div>
       <p class="nav-caption" data-i18n="workspace">工作空間</p>
       <nav data-i18n-aria="workspace">
-        <a href="/overview" class="nav-item active" data-view="overview" data-i18n-title="overview">
-          <span data-icon="grid"></span><span class="nav-label" data-i18n="overview">生產總覽</span>
+        <a
+          href="/overview"
+          class="nav-item active"
+          data-view="overview"
+          data-i18n-title="overview"
+        >
+          <span data-icon="grid"></span
+          ><span class="nav-label" data-i18n="overview">生產總覽</span>
         </a>
         <a href="/details" class="nav-item" data-view="details" data-i18n-title="details">
           <span data-icon="clipboard"></span><span class="nav-label" data-i18n="details"></span>
@@ -97,7 +105,8 @@
           ><label class="header-select theme-select"
             ><span data-icon="palette"></span
             ><select id="theme-select" data-i18n-aria="theme"></select></label
-          ><span class="current-user" id="current-user"></span><span class="user-avatar">BP</span
+          ><span class="current-user" id="current-user"></span
+          ><span class="user-avatar">BP</span
           ><button
             class="icon-button logout-button"
             id="logout"
@@ -150,6 +159,18 @@
                 ><strong id="board-context"></strong>
               </div>
               <div class="board-actions">
+                <div class="metric-scope-buttons" role="group" data-i18n-aria="metricScope">
+                  <button
+                    data-metric-scope="interval"
+                    aria-pressed="true"
+                    data-i18n="metricInterval"
+                  ></button>
+                  <button
+                    data-metric-scope="day"
+                    aria-pressed="false"
+                    data-i18n="metricDay"
+                  ></button>
+                </div>
                 <details class="board-display-options">
                   <summary data-i18n="displayOptions"></summary>
                   <div>
@@ -175,6 +196,18 @@
                 <p data-i18n="lineOverviewDesc"></p>
               </div>
               <div class="dashboard-actions">
+                <div class="metric-scope-buttons" role="group" data-i18n-aria="metricScope">
+                  <button
+                    data-metric-scope="interval"
+                    aria-pressed="true"
+                    data-i18n="metricInterval"
+                  ></button>
+                  <button
+                    data-metric-scope="day"
+                    aria-pressed="false"
+                    data-i18n="metricDay"
+                  ></button>
+                </div>
                 <button class="button" id="enter-fullscreen">
                   <span data-icon="fullscreen"></span><span data-i18n="fullscreen"></span>
                 </button>
@@ -239,7 +272,8 @@
                 <label for="chart-line" data-i18n="chartLine"></label
                 ><select id="chart-line"></select
                 ><span class="point-key met-point"></span><span data-i18n="onTarget"></span
-                ><span class="point-key missed-point"></span><span data-i18n="belowTarget"></span>
+                ><span class="point-key missed-point"></span
+                ><span data-i18n="belowTarget"></span>
               </div>
               <div id="chart" class="chart"></div>
               <div class="table-scroll interval-details">
@@ -266,7 +300,8 @@
               <div>
                 <div class="section-eyebrow" data-i18n="shopFloor"></div>
                 <h2>
-                  <span id="table-heading"></span><span class="count-badge" id="row-count">0</span>
+                  <span id="table-heading"></span
+                  ><span class="count-badge" id="row-count">0</span>
                 </h2>
                 <p id="table-description"></p>
               </div>
@@ -292,9 +327,11 @@
               <div class="table-tools-right">
                 <label class="search-control"
                   ><span data-icon="search"></span
-                  ><input id="search" data-i18n-placeholder="search" data-i18n-aria="search" /><kbd
-                    >/</kbd
-                  ></label
+                  ><input
+                    id="search"
+                    data-i18n-placeholder="search"
+                    data-i18n-aria="search"
+                  /><kbd>/</kbd></label
                 ><select id="status-select" data-i18n-aria="status">
                   <option value="all" data-i18n="allStatus"></option>
                   <option value="filled" data-i18n="filled"></option>
@@ -303,7 +340,12 @@
                 </select>
               </div>
             </div>
-            <div class="slot-tabs" id="slot-tabs" role="tablist" data-i18n-aria="timeSlot"></div>
+            <div
+              class="slot-tabs"
+              id="slot-tabs"
+              role="tablist"
+              data-i18n-aria="timeSlot"
+            ></div>
             <div class="table-scroll">
               <table id="production-table">
                 <colgroup>
@@ -436,7 +478,12 @@
                 id="setup-next"
                 aria-describedby="setup-next-reason"
               ></button>
-              <button type="button" class="button primary" id="save-settings" data-save-settings>
+              <button
+                type="button"
+                class="button primary"
+                id="save-settings"
+                data-save-settings
+              >
                 <span data-icon="check"></span><span data-i18n="saveSettings">儲存設定</span>
               </button>
             </div>
@@ -448,7 +495,11 @@
         </footer>
       </main>
     </div>
-    <dialog id="line-detail-dialog" class="line-detail-dialog" aria-labelledby="line-modal-title">
+    <dialog
+      id="line-detail-dialog"
+      class="line-detail-dialog"
+      aria-labelledby="line-modal-title"
+    >
       <div id="line-detail-content"></div>
     </dialog>
     <dialog
@@ -467,7 +518,8 @@
     </dialog>
     <dialog id="login-dialog" class="login-dialog" aria-labelledby="login-title">
       <div class="login-brand">
-        <span class="brand-mark"><img src="/delta-logo.svg#symbol" alt="DELTA" /></span><strong>BP PULSE</strong
+        <span class="brand-mark"><img src="/delta-logo.svg#symbol" alt="DELTA" /></span
+        ><strong>BP PULSE</strong
         ><select id="login-language" aria-label="Language">
           <option value="zh">Chinese</option>
           <option value="en">English</option>

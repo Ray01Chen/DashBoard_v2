@@ -520,12 +520,13 @@
   border-radius: 10px;
   background: #fff;
 }
-.line-modal-trend .group-trend-svg {
-  display: block;
-  width: auto;
-  min-width: 100%;
-  height: auto;
-  min-height: 285px;
+.line-modal-plot {
+  height: clamp(220px, 34vh, 360px);
+  overflow-x: auto;
+  min-width: 0;
+}
+.line-modal-plot .group-trend-svg {
+  height: 100%;
 }
 .line-modal-stations {
   display: grid;
@@ -774,9 +775,6 @@
     width: 100%;
     box-sizing: border-box;
   }
-  .line-modal-trend .group-trend-svg {
-    min-height: 230px;
-  }
 }
 /* A sticky action bar must not consume half of a short or zoomed viewport. */
 @media (max-height: 600px), (max-width: 600px) {
@@ -853,9 +851,6 @@
     padding: 10px 0 0;
     border-top: 1px solid var(--line);
     border-left: 0;
-  }
-  .line-modal-trend .group-trend-svg {
-    min-height: 200px;
   }
   .line-modal-table th,
   .line-modal-table td {

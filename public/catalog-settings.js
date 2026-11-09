@@ -7,7 +7,8 @@ const matches = (row, catalog, value) =>
 export function catalogImpact(config, catalog, value) {
   return {
     mappings: config.rows.filter((row) => row.active && matches(row, catalog, value)).length,
-    people: catalog === 'jobs' ? (config.personnel || []).filter((p) => p.job === value).length : 0,
+    people:
+      catalog === 'jobs' ? (config.personnel || []).filter((p) => p.job === value).length : 0,
     units: ['lines', 'models'].includes(catalog)
       ? productionUnits(config).filter((unit) => matches(unit, catalog, value)).length
       : 0,
@@ -48,7 +49,12 @@ export function renameCatalogItem(config, catalog, old, name) {
   if (catalog === 'lines') {
     for (const group of config.monitoring?.groups || [])
       group.lines = group.lines.map((line) => (line === old ? name : line));
-    for (const map of [config.lineTargets, config.lineStaffing, config.monitoring?.outputSources]) {
+    for (const map of [
+      config.lineTargets,
+      config.lineStaffing,
+      config.lineSchedules,
+      config.monitoring?.outputSources,
+    ]) {
       if (!map || !Object.hasOwn(map, old) || name === old) continue;
       Object.defineProperty(map, name, {
         value: map[old],
@@ -89,7 +95,9 @@ export function removeCatalogItem(config, catalog, value) {
   if (catalog === 'jobs') {
     removePersonnel(
       config,
-      (config.personnel || []).filter((person) => person.job === value).map((person) => person.id),
+      (config.personnel || [])
+        .filter((person) => person.job === value)
+        .map((person) => person.id),
     );
   }
   config[catalog] = config[catalog].filter((item) => item !== value);
@@ -102,7 +110,12 @@ export function removeCatalogItem(config, catalog, value) {
   if (catalog === 'lines') {
     for (const group of config.monitoring?.groups || [])
       group.lines = group.lines.filter((line) => line !== value);
-    for (const map of [config.lineTargets, config.lineStaffing, config.monitoring?.outputSources])
+    for (const map of [
+      config.lineTargets,
+      config.lineStaffing,
+      config.lineSchedules,
+      config.monitoring?.outputSources,
+    ])
       if (map) delete map[value];
   }
   return true;

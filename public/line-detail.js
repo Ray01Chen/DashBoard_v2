@@ -1,5 +1,5 @@
 import { buildLineMonitor } from './monitor.js';
-import { trendSvg, sum, overviewMetricsMarkup } from './dashboard.js';
+import { renderTrend, sum, overviewMetricsMarkup } from './dashboard.js';
 import {
   sameProduction,
   productionIdentityMarkup,
@@ -59,11 +59,6 @@ export function showLineDetail(dialog, context) {
           context.now,
         ).find((item) => (item.key || item.line) === line)
       : monitor;
-  const trend = trendSvg(series, {
-    ...context,
-    trendSize: { width: 1040, height: 320 },
-  });
-
   dialog.querySelector('#line-detail-content').innerHTML = `
     <header class="line-modal-header" data-detail-line="${esc(monitor.key || monitor.line)}">
       <div class="line-modal-identity">
@@ -75,7 +70,7 @@ export function showLineDetail(dialog, context) {
       <button class="icon-button" data-close-line-dialog aria-label="${esc(t('close'))}">${icon('close')}</button>
     </header>
     <div class="line-modal-body">
-      <section class="line-modal-trend"><h3>${esc(t('hourlyTrend'))}</h3>${trend}</section>
+      <section class="line-modal-trend"><h3>${esc(t('hourlyTrend'))}</h3><div class="line-modal-plot"></div></section>
       <div class="line-modal-table-wrap"><table class="line-modal-table"><thead><tr><th>${esc(t('timeSlot'))}</th><th>${esc(t('target'))}</th><th>${esc(t('actual'))}</th><th>${esc(t('gap'))}</th></tr></thead><tbody>${series.map((value) => `<tr><td>${esc(value.slot.start)}–${esc(value.slot.end)}</td><td>${number(value.target)}</td><td>${number(value.actual)}</td><td>${number(value.target != null && value.actual != null ? value.actual - value.target : null)}</td></tr>`).join('')}</tbody></table></div>
       <div class="line-modal-stations">${rows
         .map((row) => {
@@ -106,4 +101,17 @@ export function showLineDetail(dialog, context) {
     </div>`;
   dialog.querySelector('[data-close-line-dialog]').onclick = () => dialog.close();
   if (!dialog.open) dialog.showModal();
+  const plot = dialog.querySelector('.line-modal-plot');
+  renderTrend(plot, series, context);
+  let previousSize = '';
+  const observer = new ResizeObserver(([entry]) => {
+    const size = `${Math.round(entry.contentRect.width)}:${innerHeight}`;
+    if (entry.contentRect.width > 0 && size !== previousSize) {
+      previousSize = size;
+      renderTrend(plot, series, context);
+    }
+  });
+  observer.observe(plot);
+  // Reopening the dialog must not leave observers attached to retired plots.
+  dialog.addEventListener('close', () => observer.disconnect(), { once: true });
 }
