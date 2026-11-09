@@ -1326,14 +1326,14 @@ try {
     'No-output stations stay ordered and visible without writable fields in all modes; history survives and batch skips them',
   );
 
-  // Reproduce the exact vertical paste reported by users: six clipboard rows,
-  // three output stations and one interval. No value may spill into slot 2.
-  const beforeSixRowConfig = await readConfig();
-  const sixRowDraft = structuredClone(beforeSixRowConfig);
-  for (const row of sixRowDraft.rows)
+  // Any source row count follows odd=Target/even=Actual. The visible capacity
+  // clips overflow instead of wrapping it into another station or interval.
+  const beforeVariablePasteConfig = await readConfig();
+  const variablePasteDraft = structuredClone(beforeVariablePasteConfig);
+  for (const row of variablePasteDraft.rows)
     if (row.id === test.id || row.id === pack.id) row.hasOutput = true;
-  sixRowDraft.rows.push({
-    id: 'new-browser-six-row-paste',
+  variablePasteDraft.rows.push({
+    id: 'new-browser-variable-row-paste',
     line: 'DEMO-A',
     model,
     job: 'PD',
@@ -1341,10 +1341,10 @@ try {
     active: true,
     hasOutput: true,
   });
-  response = await context.request.put(baseURL + '/api/config', { data: sixRowDraft });
+  response = await context.request.put(baseURL + '/api/config', { data: variablePasteDraft });
   assert.equal(response.status(), 200, await response.text());
-  const sixRowConfig = await response.json();
-  const thirdPasteRow = sixRowConfig.rows.find(
+  const variablePasteConfig = await response.json();
+  const thirdPasteRow = variablePasteConfig.rows.find(
     (row) =>
       row.active &&
       row.line === 'DEMO-A' &&
@@ -1353,11 +1353,11 @@ try {
       row.station === 'Test',
   );
   assert.ok(thirdPasteRow);
-  const sixRowDate = '2026-11-16';
+  const variablePasteDate = '2026-11-16';
   await page.goto(baseURL + '/entry');
   await page.locator('[data-entry-line]').selectOption('DEMO-A');
   await page.locator('[data-entry-model-filter]').selectOption(model);
-  await page.locator('#report-date').fill(sixRowDate);
+  await page.locator('#report-date').fill(variablePasteDate);
   await page.locator('#report-date').dispatchEvent('change');
   await page.locator('[data-entry-mode]').selectOption('shift');
   await page.locator('[data-entry-select-shift="day"]').click();
@@ -1365,22 +1365,31 @@ try {
   await page.waitForFunction(
     () => document.querySelectorAll('[data-entry-field="actual"]').length === 3,
   );
-  const sixRowOrder = await page
+  const variablePasteOrder = await page
     .locator('[data-entry-station-row]:not([data-entry-no-output])')
     .evaluateAll((rows) => rows.map((row) => Number(row.dataset.entryStationRow)));
-  assert.equal(sixRowOrder.length, 3);
+  assert.equal(variablePasteOrder.length, 3);
   await page.locator('[data-entry-field="actual"]').first().evaluate((input) => {
     const transfer = new DataTransfer();
-    transfer.setData('text/plain', '301\n31\n302\n32\n303\n33');
+    transfer.setData('text/plain', '299');
+    input.dispatchEvent(
+      new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer }),
+    );
+  });
+  assert.equal(await page.locator('[data-entry-field="target"]').first().inputValue(), '299');
+  assert.equal(await page.locator('[data-entry-field="actual"]').first().inputValue(), '');
+  await page.locator('[data-entry-field="actual"]').first().evaluate((input) => {
+    const transfer = new DataTransfer();
+    transfer.setData('text/plain', '301\n31\n302\n32\n303\n33\n999');
     input.dispatchEvent(
       new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer }),
     );
   });
   await page.locator('[data-entry-action="save-all"]').click();
   await saved();
-  const sixRowReport = await readReport(sixRowDate);
-  for (const [index, rowId] of sixRowOrder.entries()) {
-    const row = sixRowReport.records.find((record) => record.rowId === rowId);
+  const variablePasteReport = await readReport(variablePasteDate);
+  for (const [index, rowId] of variablePasteOrder.entries()) {
+    const row = variablePasteReport.records.find((record) => record.rowId === rowId);
     assert.equal(row.slots[0].target, 301 + index);
     assert.equal(row.slots[0].actual, 31 + index);
     assert.notEqual(row.slots[1]?.target, 301 + index);
@@ -1388,10 +1397,10 @@ try {
   }
   await screenshot('.entry-unified', 'production-entry-paste');
   record(
-    'Six vertical clipboard rows fill three station Target/Actual pairs in one interval without spilling into the next interval',
+    'Any clipboard row count follows odd Target/even Actual; overflow is ignored without wrapping into another interval',
   );
   response = await context.request.put(baseURL + '/api/config', {
-    data: { ...beforeSixRowConfig, version: sixRowConfig.version },
+    data: { ...beforeVariablePasteConfig, version: variablePasteConfig.version },
   });
   assert.equal(response.status(), 200, await response.text());
 

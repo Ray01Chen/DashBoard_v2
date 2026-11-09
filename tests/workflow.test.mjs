@@ -324,7 +324,7 @@ test('main entry paired paste maps odd rows to Target and even rows to Actual', 
   );
 });
 
-test('six vertical rows stay in one interval and fill three station Target/Actual pairs', () => {
+test('main entry paste accepts any row count, follows odd/even fields and clips overflow', () => {
   const paired = Object.fromEntries(
     ['target', 'actual'].map((field) => [
       field,
@@ -337,20 +337,39 @@ test('six vertical rows stay in one interval and fill three station Target/Actua
       ),
     ]),
   );
-  const plan = planEntryPaste('101\n11\n102\n12\n103\n13', paired.actual, 0, 0, paired);
-  assert.equal(plan.valid, true);
+  for (let count = 1; count <= 9; count++) {
+    const plan = planEntryPaste(
+      Array.from({ length: count }, (_, index) => String(index + 1)).join('\n'),
+      paired.actual,
+      0,
+      0,
+      paired,
+    );
+    assert.equal(plan.valid, true, `row count ${count}`);
+    assert.deepEqual(
+      plan.edits.map(({ rowKey, slotId, field, value }) => [rowKey, slotId, field, value]),
+      Array.from({ length: Math.min(count, 6) }, (_, index) => [
+        `station-${Math.floor(index / 2)}`,
+        'slot-0',
+        index % 2 === 0 ? 'target' : 'actual',
+        index + 1,
+      ]),
+      `row count ${count}`,
+    );
+  }
+  const oneRow = planEntryPaste('77', paired.actual, 0, 0, paired);
+  assert.equal(oneRow.edits[0].field, 'target');
+  assert.equal(oneRow.edits[0].value, 77);
+  const fromSecondStation = planEntryPaste('1\n2\n3\n4\n5', paired.target, 1, 0, paired);
   assert.deepEqual(
-    plan.edits.map(({ rowKey, slotId, field, value }) => [rowKey, slotId, field, value]),
+    fromSecondStation.edits.map(({ rowKey, field, value }) => [rowKey, field, value]),
     [
-      ['station-0', 'slot-0', 'target', 101],
-      ['station-0', 'slot-0', 'actual', 11],
-      ['station-1', 'slot-0', 'target', 102],
-      ['station-1', 'slot-0', 'actual', 12],
-      ['station-2', 'slot-0', 'target', 103],
-      ['station-2', 'slot-0', 'actual', 13],
+      ['station-1', 'target', 1],
+      ['station-1', 'actual', 2],
+      ['station-2', 'target', 3],
+      ['station-2', 'actual', 4],
     ],
   );
-  assert.ok(plan.edits.every((edit) => edit.slotId === 'slot-0'));
 });
 
 test('spreadsheet keyboard navigation skips unavailable cells and exits at Tab boundaries', () => {

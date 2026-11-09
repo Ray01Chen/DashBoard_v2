@@ -22,7 +22,7 @@ const messages = {
     bulkApplyIssue: 'Apply issues',
     wholeDay: 'Whole day',
     pasteHint:
-      'Paste rows in pairs: Target, Actual, then the next station. Columns follow time slots.',
+      'Paste any number of rows: odd rows are Target, even rows are Actual. Values that exceed the remaining stations or time slots are ignored.',
     bulkDateInvalid: 'Choose a valid production date.',
     bulkApplyActual: 'Apply actuals',
     bulkApplyTarget: 'Apply targets',
@@ -147,7 +147,7 @@ const messages = {
   zh: {
     bulkApplyIssue: '套用異常',
     wholeDay: '一整天',
-    pasteHint: '成對貼上：第一列目標、第二列實績，接著下一站；欄位依時段排列。',
+    pasteHint: '可貼任意列數：單數列是目標、雙數列是實績；超過剩餘站點或時段的值不貼上。',
     bulkDateInvalid: '請選擇有效的生產日期。',
     bulkApplyActual: '套用實績',
     bulkApplyTarget: '套用目標',
@@ -260,7 +260,7 @@ const messages = {
   th: {
     bulkApplyIssue: 'ใช้ปัญหากับทุกสถานี',
     wholeDay: 'ทั้งวัน',
-    pasteHint: 'วางแถวเป็นคู่: เป้าหมาย ผลจริง แล้วสถานีถัดไป คอลัมน์เรียงตามช่วงเวลา',
+    pasteHint: 'วางกี่แถวก็ได้: แถวคี่เป็น Target แถวคู่เป็น Actual ค่าที่เกินสถานีหรือช่วงเวลาที่เหลือจะไม่ถูกวาง',
     bulkDateInvalid: 'เลือกวันที่ผลิตที่ถูกต้อง',
     bulkApplyActual: 'ใช้ผลจริง',
     bulkApplyTarget: 'ใช้เป้าหมาย',
@@ -446,10 +446,21 @@ export function planEntryPaste(tsv, grid, row, column, pairedGrids = null) {
     destinations = new Set();
   for (let y = 0; y < values.length; y++) {
     for (let x = 0; x < width; x++) {
-      const paired = pairedGrids && values.length > 1;
+      const paired = Boolean(pairedGrids);
       const destinationField = paired ? (y % 2 === 0 ? 'target' : 'actual') : field;
       const destination = paired ? pairedGrids[destinationField] : grid;
-      const cell = destination[row + (paired ? Math.floor(y / 2) : y)]?.[column + x];
+      const destinationRow = row + (paired ? Math.floor(y / 2) : y);
+      const destinationColumn = column + x;
+      // The production grid follows spreadsheet edge behavior: paste the part
+      // that fits from the selected cell and never wrap overflow into another
+      // station or interval. Non-edge holes still reject the full paste.
+      if (
+        paired &&
+        (destinationRow >= destination.length ||
+          destinationColumn >= (destination[destinationRow]?.length ?? 0))
+      )
+        continue;
+      const cell = destination[destinationRow]?.[destinationColumn];
       const parsed = parseEntryActual(values[y][x]);
       if (!parsed.valid) return { valid: false, reason: 'number' };
       if (!cell?.rowKey || !cell.slotId || cell.disabled || cell.field !== destinationField)
@@ -465,7 +476,7 @@ export function planEntryPaste(tsv, grid, row, column, pairedGrids = null) {
       });
     }
   }
-  return { valid: true, edits };
+  return edits.length ? { valid: true, edits } : { valid: false, reason: 'destination' };
 }
 
 /** Grid edges never wrap for arrows/Enter; Tab wraps rows and exits at the outer edge. */

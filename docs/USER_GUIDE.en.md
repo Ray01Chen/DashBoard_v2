@@ -21,9 +21,9 @@ Save settings at top/bottom publishes the draft. Save draft stays in this browse
 
 ![Station production entry](./images/production-entry.png)
 
-When six rows are pasted vertically into one interval, rows 1/2, 3/4 and 5/6 fill the Target/Actual pair for three successive stations. All six values stay in the interval where the paste started.
+Paste any number of rows vertically. Odd source rows are Target and even source rows are Actual for successive stations. Only the portion that fits the remaining stations and intervals is pasted; overflow is ignored and never wraps.
 
-![Six-row Target and Actual paste in one interval](./images/production-entry-paste.png)
+![Odd/even row Target and Actual paste](./images/production-entry-paste.png)
 
 Choose production date, Line and Model. All stations appear automatically; there is no station selector. The fixed left column shows Job/Station and day/night/whole-day totals. Each interval has adjacent **Target / Actual** inputs and a one-line issue button. Individual edits affect only that station. People and owners remain automatically captured and can be viewed in production details.
 
@@ -33,7 +33,7 @@ Whole-day spreadsheet shows both shifts; Whole-shift spreadsheet shows the selec
 
 The **Day shift** and **Night shift** buttons open that complete shift. **Go to current time slot** uses Bangkok time to open the active single interval and focus Actual; when the selected production date has no active interval, the page explains why.
 
-Click another numeric cell to autosave and confirm Saved. Tab moves across intervals within the same field; Enter moves down stations. For multirow paste, odd rows are Target and even rows are Actual for successive stations; columns follow intervals. Six rows in one column therefore fill three stations in the starting interval. Failed saves retain input. Review a station version conflict before Use latest data or Save my changed cells; only changed cells are merged and other stations stay independent.
+Click another numeric cell to autosave and confirm Saved. Tab moves across intervals within the same field; Enter moves down stations. Paste any row count: odd rows are Target, even rows are Actual, and columns follow intervals. Values beyond the remaining grid capacity are ignored instead of wrapping. Failed saves retain input. Review a station version conflict before Use latest data or Save my changed cells; only changed cells are merged and other stations stay independent.
 
 Click **Add issue** or its preview, or press **F2** in a numeric cell. The editor identifies the station, date, shift and interval. Quick text inserts equipment, material or quality reasons; edit freely and use Enter for new lines, up to 2,000 characters. Done, X, Esc, Ctrl+Enter or a click outside closes and saves. Clear note removes the saved note. Opening without changes never creates a report. Long notes stay one line in the table; reopening shows the full text. F2 returns to the original numeric cell after closing. Save failures retain text and expose recovery controls beside the totals.
 
