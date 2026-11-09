@@ -324,6 +324,35 @@ test('main entry paired paste maps odd rows to Target and even rows to Actual', 
   );
 });
 
+test('six vertical rows stay in one interval and fill three station Target/Actual pairs', () => {
+  const paired = Object.fromEntries(
+    ['target', 'actual'].map((field) => [
+      field,
+      [0, 1, 2].map((row) =>
+        [0, 1].map((column) => ({
+          rowKey: `station-${row}`,
+          slotId: `slot-${column}`,
+          field,
+        })),
+      ),
+    ]),
+  );
+  const plan = planEntryPaste('101\n11\n102\n12\n103\n13', paired.actual, 0, 0, paired);
+  assert.equal(plan.valid, true);
+  assert.deepEqual(
+    plan.edits.map(({ rowKey, slotId, field, value }) => [rowKey, slotId, field, value]),
+    [
+      ['station-0', 'slot-0', 'target', 101],
+      ['station-0', 'slot-0', 'actual', 11],
+      ['station-1', 'slot-0', 'target', 102],
+      ['station-1', 'slot-0', 'actual', 12],
+      ['station-2', 'slot-0', 'target', 103],
+      ['station-2', 'slot-0', 'actual', 13],
+    ],
+  );
+  assert.ok(plan.edits.every((edit) => edit.slotId === 'slot-0'));
+});
+
 test('spreadsheet keyboard navigation skips unavailable cells and exits at Tab boundaries', () => {
   const cell = { disabled: false };
   const grid = [

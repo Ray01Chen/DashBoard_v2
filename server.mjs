@@ -818,6 +818,7 @@ const files = {
       'line-configuration',
       'daily-targets',
       'production-entry',
+      'production-entry-paste',
       'production-cell',
       'issue-editor',
       'interval-batch',

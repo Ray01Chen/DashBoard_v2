@@ -1326,6 +1326,75 @@ try {
     'No-output stations stay ordered and visible without writable fields in all modes; history survives and batch skips them',
   );
 
+  // Reproduce the exact vertical paste reported by users: six clipboard rows,
+  // three output stations and one interval. No value may spill into slot 2.
+  const beforeSixRowConfig = await readConfig();
+  const sixRowDraft = structuredClone(beforeSixRowConfig);
+  for (const row of sixRowDraft.rows)
+    if (row.id === test.id || row.id === pack.id) row.hasOutput = true;
+  sixRowDraft.rows.push({
+    id: 'new-browser-six-row-paste',
+    line: 'DEMO-A',
+    model,
+    job: 'PD',
+    station: 'Test',
+    active: true,
+    hasOutput: true,
+  });
+  response = await context.request.put(baseURL + '/api/config', { data: sixRowDraft });
+  assert.equal(response.status(), 200, await response.text());
+  const sixRowConfig = await response.json();
+  const thirdPasteRow = sixRowConfig.rows.find(
+    (row) =>
+      row.active &&
+      row.line === 'DEMO-A' &&
+      row.model === model &&
+      row.job === 'PD' &&
+      row.station === 'Test',
+  );
+  assert.ok(thirdPasteRow);
+  const sixRowDate = '2026-11-16';
+  await page.goto(baseURL + '/entry');
+  await page.locator('[data-entry-line]').selectOption('DEMO-A');
+  await page.locator('[data-entry-model-filter]').selectOption(model);
+  await page.locator('#report-date').fill(sixRowDate);
+  await page.locator('#report-date').dispatchEvent('change');
+  await page.locator('[data-entry-mode]').selectOption('shift');
+  await page.locator('[data-entry-select-shift="day"]').click();
+  await page.locator('[data-entry-mode]').selectOption('sheet');
+  await page.waitForFunction(
+    () => document.querySelectorAll('[data-entry-field="actual"]').length === 3,
+  );
+  const sixRowOrder = await page
+    .locator('[data-entry-station-row]:not([data-entry-no-output])')
+    .evaluateAll((rows) => rows.map((row) => Number(row.dataset.entryStationRow)));
+  assert.equal(sixRowOrder.length, 3);
+  await page.locator('[data-entry-field="actual"]').first().evaluate((input) => {
+    const transfer = new DataTransfer();
+    transfer.setData('text/plain', '301\n31\n302\n32\n303\n33');
+    input.dispatchEvent(
+      new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer }),
+    );
+  });
+  await page.locator('[data-entry-action="save-all"]').click();
+  await saved();
+  const sixRowReport = await readReport(sixRowDate);
+  for (const [index, rowId] of sixRowOrder.entries()) {
+    const row = sixRowReport.records.find((record) => record.rowId === rowId);
+    assert.equal(row.slots[0].target, 301 + index);
+    assert.equal(row.slots[0].actual, 31 + index);
+    assert.notEqual(row.slots[1]?.target, 301 + index);
+    assert.notEqual(row.slots[1]?.actual, 31 + index);
+  }
+  await screenshot('.entry-unified', 'production-entry-paste');
+  record(
+    'Six vertical clipboard rows fill three station Target/Actual pairs in one interval without spilling into the next interval',
+  );
+  response = await context.request.put(baseURL + '/api/config', {
+    data: { ...beforeSixRowConfig, version: sixRowConfig.version },
+  });
+  assert.equal(response.status(), 200, await response.text());
+
   // Real page URLs work after refresh and with Back/Forward; cancelling a dirty
   // draft navigation restores both the original address and the draft.
   assert.equal(new URL(page.url()).pathname, '/entry');

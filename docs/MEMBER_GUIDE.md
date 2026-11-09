@@ -6,6 +6,10 @@
 
 ![整日站點填報](./images/production-entry.png)
 
+同一時段由上往下貼上 6 排時，會依序填入 3 個站點：第 1、3、5 排是 Target，第 2、4、6 排是 Actual；所有數值都留在開始貼上的時段。
+
+![同一時段貼上六排 Target 與 Actual](./images/production-entry-paste.png)
+
 1. 選生產日期、Line、Model；不需再選站點，下方直接列所有站。
 2. 左側顯示站點、職務與早晚班及整日合計。每時段 Target、Actual 並排，直接點選填寫；異常用一行按鈕，不佔大文字框。不同站的數值不會互相同步。
 3. 點旁邊或離開儲存格自動儲存，確認 Saved；Save now 會送出全部待存有效資料。
