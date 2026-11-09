@@ -3,7 +3,8 @@ import { readSpreadsheet, writeSpreadsheet } from './spreadsheet.mjs';
 import { importDiagnostic } from './import-messages.mjs';
 import {
   modelOf,
-  orderedStationRows,
+  productionKey,
+  productionUnits,
   stationHasOutput,
 } from './public/production-models.js';
 
@@ -49,25 +50,47 @@ const fieldFor = new Map(
   ),
 );
 
-function templateRows(config, shift, date, defaults, records) {
-  const rows = [
-    [
-      'Row ID',
-      'Line',
-      'Job',
-      'Station',
-      'Time slot',
-      'Actual',
-      'Issue',
-      'Date',
-      'Shift',
-      'Target',
-      'Model',
-    ],
-  ];
+// Keep workbook fields together: scope, station identity, interval, then editable values.
+const templateColumns = [
+  ['date', 'Date', 14],
+  ['shift', 'Shift', 12],
+  ['line', 'Line', 18],
+  ['model', 'Model', 40],
+  ['job', 'Job', 18],
+  ['station', 'Station', 20],
+  ['interval', 'Time slot', 18],
+  ['target', 'Target', 12],
+  ['actual', 'Actual', 12],
+  ['issue', 'Issue', 45],
+  ['rowId', 'Row ID', 10],
+];
+
+/** Group each line/model and station in configured order, keeping day/night adjacent.
+ * Source row numbers remain on diagnostics; sorting affects only the display plan. */
+function orderedImportRows(config, rows) {
+  const unitRank = new Map(
+    [...new Set([...productionUnits(config), ...rows].map(productionKey))].map((key, index) => [
+      key,
+      index,
+    ]),
+  );
+  const stationRank = new Map(config.rows.map((row, index) => [row.id, index]));
+  return [...rows].sort(
+    (a, b) =>
+      (unitRank.get(productionKey(a)) ?? Number.MAX_SAFE_INTEGER) -
+        (unitRank.get(productionKey(b)) ?? Number.MAX_SAFE_INTEGER) ||
+      (stationRank.get(a.rowId) ?? Number.MAX_SAFE_INTEGER) -
+        (stationRank.get(b.rowId) ?? Number.MAX_SAFE_INTEGER) ||
+      a.rowId - b.rowId ||
+      (a.shift === 'night' ? 1 : 0) - (b.shift === 'night' ? 1 : 0),
+  );
+}
+
+function templateEntries(config, shift, date, defaults, records) {
+  const entries = [];
   const saved = new Map(records.map((record) => [record.rowId, record]));
-  // A template for a historical date must use the same model/station/interval
-  // identities the preview resolves, including saved retired mappings.
+  // Historical templates use captured station and interval identities so renamed
+  // or retired stations still round-trip through preview and version checks.
   const mappings = new Map(
     config.rows
       .filter((row) => row.active)
@@ -75,46 +98,57 @@ function templateRows(config, shift, date, defaults, records) {
   );
   for (const record of records)
     if (record.rowSnapshot) mappings.set(record.rowId, record.rowSnapshot);
-  for (const row of orderedStationRows(config, [...mappings.values()])) {
+  for (const row of mappings.values()) {
     if (!stationHasOutput(row, config)) continue;
-    for (const slot of saved.get(row.id)?.slots ||
+    const slots =
+      saved.get(row.id)?.slots ||
       defaults[row.id]?.slots ||
-      config.schedules[shift].filter((slot) => slot.kind === 'production'))
-      rows.push([
-        row.id,
-        row.line,
-        row.job,
-        row.station,
-        `${slot.start}-${slot.end}`,
-        '',
-        '',
+      config.schedules[shift].filter((slot) => slot.kind === 'production');
+    for (const slot of slots)
+      entries.push({
+        rowId: row.id,
+        line: row.line,
+        model: modelOf(row),
+        job: row.job,
+        station: row.station,
+        interval: `${slot.start}-${slot.end}`,
         date,
         shift,
-        '',
-        modelOf(row),
-      ]);
+        target: '',
+        actual: '',
+        issue: '',
+      });
   }
-  return rows;
+  return entries;
 }
 
 export function importTemplate(config, shift, date = '', defaults = {}, records = []) {
-  if (shift !== 'all')
-    return writeSpreadsheet(templateRows(config, shift, date, defaults, records));
-  const day = templateRows(
+  const shifts = shift === 'all' ? ['day', 'night'] : [shift];
+  const entries = orderedImportRows(
     config,
-    'day',
-    date,
-    defaults.day || {},
-    records.filter((record) => record.shift === 'day'),
+    shifts.flatMap((workShift) =>
+      templateEntries(
+        config,
+        workShift,
+        date,
+        shift === 'all' ? defaults[workShift] || {} : defaults,
+        records.filter((record) => shift !== 'all' || record.shift === workShift),
+      ),
+    ),
   );
-  const night = templateRows(
-    config,
-    'night',
-    date,
-    defaults.night || {},
-    records.filter((record) => record.shift === 'night'),
+  return writeSpreadsheet(
+    [
+      templateColumns.map(([, label]) => label),
+      ...entries.map((entry) => templateColumns.map(([key]) => entry[key])),
+    ],
+    {
+      widths: templateColumns.map(([, , width]) => width),
+      inputColumns: templateColumns.flatMap(([key], index) =>
+        ['target', 'actual', 'issue'].includes(key) ? [index] : [],
+      ),
+      freezeColumns: templateColumns.findIndex(([key]) => key === 'interval'),
+    },
   );
-  return writeSpreadsheet([...day, ...night.slice(1)]);
 }
 
 function findSlot(raw, slots) {
@@ -130,7 +164,8 @@ function findSlot(raw, slots) {
     return slots.find((slot) => slot.start === start && slot.end === end);
   }
   const start = value.match(/^(\d{1,2}):(\d{2})(?::00)?$/);
-  if (start) return slots.find((slot) => slot.start === `${start[1].padStart(2, '0')}:${start[2]}`);
+  if (start)
+    return slots.find((slot) => slot.start === `${start[1].padStart(2, '0')}:${start[2]}`);
   return null;
 }
 
@@ -166,8 +201,9 @@ export function previewImport(
         matrix,
       ),
     }));
-    const rows = parts.flatMap(({ shift, result }) =>
-      result.rows.map((row) => ({ ...row, shift })),
+    const rows = orderedImportRows(
+      config,
+      parts.flatMap(({ shift, result }) => result.rows.map((row) => ({ ...row, shift }))),
     );
     const errors = [
       ...new Map(
@@ -204,7 +240,11 @@ export function previewImport(
   });
   const headerIndex = matrix.findIndex((row) => row.some((cell) => !blank(cell?.value)));
   if (headerIndex < 0)
-    return { rows: [], errors: [diagnostic(1, '', 'empty')], summary: { records: 0, cells: 0 } };
+    return {
+      rows: [],
+      errors: [diagnostic(1, '', 'empty')],
+      summary: { records: 0, cells: 0 },
+    };
   const columns = {};
   matrix[headerIndex].forEach((cell, index) => {
     const field = fieldFor.get(normalized(cell?.value));
@@ -237,7 +277,6 @@ export function previewImport(
   const shiftNames = new Set(
     [shift, ...Object.values(messages).map((dictionary) => dictionary[shift])].map(normalized),
   );
-  let cells = 0;
   for (let index = headerIndex + 1; index < matrix.length; index++) {
     const source = matrix[index],
       value = (field) => source[columns[field]]?.value ?? '';
@@ -257,7 +296,11 @@ export function previewImport(
       }
       if (selectedShift !== shift) continue;
     }
-    if (columns.date != null && !blank(value('date')) && String(value('date')).trim() !== date) {
+    if (
+      columns.date != null &&
+      !blank(value('date')) &&
+      String(value('date')).trim() !== date
+    ) {
       error('date', 'dateMismatch', { date });
       continue;
     }
@@ -278,7 +321,8 @@ export function previewImport(
       if (!blank(value(field)))
         matches = matches.filter(
           (row) =>
-            normalized(field === 'model' ? modelOf(row) : row[field]) === normalized(value(field)),
+            normalized(field === 'model' ? modelOf(row) : row[field]) ===
+            normalized(value(field)),
         );
     if (matches.length !== 1) {
       error('rowId', matches.length ? 'ambiguous' : 'unknownMapping');
@@ -302,7 +346,12 @@ export function previewImport(
       error('slot', 'unknownSlot');
       continue;
     }
-    const change = { slotId: slot.id, start: slot.start, end: slot.end, sourceRow: rowNumber };
+    const change = {
+      slotId: slot.id,
+      start: slot.start,
+      end: slot.end,
+      sourceRow: rowNumber,
+    };
     let valid = true;
     for (const field of ['target', 'actual', 'issue']) {
       if (blank(value(field))) continue;
@@ -350,11 +399,21 @@ export function previewImport(
       }
       Object.assign(existing, change);
     } else record.changes.push(change);
-    cells += Number(Object.hasOwn(change, 'actual')) + Number(Object.hasOwn(change, 'issue'));
   }
   // Each worksheet row addresses one station; differing station counts are valid.
-  const rows = [...records.values()];
-  cells = rows.reduce(
+  const rows = orderedImportRows(config, [...records.values()]);
+  for (const row of rows) {
+    // Use captured interval order, including overnight and retired intervals;
+    // sorting clock strings would incorrectly move midnight before the evening.
+    const captured = savedById.get(row.rowId)?.slots || defaults[row.rowId]?.slots || [];
+    const slots = [
+      ...captured,
+      ...schedule.filter((slot) => !captured.some((saved) => saved.id === slot.id)),
+    ];
+    const intervalRank = new Map(slots.map((slot, index) => [slot.id, index]));
+    row.changes.sort((a, b) => intervalRank.get(a.slotId) - intervalRank.get(b.slotId));
+  }
+  const cells = rows.reduce(
     (sum, row) =>
       sum +
       row.changes.reduce(

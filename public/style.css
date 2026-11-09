@@ -124,7 +124,7 @@ textarea:focus-visible {
   position: fixed;
   inset: 0 auto 0 0;
   width: 248px;
-  background: #fff;
+  background: linear-gradient(180deg, var(--tint), #fff 65%);
   border-right: 1px solid var(--line);
   padding: 27px 19px 18px;
   display: flex;
@@ -150,27 +150,30 @@ textarea:focus-visible {
   height: 42px;
   display: grid;
   place-items: center;
-  background: var(--primary);
-  color: #fff;
-  border-radius: 11px;
-  font-size: 19px;
-  font-weight: 750;
-  letter-spacing: -0.7px;
+  background: transparent;
   flex-shrink: 0;
 }
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 .brand-word {
-  font-size: 17px;
-  font-weight: 750;
-  letter-spacing: 0.3px;
+  min-width: 0;
   white-space: nowrap;
+}
+.brand-word > img {
+  display: block;
+  width: 134px;
+  max-width: 100%;
+  height: 34px;
 }
 .brand-word small {
   display: block;
-  color: var(--muted);
+  color: #0087dc;
   font-size: 8px;
-  font-weight: 450;
-  letter-spacing: 1px;
-  margin-top: 3px;
+  font-weight: 500;
+  margin-top: 1px;
 }
 .icon-button {
   display: inline-flex;
@@ -253,9 +256,10 @@ nav {
   display: flex;
   align-items: center;
   gap: 11px;
-  border: 0;
   background: transparent;
-  border-radius: 7px;
+  position: relative;
+  border: 1px solid transparent;
+  border-radius: 12px;
   padding: 12px 11px;
   text-align: left;
   font-size: 12px;
@@ -268,8 +272,20 @@ nav {
 }
 .nav-item.active {
   color: var(--primary-dark);
-  background: var(--soft);
+  background: linear-gradient(110deg, #fff, var(--soft));
+  border-color: var(--soft-strong);
+  box-shadow: 0 4px 12px #163e6008;
   font-weight: 600;
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 25%;
+  bottom: 25%;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--primary);
 }
 .nav-label {
   min-width: 0;
@@ -334,7 +350,7 @@ nav {
 .topbar {
   height: 73px;
   border-bottom: 1px solid var(--line);
-  background: #fff;
+  background: linear-gradient(110deg, var(--tint), var(--soft));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -350,8 +366,8 @@ nav {
   min-width: 0;
 }
 .breadcrumb strong {
-  font-weight: 500;
-  color: var(--ink);
+  font-weight: 650;
+  color: var(--primary-dark);
 }
 .topbar-right {
   display: flex;
@@ -380,7 +396,11 @@ nav {
   display: flex;
   align-items: center;
   gap: 5px;
-  color: var(--muted);
+  color: var(--primary-dark);
+  border: 1px solid var(--soft-strong);
+  border-radius: 9px;
+  padding: 2px 5px;
+  background: #ffffffbf;
 }
 .header-select > .icon {
   width: 15px;
@@ -389,7 +409,7 @@ nav {
 .header-select select {
   border: 0;
   padding: 7px 17px 7px 3px;
-  background: #fff;
+  background: transparent;
   font-size: 11px;
   max-width: 120px;
   color: var(--ink);
@@ -416,7 +436,11 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 22px;
-  margin-bottom: 26px;
+  margin-bottom: 18px;
+  padding: 18px 22px;
+  border: 1px solid var(--soft-strong);
+  border-radius: 14px;
+  background: linear-gradient(110deg, var(--tint), var(--soft));
 }
 .eyebrow {
   display: flex;
@@ -433,15 +457,11 @@ main {
   border-radius: 50%;
 }
 h1 {
-  font-size: 29px;
-  font-weight: 650;
+  font-size: 25px;
+  font-weight: 700;
   letter-spacing: 0.3px;
   margin: 10px 0 8px;
   line-height: 1.4;
-}
-.title-dot {
-  color: var(--primary);
-  margin-left: 3px;
 }
 .page-heading p {
   font-size: 12px;
@@ -492,9 +512,10 @@ h1 {
   gap: 15px;
   background: #fff;
   border: 1px solid var(--line);
-  border-radius: 9px;
-  padding: 12px 15px;
-  margin-bottom: 21px;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  box-shadow: 0 3px 12px #163e6004;
 }
 .filter-group {
   display: flex;
@@ -509,6 +530,10 @@ h1 {
   display: flex;
   align-items: center;
   gap: 7px;
+  padding: 7px 9px;
+  border: 1px solid var(--soft-strong);
+  border-radius: 9px;
+  background: var(--tint);
 }
 .date-control .icon {
   width: 16px;
@@ -574,10 +599,11 @@ h1 {
 }
 .panel {
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 14px;
   background: #fff;
   overflow: hidden;
   min-width: 0;
+  box-shadow: 0 3px 14px #163e6004;
 }
 .panel-heading {
   padding: 21px 22px 0;
@@ -1553,9 +1579,6 @@ html[lang='th'] .nav-item {
   .app-shell {
     margin-left: 225px;
   }
-  .brand-word {
-    font-size: 15px;
-  }
   .brand-word small {
     font-size: 7px;
   }
@@ -2047,8 +2070,6 @@ html[lang='th'] .nav-item {
   .sidebar-collapsed .brand-mark {
     width: 33px;
     height: 36px;
-    font-size: 17px;
-    border-radius: 9px;
   }
   .collapse-button {
     padding: 5px;
@@ -2691,8 +2712,8 @@ body:not(.authenticated) > .app-shell {
   display: flex;
   align-items: center;
   padding: 24px 28px;
-  background: var(--surface, #fff);
-  border: 1px solid var(--border, #e5eaf0);
+  background: linear-gradient(110deg, var(--tint), var(--soft));
+  border: 1px solid var(--soft-strong);
   border-radius: 16px;
   margin: 18px 0;
 }

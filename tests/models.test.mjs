@@ -16,7 +16,11 @@ import {
   productionIdentityMarkup,
   productionLabel,
 } from '../public/production-models.js';
-import { renameCatalogItem, removeCatalogItem, catalogImpact } from '../public/catalog-settings.js';
+import {
+  renameCatalogItem,
+  removeCatalogItem,
+  catalogImpact,
+} from '../public/catalog-settings.js';
 import {
   addBatchMappings,
   updateMapping,
@@ -29,7 +33,10 @@ import { previewImport, importTemplate } from '../production-import.mjs';
 import { readSpreadsheet } from '../spreadsheet.mjs';
 
 test('visible line/model identities preserve full escaped values separately from plain labels', () => {
-  const row = { line: '<Line>', model: 'ECD16010094-ORV3-PSU-3KW-AutoLine & test' };
+  const row = {
+    line: '<Line>',
+    model: 'ECD16010094-ORV3-PSU-3KW-AutoLine & test',
+  };
   const esc = (value) =>
     String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
   const html = productionIdentityMarkup(row, esc);
@@ -62,7 +69,11 @@ function fixture() {
       line: 'L',
       model,
       dailyTarget: 1000 * (index + 1),
-      staffing: { day: [model.toLowerCase()], night: [], owners: [model.toLowerCase()] },
+      staffing: {
+        day: [model.toLowerCase()],
+        night: [],
+        owners: [model.toLowerCase()],
+      },
     })),
     rows: ['A', 'B'].flatMap((model, index) =>
       ['Pack', 'Test'].map((station, i) => ({
@@ -126,7 +137,10 @@ test('targets, personnel, mapping duplicates and model reassignment use the same
   assert.equal(cfg.rows[0].active, false);
   assert.notEqual(cfg.rows.at(-1).id, id);
   assert.equal(cfg.rows.at(-1).model, 'B');
-  handleWorkforceChange(cfg, { dataset: { lineTarget: 'L', targetModel: 'B' }, value: '2500' });
+  handleWorkforceChange(cfg, {
+    dataset: { lineTarget: 'L', targetModel: 'B' },
+    value: '2500',
+  });
   assert.equal(cfg.productionUnits[0].dailyTarget, 1000);
   assert.equal(cfg.productionUnits[1].dailyTarget, 2500);
 });
@@ -139,7 +153,11 @@ test('catalog rename updates targets, teams and references; retirement is a sing
   assert.equal(cfg.productionUnits[0].dailyTarget, 1000);
   assert.deepEqual(cfg.productionUnits[0].staffing.day, ['a']);
   assert.equal(renameCatalogItem(cfg, 'models', 'Model A', 'b'), false);
-  assert.deepEqual(catalogImpact(cfg, 'models', 'Model A'), { mappings: 2, people: 0, units: 1 });
+  assert.deepEqual(catalogImpact(cfg, 'models', 'Model A'), {
+    mappings: 2,
+    people: 0,
+    units: 1,
+  });
   assert.equal(removeCatalogItem(cfg, 'models', 'Model A'), true);
   assert.equal(cfg.rows.filter((r) => r.active).length, 2);
   assert.deepEqual(cfg.models, ['B']);
@@ -163,14 +181,24 @@ test('enabling models starts independent empty settings and disabling preserves 
   cfg.models.push('C');
   assert.equal(setProductionUnit(cfg, 'L', 'C', true), true);
   assert.equal(productionUnits(cfg).at(-1).dailyTarget, null);
-  assert.deepEqual(productionUnits(cfg).at(-1).staffing, { day: [], night: [], owners: [] });
+  assert.deepEqual(productionUnits(cfg).at(-1).staffing, {
+    day: [],
+    night: [],
+    owners: [],
+  });
   setProductionUnit(cfg, 'L', 'A', false);
   assert.equal(cfg.rows[0].id, 1);
   assert.equal(cfg.rows[0].active, false);
   assert.equal(cfg.rows[2].active, true);
   assert.equal(cfg.rows[0].deleted, true);
   setProductionUnit(cfg, 'L', 'A', true);
-  addBatchMappings(cfg, ['L'], [{ job: 'QA', station: 'Pack' }], () => 'new-after-removal', 'A');
+  addBatchMappings(
+    cfg,
+    ['L'],
+    [{ job: 'QA', station: 'Pack' }],
+    () => 'new-after-removal',
+    'A',
+  );
   assert.equal(cfg.rows.at(-1).id, 'new-after-removal');
   assert.equal(cfg.rows[0].active, false);
 });
@@ -183,7 +211,11 @@ test('monitor and spreadsheet import never aggregate or synchronize across model
     rowSnapshot: row,
     version: 1,
     slots: [
-      { ...defaults[row.id].slots[0], actual: row.model === 'A' ? 12 : 23, lineShared: true },
+      {
+        ...defaults[row.id].slots[0],
+        actual: row.model === 'A' ? 12 : 23,
+        lineShared: true,
+      },
     ],
   }));
   cfg.monitoring.outputSources.L = 'all';
@@ -248,7 +280,16 @@ test('historical templates preserve model, retired station and interval identiti
   const records = snapshots.map((row) => ({
     rowId: row.id,
     rowSnapshot: row,
-    slots: [{ id: 'retired', start: '06:30', end: '07:00', target: 20, actual: 15, issue: '' }],
+    slots: [
+      {
+        id: 'retired',
+        start: '06:30',
+        end: '07:00',
+        target: 20,
+        actual: 15,
+        issue: '',
+      },
+    ],
   }));
   renameCatalogItem(cfg, 'models', 'A', 'New name');
   cfg.rows[0].active = false;
@@ -256,11 +297,11 @@ test('historical templates preserve model, retired station and interval identiti
     'template.xlsx',
     importTemplate(cfg, 'day', '2026-11-06', {}, records).toString('base64'),
   ).map((row) => row.map((cell) => cell.value));
-  assert.equal(matrix[0].at(-1), 'Model');
-  const historical = matrix.find((row) => Number(row[0]) === 1);
-  assert.equal(historical.at(-1), 'A');
-  assert.equal(historical[4], '06:30-07:00');
-  historical[5] = 55;
+  const column = (name) => matrix[0].indexOf(name);
+  const historical = matrix.find((row) => Number(row[column('Row ID')]) === 1);
+  assert.equal(historical[column('Model')], 'A');
+  assert.equal(historical[column('Time slot')], '06:30-07:00');
+  historical[column('Actual')] = 55;
   const csv = [matrix[0], historical].map((row) => row.join(',')).join('\n');
   const preview = previewImport(
     'history.csv',
@@ -277,6 +318,76 @@ test('historical templates preserve model, retired station and interval identiti
     ['A'],
   );
   assert.ok(preview.rows.every((row) => row.changes[0].actual === 55));
+});
+
+test('whole-day templates group models and configured stations, with overnight slots in shift order', () => {
+  const cfg = fixture();
+  cfg.rows = [cfg.rows[1], cfg.rows[3], cfg.rows[0], cfg.rows[2]];
+  cfg.schedules.night = [
+    { id: 'n1', start: '23:00', end: '00:00', kind: 'production' },
+    { id: 'n2', start: '00:00', end: '01:00', kind: 'production' },
+  ];
+  const workbook = importTemplate(cfg, 'all', '2026-11-10');
+  const matrix = readSpreadsheet('all.xlsx', workbook.toString('base64')).map((row) =>
+    row.map((cell) => cell.value),
+  );
+  const header = matrix.shift();
+  const column = (name) => header.indexOf(name);
+  assert.deepEqual(
+    matrix.map((row) => [row[column('Model')], row[column('Row ID')], row[column('Shift')]]),
+    ['A:2', 'A:1', 'B:4', 'B:3'].flatMap((key) => {
+      const [model, id] = key.split(':');
+      return [
+        [model, id, 'day'],
+        [model, id, 'night'],
+        [model, id, 'night'],
+      ];
+    }),
+  );
+  assert.deepEqual(
+    matrix.slice(0, 3).map((row) => row[column('Time slot')]),
+    ['08:00-09:00', '23:00-00:00', '00:00-01:00'],
+  );
+  // Stored ZIP members let us check the actual workbook layout and relationships.
+  const xml = workbook.toString('utf8');
+  assert.match(xml, /autoFilter ref="A1:K13"/);
+  assert.match(xml, /xSplit="6" ySplit="1" topLeftCell="G2"/);
+  assert.match(xml, /PartName="\/xl\/styles.xml"/);
+  assert.match(xml, /Target="styles.xml"/);
+  assert.match(xml, /r="H2" s="3"/);
+  assert.match(xml, /min="4" max="4" width="40"/);
+
+  // Reverse worksheet order; the preview still follows configured station and
+  // captured overnight order while keeping original worksheet diagnostics.
+  const input = matrix
+    .slice()
+    .reverse()
+    .map((row) => {
+      const filled = [...row];
+      filled[column('Target')] = 12;
+      filled[column('Actual')] = 0;
+      return filled;
+    });
+  const preview = previewImport(
+    'all.csv',
+    Buffer.from([header, ...input].map((row) => row.join(',')).join('\n')).toString('base64'),
+    cfg,
+    '2026-11-10',
+    'all',
+  );
+  assert.deepEqual(preview.errors, []);
+  assert.deepEqual(
+    preview.rows.map((row) => [row.rowId, row.shift]),
+    [2, 1, 4, 3].flatMap((id) => [
+      [id, 'day'],
+      [id, 'night'],
+    ]),
+  );
+  assert.deepEqual(
+    preview.rows[1].changes.map((change) => change.slotId),
+    ['n1', 'n2'],
+  );
+  assert.ok(preview.rows.every((row) => row.changes.every((change) => change.actual === 0)));
 });
 
 test('line/model API saves isolate records, targets, imports and historical identities', async (t) => {
@@ -304,7 +415,8 @@ test('line/model API saves isolate records, targets, imports and historical iden
       body: JSON.stringify(data),
     });
   const date = '2026-11-06';
-  const report = async () => (await client(`${base}/api/records?date=${date}&shift=day`)).json();
+  const report = async () =>
+    (await client(`${base}/api/records?date=${date}&shift=day`)).json();
   try {
     let ready = false;
     for (let i = 0; i < 150; i++) {

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="276" height="60" viewBox="0 0 276 60">
+  <title>DELTA</title>
+  <view id="symbol" viewBox="0 0 64 60"/>
+  <view id="wordmark" viewBox="72 0 204 60"/>
+  <g fill="#0087dc">
+    <path d="M32 2 1 56h62Z"/>
+    <path fill-rule="evenodd" d="M77 20h16c24 0 24 34 0 34H77Zm10 8v18h6c11 0 11-18 0-18Z"/>
+    <path d="M118 20h30v8h-20v5h18v8h-18v5h20v8h-30Zm36 0h10v26h19v8h-29Zm28 0h37v8h-13v26h-10V28h-14Z"/>
+    <path fill-rule="evenodd" d="m239 20 20 34h-12l-3-6h-18l-3 6h-11l20-34Zm-9 20h10l-5-10Z"/>
+  </g>
+  <g fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round">
+    <ellipse cx="31" cy="39" rx="15" ry="9" transform="rotate(-35 31 39)"/>
+    <path d="M41 31c-1-10-12-10-16-3"/>
+  </g>
+  <circle cx="39" cy="40" r="5" fill="#fff"/>
+</svg>

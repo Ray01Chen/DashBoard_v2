@@ -87,9 +87,17 @@ Target／Actual 使用 Tab、Enter、方向鍵移動；可從 Excel 複製任意
 
 先展開「Excel 匯入與範本」，依生產日期、班別下載範本，保留 Row ID、Line、Model、Job、Station、Time slot、Date、Shift。各站列分別填 Target、Actual、Issue；空格保留原值，0 寫入零。Excel 選單可選整日、早班或晚班；整日範本包含兩班並可一次匯入。
 
+範本欄位依序為 **Date、Shift、Line、Model、Job、Station、Time slot、Target、Actual、Issue、Row ID**。淡黃色區是填寫區；左側識別欄與表頭已固定，所有欄位都可篩選。列按產線／Model、已設定站點順序排列；全天時每站先早班再晚班，跨午夜時段維持班表順序。匯入預覽也採此順序，並分開顯示職務／站點與班別。
+
+[下載 DEMO 整日範本](./examples/production-import-template.xlsx)可查看格式；正式填報請從系統下載符合日期與現場站點的範本。舊範本仍按欄名識別，不要求改成新欄位順序。
+
 CSV 可用 Row ID＋Time slot，或可唯一識別的 Line＋Model＋Job／Station＋Time slot。只有產線／Model 且有多站時會拒絕，不會自動同步或挑站。預覽確認所有站點、數值及錯誤後按 Import data；任一站或設定版本衝突會整批拒絕。要清空已存欄位請回畫面編輯，匯入空格不會清除資料。
 
 ## 看板、來源與歷史
+
+![生產總覽與語言、主題控制](./images/production-overview.png)
+
+左側台達標誌下方為功能導覽，選取中的頁面有主題色細條。右上角保留語言及配色選單；頂部、篩選與合計卡會跟隨主題。圖表與警示仍按原有資料及規則顯示。
 
 ![全螢幕明細](./images/line-details.png)
 

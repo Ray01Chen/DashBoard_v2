@@ -64,7 +64,7 @@ const guides = {
       {
         title: 'Import an Excel report',
         paragraphs: [
-          'Download the template for the production date and shift. Keep Row ID, Line, Model, Job, Station, interval, date and shift identifiers. Fill Target, Actual and Issue on each station’s own rows; different station counts are valid.',
+          'Template columns are Date, Shift, Line, Model, Job, Station, Time slot, Target, Actual, Issue and Row ID. Fill the yellow Target/Actual/Issue cells; keep the identifiers. Headers and identity columns stay frozen, and filters cover every column. Rows follow configured line/model and station order, with Day then Night inside each station; preview uses the same grouping. Older column orders remain supported.',
           'For CSV, provide Row ID + Time slot, or an unambiguous Line + Model + Job/Station + Time slot. Line/model alone is rejected when it matches several stations. Blank cells keep saved values; 0 writes zero. Excel offers whole-day or single-shift templates and imports.',
           'Preview checks mappings, intervals, values and versions. Fix errors before importing. Any stale station or configuration version rejects the entire import. Saved historical station and interval identifiers remain supported.',
         ],
@@ -161,7 +161,7 @@ const guides = {
       {
         title: '使用 Excel 匯入',
         paragraphs: [
-          '依生產日期及班別下載範本，保留 Row ID、Line、Model、Job、Station、時段、日期與班別識別。各站自己的列分別填 Target、Actual、Issue，不同站可填不同產量。',
+          '範本欄位依序為 Date、Shift、Line、Model、Job、Station、Time slot、Target、Actual、Issue、Row ID。淡黃色 Target／Actual／Issue 為填寫區，識別欄保留不改；表頭及識別欄固定，全欄可篩選。列依產線／Model、站點配置順序，每站先早班再晚班；預覽也採相同分組。舊欄位順序仍可匯入。',
           'CSV 請用 Row ID＋Time slot，或可唯一識別的 Line＋Model＋Job／Station＋Time slot。只填產線／Model 而有多站時會拒絕，避免猜站；空格保留原值，0 寫入零。Excel 可選整日雙班或單班範本與匯入。',
           '先預覽配置、時間、數值與版本，修正錯誤再匯入。任一站或設定版本衝突時整批拒絕；歷史站點與原時間識別仍可使用。',
         ],
@@ -259,7 +259,7 @@ const guides = {
       {
         title: 'นำเข้ารายงาน Excel',
         paragraphs: [
-          'ดาวน์โหลดแม่แบบตามวันที่และกะ เก็บ Row ID, Line, Model, Job, Station, ช่วงเวลา วันที่และกะ กรอก Target, Actual, Issue แยกแถวสถานี สถานีต่างกันมีจำนวนต่างกันได้',
+          'คอลัมน์แม่แบบเรียง Date, Shift, Line, Model, Job, Station, Time slot, Target, Actual, Issue, Row ID กรอกช่องสีเหลืองและเก็บรหัสเดิม ตรึงหัวตารางและคอลัมน์ระบุสถานี กรองได้ทุกคอลัมน์ เรียงตามสาย/Model และลำดับสถานี โดยกะเช้าต่อด้วยกะกลางคืนในแต่ละสถานี ตัวอย่างนำเข้าเรียงแบบเดียวกัน รองรับลำดับคอลัมน์เก่าด้วย',
           'CSV ใช้ Row ID + Time slot หรือ Line + Model + Job/Station + Time slot ที่ระบุได้หนึ่งสถานี ถ้าระบุแค่สาย/Model แล้วพบหลายสถานีจะปฏิเสธ ช่องว่างเก็บค่าเดิม 0 เขียนศูนย์ เลือกแม่แบบและนำเข้าทั้งวันหรือแยกกะได้',
           'ดูตัวอย่างเพื่อตรวจสถานี เวลา ค่าและรุ่น แก้ข้อผิดพลาดก่อนนำเข้า หากสถานีใดหรือการตั้งค่ารุ่นเปลี่ยนจะปฏิเสธทั้งชุด ประวัติใช้รหัสสถานีและเวลาเดิมได้',
         ],
@@ -315,70 +315,73 @@ const exampleScreens = [
     'no-output-station',
   ],
   ['excel-preview'],
-  ['line-details'],
+  ['production-overview', 'line-details'],
   [],
   [],
 ];
 const exampleLabels = {
   en: {
     note: 'Training screenshots use isolated DEMO lines and sample personnel. Select an image to open it at full size.',
-    captions: [
-      'Setup order',
-      'Line/model dropdown pairing',
-      'English issue quick text in Master data',
-      'One default target per line + model',
-      'People filtered by job',
-      'Line teams and owners',
-      'Integrated station configuration and output source',
-      'Unified whole-day table',
-      'Adjacent Target/Actual columns stay in one interval',
-      'Station target, actual and issue',
-      'Compact issue editor and quick text',
-      'One-time interval fill with editable station values',
-      'No-output stations stay visible with read-only history',
-      'Excel import preview',
-      'Theme-aware fullscreen details with owner, totals and day/night personnel',
-    ],
+    captions: {
+      'setup-order': 'Setup order',
+      'models-and-lines': 'Line/model dropdown pairing',
+      'issue-quick-text': 'English issue quick text in Master data',
+      'daily-targets': 'One default target per line + model',
+      'people-by-job': 'People filtered by job',
+      'line-people': 'Line teams and owners',
+      'line-configuration': 'Integrated station configuration and output source',
+      'production-entry': 'Unified whole-day table',
+      'production-entry-paste': 'Adjacent Target/Actual columns stay in one interval',
+      'production-cell': 'Station target, actual and issue',
+      'issue-editor': 'Compact issue editor and quick text',
+      'interval-batch': 'One-time interval fill with editable station values',
+      'no-output-station': 'No-output stations stay visible with read-only history',
+      'excel-preview': 'Excel import preview',
+      'line-details': 'Theme-aware fullscreen details with owner, totals and day/night personnel',
+      'production-overview': 'Production overview with DELTA branding and theme controls',
+    },
   },
   zh: {
     note: '以下截圖使用獨立測試環境的 DEMO 產線與示範人名。點圖可開啟完整尺寸。',
-    captions: [
-      '設定順序',
-      '下拉配對產線與 Model',
-      '基礎資料的英文異常快捷文字',
-      '每組產線＋Model 一個預設日目標',
-      '依職務篩選人員',
-      '產線兩班與負責人',
-      '整合站點配置與產量來源',
-      '整合式整日填報',
-      '相鄰目標／實績欄留在同一時段',
-      '每站目標、實績與異常',
-      '異常編輯視窗與快捷文字',
-      '同時段批次填寫，之後仍可個別修改',
-      '無產出站保留顯示與歷史查閱',
-      'Excel 匯入預覽',
-      '跟隨主題的全螢幕明細與各站早晚班人員',
-    ],
+    captions: {
+      'setup-order': '設定順序',
+      'models-and-lines': '下拉配對產線與 Model',
+      'issue-quick-text': '基礎資料的英文異常快捷文字',
+      'daily-targets': '每組產線＋Model 一個預設日目標',
+      'people-by-job': '依職務篩選人員',
+      'line-people': '產線兩班與負責人',
+      'line-configuration': '整合站點配置與產量來源',
+      'production-entry': '整合式整日填報',
+      'production-entry-paste': '相鄰目標／實績欄留在同一時段',
+      'production-cell': '每站目標、實績與異常',
+      'issue-editor': '異常編輯視窗與快捷文字',
+      'interval-batch': '同時段批次填寫，之後仍可個別修改',
+      'no-output-station': '無產出站保留顯示與歷史查閱',
+      'excel-preview': 'Excel 匯入預覽',
+      'line-details': '跟隨主題的全螢幕明細與各站早晚班人員',
+      'production-overview': '台達品牌與主題配色的生產總覽',
+    },
   },
   th: {
     note: 'ภาพตัวอย่างใช้สาย DEMO และบุคลากรจากฐานทดสอบแยก คลิกภาพเพื่อเปิดขนาดเต็ม',
-    captions: [
-      'ลำดับตั้งค่า',
-      'จับคู่สาย / Model',
-      'ข้อความปัญหาภาษาอังกฤษในข้อมูลหลัก',
-      'เป้าหมายต่อสาย + Model',
-      'บุคลากรตามหน้าที่',
-      'ทีมและผู้รับผิดชอบ',
-      'บุคลากรอัตโนมัติ',
-      'ตารางบันทึกรวม',
-      'คอลัมน์ Target/Actual ที่ติดกันอยู่ช่วงเดียว',
-      'เป้าหมาย ผลจริงและปัญหาแยกตามสถานี',
-      'หน้าต่างแก้ปัญหาและข้อความด่วน',
-      'กรอกทุกสถานีตามช่วงและแก้รายสถานีภายหลัง',
-      'สถานีไม่มีผลผลิตและประวัติแบบอ่านอย่างเดียว',
-      'ตัวอย่างนำเข้า Excel',
-      'รายละเอียดเต็มจอตามธีม พร้อมยอดรวมและบุคลากรแยกกะ',
-    ],
+    captions: {
+      'setup-order': 'ลำดับตั้งค่า',
+      'models-and-lines': 'จับคู่สาย / Model',
+      'issue-quick-text': 'ข้อความปัญหาภาษาอังกฤษในข้อมูลหลัก',
+      'daily-targets': 'เป้าหมายต่อสาย + Model',
+      'people-by-job': 'บุคลากรตามหน้าที่',
+      'line-people': 'ทีมและผู้รับผิดชอบ',
+      'line-configuration': 'บุคลากรอัตโนมัติ',
+      'production-entry': 'ตารางบันทึกรวม',
+      'production-entry-paste': 'คอลัมน์ Target/Actual ที่ติดกันอยู่ช่วงเดียว',
+      'production-cell': 'เป้าหมาย ผลจริงและปัญหาแยกตามสถานี',
+      'issue-editor': 'หน้าต่างแก้ปัญหาและข้อความด่วน',
+      'interval-batch': 'กรอกทุกสถานีตามช่วงและแก้รายสถานีภายหลัง',
+      'no-output-station': 'สถานีไม่มีผลผลิตและประวัติแบบอ่านอย่างเดียว',
+      'excel-preview': 'ตัวอย่างนำเข้า Excel',
+      'line-details': 'รายละเอียดเต็มจอตามธีม พร้อมยอดรวมและบุคลากรแยกกะ',
+      'production-overview': 'ภาพรวมการผลิตพร้อมสัญลักษณ์ DELTA และธีมสี',
+    },
   },
 };
 
@@ -405,13 +408,12 @@ export function helpMarkup({ role, language, esc = escapeHtml } = {}) {
   const manager = ['admin', 'manager'].includes(role);
   const steps = manager ? guide.managerSteps : guide.memberSteps;
   const examples = exampleLabels[locale];
-  const allScreens = exampleScreens.flat();
   const screenMarkup = (index) => {
     const names = exampleScreens[index];
     return names.length
       ? `<p class="help-example-note">${esc(examples.note)}</p><div class="help-screens">${names
           .map((name) => {
-            const caption = examples.captions[allScreens.indexOf(name)];
+            const caption = examples.captions[name];
             return `<figure><a href="/guide-images/${name}.png" target="_blank" rel="noopener"><img src="/guide-images/${name}.png" alt="${esc(caption)}" loading="lazy"></a><figcaption>${esc(caption)}</figcaption></figure>`;
           })
           .join('')}</div>`

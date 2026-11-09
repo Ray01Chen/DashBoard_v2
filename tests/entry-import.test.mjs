@@ -17,6 +17,21 @@ import { readSpreadsheet, writeSpreadsheet } from '../spreadsheet.mjs';
 import { previewImport } from '../production-import.mjs';
 import { crc32 } from 'node:zlib';
 
+// Legacy column-order fixtures ensure older workbooks still import by header name.
+const legacyHeader = [
+  'Row ID',
+  'Line',
+  'Job',
+  'Station',
+  'Time slot',
+  'Actual',
+  'Issue',
+  'Date',
+  'Shift',
+  'Target',
+  'Model',
+];
+
 // Produce malformed/sparse OOXML fixtures without weakening the reader's CRC
 // checks. The production writer uses stored ZIP members, so fixture edits can
 // preserve byte lengths and update both header checksums independently.
@@ -31,7 +46,8 @@ function rewriteWorksheet(workbook, change) {
       name = result.subarray(cursor + 46, cursor + 46 + length).toString();
     if (name === 'xl/worksheets/sheet1.xml') {
       const offset = result.readUInt32LE(cursor + 42),
-        start = offset + 30 + result.readUInt16LE(offset + 26) + result.readUInt16LE(offset + 28),
+        start =
+          offset + 30 + result.readUInt16LE(offset + 26) + result.readUInt16LE(offset + 28),
         size = result.readUInt32LE(cursor + 24),
         before = result.subarray(start, start + size).toString(),
         after = change(before);
@@ -176,7 +192,10 @@ test('spreadsheet codec preserves Unicode/escaped/newline text and rejects malfo
   assert.throws(() => readSpreadsheet('test.csv', '%%invalid%%'), /Invalid or oversized/);
   assert.throws(
     () =>
-      readSpreadsheet('test.csv', Buffer.from('Actual,Issue\n1,"unfinished').toString('base64')),
+      readSpreadsheet(
+        'test.csv',
+        Buffer.from('Actual,Issue\n1,"unfinished').toString('base64'),
+      ),
     /not closed/,
   );
   const corrupted = Buffer.from(workbook);
@@ -222,7 +241,12 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
   const base = `http://127.0.0.1:${port}`;
   const child = spawn(process.execPath, ['server.mjs'], {
     cwd: new URL('..', import.meta.url),
-    env: { ...process.env, ...testAuthEnv, PORT: String(port), DB_PATH: dbPath },
+    env: {
+      ...process.env,
+      ...testAuthEnv,
+      PORT: String(port),
+      DB_PATH: dbPath,
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let logs = '';
@@ -255,7 +279,12 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
       async () => {
         config.personnel = [
           { id: 'day-person', name: '中文 Day', job: 'PD', active: true },
-          { id: 'night-person', name: 'ทีมกลางคืน Night', job: 'PD', active: true },
+          {
+            id: 'night-person',
+            name: 'ทีมกลางคืน Night',
+            job: 'PD',
+            active: true,
+          },
           { id: 'other-job', name: 'Other Job', job: 'IE', active: true },
           { id: 'inactive-person', name: 'Inactive', job: 'PD', active: false },
         ];
@@ -339,7 +368,11 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
         assert.equal(saved.dayTeam, 'Legacy Team');
         assert.equal(saved.owner, 'Legacy Owner');
         assert.equal(saved.dailyTarget, 500);
-        assert.deepEqual(saved.defaultsSnapshot.personnel, { day: [], night: [], owners: [] });
+        assert.deepEqual(saved.defaultsSnapshot.personnel, {
+          day: [],
+          night: [],
+          owners: [],
+        });
         assert.equal(saved.slots[0].target, 7);
       },
     );
@@ -411,8 +444,9 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
         assert.equal(saved.slots[0].target, defaultDay.slots[0].target);
         assert.equal(saved.slots[0].issue, 'First issue');
         assert.equal(saved.slots[0].actual, 5);
-        const next = (await (await member(base + `/api/defaults?date=${date}&shift=day`)).json())
-          .rows[3];
+        const next = (
+          await (await member(base + `/api/defaults?date=${date}&shift=day`)).json()
+        ).rows[3];
         assert.equal(next.dayTeam, 'Renamed');
         assert.notEqual(next.dailyTarget, defaultDay.dailyTarget);
       },
@@ -422,7 +456,9 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
       async () => {
         const before = (await snapshot(date)).records.find((record) => record.rowId === 3),
           capturedNight = before.defaultsSnapshot.productionDay.night;
-        const pending = await (await member(base + `/api/records?date=${date}&shift=night`)).json();
+        const pending = await (
+          await member(base + `/api/records?date=${date}&shift=night`)
+        ).json();
         assert.deepEqual(pending.defaults[3], capturedNight);
         const draft = structuredClone(config);
         draft.schedules.night[0].start = '19:30';
@@ -439,7 +475,9 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
           ).toString('base64'),
         ).map((row) => row.map((cell) => cell.value));
         assert.equal(
-          template.find((row) => row[0] === '3')[4],
+          template.find((row) => row[template[0].indexOf('Row ID')] === '3')[
+            template[0].indexOf('Time slot')
+          ],
           `${capturedNight.slots[0].start}-${capturedNight.slots[0].end}`,
         );
         const planResponse = await send(member, 'POST', '/api/import/preview', {
@@ -447,8 +485,17 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
           shift: 'night',
           fileName: 'night.xlsx',
           base64: writeSpreadsheet([
-            template[0],
-            [3, 'CD303', 'PD', 'HI', template.find((row) => row[0] === '3')[4], 6],
+            legacyHeader,
+            [
+              3,
+              'CD303',
+              'PD',
+              'HI',
+              template.find((row) => row[template[0].indexOf('Row ID')] === '3')[
+                template[0].indexOf('Time slot')
+              ],
+              6,
+            ],
           ]).toString('base64'),
         });
         const plan = await planResponse.json();
@@ -468,14 +515,20 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
         const night = await response.json();
         assert.equal(night.dayTeam, defaultDay.dayTeam);
         assert.equal(night.dailyTarget + before.dailyTarget, 101);
-        assert.equal(night.defaultsSnapshot.configVersion, before.defaultsSnapshot.configVersion);
+        assert.equal(
+          night.defaultsSnapshot.configVersion,
+          before.defaultsSnapshot.configVersion,
+        );
         assert.deepEqual(
           night.defaultsSnapshot.productionDay,
           before.defaultsSnapshot.productionDay,
         );
         assert.equal(night.defaultsSnapshot.capturedAt, before.defaultsSnapshot.capturedAt);
         assert.deepEqual(night.rowSnapshot, before.rowSnapshot);
-        assert.equal(night.slots.find((slot) => slot.id === capturedNight.slots[0].id).actual, 6);
+        assert.equal(
+          night.slots.find((slot) => slot.id === capturedNight.slots[0].id).actual,
+          6,
+        );
         assert.equal(
           night.slots.find((slot) => slot.id === config.schedules.night[0].id).target,
           null,
@@ -528,20 +581,28 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
             config.schedules.day.filter((slot) => slot.kind === 'production').length,
       );
       assert.deepEqual(templateRows[0], [
-        'Row ID',
+        'Date',
+        'Shift',
         'Line',
+        'Model',
         'Job',
         'Station',
         'Time slot',
+        'Target',
         'Actual',
         'Issue',
-        'Date',
-        'Shift',
-        'Target',
-        'Model',
+        'Row ID',
       ]);
-      assert.equal(templateRows[1][7], date);
-      assert.equal(templateRows[1][8], 'day');
+      assert.equal(templateRows[1][0], date);
+      assert.equal(templateRows[1][1], 'day');
+      // Other cases below intentionally exercise the original workbook layout.
+      const header = templateRows[0];
+      templateRows = [
+        legacyHeader,
+        ...templateRows
+          .slice(1)
+          .map((row) => legacyHeader.map((label) => row[header.indexOf(label)])),
+      ];
     });
     let token;
     await t.test(
@@ -569,7 +630,9 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
         assert.ok(plan.token);
         token = plan.token;
         assert.deepEqual((await snapshot(date)).records, before.records);
-        const applied = await send(member, 'POST', '/api/import/apply', { token });
+        const applied = await send(member, 'POST', '/api/import/apply', {
+          token,
+        });
         assert.equal(applied.status, 200);
         const result = await applied.json();
         const saved = result.records.find((record) => record.rowId === 3);
@@ -675,7 +738,9 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
         ).status,
         200,
       );
-      const rejected = await send(member, 'POST', '/api/import/apply', { token: plan.token });
+      const rejected = await send(member, 'POST', '/api/import/apply', {
+        token: plan.token,
+      });
       assert.equal(rejected.status, 409);
       const after = await snapshot(date);
       assert.deepEqual(
@@ -697,14 +762,25 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
         ).json();
       let plan = await preview();
       assert.equal(
-        (await send(manager, 'POST', '/api/import/apply', { token: plan.token })).status,
+        (
+          await send(manager, 'POST', '/api/import/apply', {
+            token: plan.token,
+          })
+        ).status,
         410,
       );
-      const changed = await send(manager, 'PUT', '/api/config', { ...config, theme: 'green' });
+      const changed = await send(manager, 'PUT', '/api/config', {
+        ...config,
+        theme: 'green',
+      });
       assert.equal(changed.status, 200);
       config = await changed.json();
       assert.equal(
-        (await send(member, 'POST', '/api/import/apply', { token: plan.token })).status,
+        (
+          await send(member, 'POST', '/api/import/apply', {
+            token: plan.token,
+          })
+        ).status,
         409,
       );
       plan = await preview();
@@ -712,7 +788,11 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
       db.prepare('UPDATE import_previews SET expires_at=0').run();
       db.close();
       assert.equal(
-        (await send(member, 'POST', '/api/import/apply', { token: plan.token })).status,
+        (
+          await send(member, 'POST', '/api/import/apply', {
+            token: plan.token,
+          })
+        ).status,
         410,
       );
     });
@@ -768,7 +848,9 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
         assert.equal(response.status, 200);
         const plan = await response.json();
         assert.deepEqual(plan.errors, []);
-        const applied = await send(member, 'POST', '/api/import/apply', { token: plan.token });
+        const applied = await send(member, 'POST', '/api/import/apply', {
+          token: plan.token,
+        });
         assert.equal(applied.status, 200);
         const record = (await applied.json()).records[0];
         assert.equal(record.rowSnapshot.line, 'CD303');
@@ -784,32 +866,66 @@ test('inline entry defaults, staffing snapshots and atomic Excel import', async 
       const wholeDate = '2026-12-01';
       const response = await member(base + `/api/import/template?date=${wholeDate}&shift=all`);
       assert.equal(response.status, 200);
-      const rows = readSpreadsheet('whole.xlsx', Buffer.from(await response.arrayBuffer()).toString('base64'))
-        .map((row) => row.map((cell) => cell.value));
+      const rows = readSpreadsheet(
+        'whole.xlsx',
+        Buffer.from(await response.arrayBuffer()).toString('base64'),
+      ).map((row) => row.map((cell) => cell.value));
       const header = rows[0];
       const shiftColumn = header.indexOf('Shift');
       const targetColumn = header.indexOf('Target');
       const actualColumn = header.indexOf('Actual');
-      assert.ok(targetColumn >= 0 && actualColumn >= 0);
+      assert.equal(actualColumn, targetColumn + 1);
+      const rowIdColumn = header.indexOf('Row ID');
+      const rowIds = [...new Set(rows.slice(1).map((row) => row[rowIdColumn]))];
+      for (const id of rowIds) {
+        const indexes = rows.flatMap((row, index) => (row[rowIdColumn] === id ? [index] : []));
+        assert.equal(indexes.at(-1) - indexes[0] + 1, indexes.length);
+        const shifts = rows
+          .filter((row) => row[rowIdColumn] === id)
+          .map((row) => row[shiftColumn]);
+        assert.ok(shifts.indexOf('night') > shifts.lastIndexOf('day'));
+      }
       const day = [...rows.find((row, i) => i && row[shiftColumn] === 'day')];
-      const night = [...rows.find((row, i) => i && row[shiftColumn] === 'night' && row[0] === day[0])];
-      day[targetColumn] = 123; day[actualColumn] = 0;
-      night[targetColumn] = 456; night[actualColumn] = 78;
+      const night = [
+        ...rows.find(
+          (row, i) =>
+            i &&
+            row[shiftColumn] === 'night' &&
+            row[header.indexOf('Row ID')] === day[header.indexOf('Row ID')],
+        ),
+      ];
+      day[targetColumn] = 123;
+      day[actualColumn] = 0;
+      night[targetColumn] = 456;
+      night[actualColumn] = 78;
       const preview = await send(member, 'POST', '/api/import/preview', {
-        date: wholeDate, shift: 'all', fileName: 'whole.xlsx',
+        date: wholeDate,
+        shift: 'all',
+        fileName: 'whole.xlsx',
         base64: writeSpreadsheet([header, day, night]).toString('base64'),
       });
       assert.equal(preview.status, 200);
       const plan = await preview.json();
       assert.deepEqual(plan.errors, []);
       assert.equal(plan.rows.length, 2);
-      const applied = await send(member, 'POST', '/api/import/apply', { token: plan.token });
+      const applied = await send(member, 'POST', '/api/import/apply', {
+        token: plan.token,
+      });
       assert.equal(applied.status, 200);
       const saved = (await applied.json()).records;
-      assert.deepEqual(saved.map((record) => [record.shift,
-        record.slots.find((slot) => slot.actual !== null)?.target,
-        record.slots.find((slot) => slot.actual !== null)?.actual]).sort(),
-        [['day', 123, 0], ['night', 456, 78]]);
+      assert.deepEqual(
+        saved
+          .map((record) => [
+            record.shift,
+            record.slots.find((slot) => slot.actual !== null)?.target,
+            record.slots.find((slot) => slot.actual !== null)?.actual,
+          ])
+          .sort(),
+        [
+          ['day', 123, 0],
+          ['night', 456, 78],
+        ],
+      );
     });
   } finally {
     if (child.exitCode === null) {

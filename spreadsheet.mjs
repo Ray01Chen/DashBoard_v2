@@ -8,7 +8,11 @@ const maximumColumns = 100;
 
 function invalid(message) {
   const error = new Error(message);
-  Object.assign(error, { status: 400, code: 'errImport', params: { detail: message } });
+  Object.assign(error, {
+    status: 400,
+    code: 'errImport',
+    params: { detail: message },
+  });
   throw error;
 }
 
@@ -90,7 +94,8 @@ function unzip(bytes) {
     )
       invalid('Encrypted or invalid XLSX member.');
     const name = bytes.subarray(cursor + 46, cursor + 46 + nameLength).toString('utf8');
-    const start = offset + 30 + bytes.readUInt16LE(offset + 26) + bytes.readUInt16LE(offset + 28);
+    const start =
+      offset + 30 + bytes.readUInt16LE(offset + 26) + bytes.readUInt16LE(offset + 28);
     expanded += size;
     if (
       expanded > maximumExpandedBytes ||
@@ -172,7 +177,9 @@ function readXlsx(bytes) {
       invalid('Invalid or duplicate worksheet row address.');
     seenRows.add(sourceRow);
     Object.defineProperty(values, 'sourceRow', { value: sourceRow });
-    for (const cell of row[2].matchAll(/<(?:\w+:)?c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/(?:\w+:)?c>)/g)) {
+    for (const cell of row[2].matchAll(
+      /<(?:\w+:)?c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/(?:\w+:)?c>)/g,
+    )) {
       const attrs = attributes(cell[1]),
         contents = cell[2] || '';
       const address = attrs.r?.match(/^([A-Z]+)([1-9]\d*)$/i);
@@ -180,8 +187,10 @@ function readXlsx(bytes) {
         invalid('Invalid worksheet cell address.');
       const letters = address?.[1];
       const column = letters
-        ? [...letters.toUpperCase()].reduce((sum, char) => sum * 26 + char.charCodeAt(0) - 64, 0) -
-          1
+        ? [...letters.toUpperCase()].reduce(
+            (sum, char) => sum * 26 + char.charCodeAt(0) - 64,
+            0,
+          ) - 1
         : values.length;
       if (column >= maximumColumns || Object.hasOwn(values, column))
         invalid('The workbook has too many columns or duplicate cells.');
@@ -310,17 +319,41 @@ function columnName(index) {
 }
 
 /** A small standards-based XLSX template writer: strings remain text, never formulas. */
-export function writeSpreadsheet(rows) {
+export function writeSpreadsheet(
+  rows,
+  { widths = [], inputColumns = [], freezeColumns = 0 } = {},
+) {
+  const columnCount = Math.max(1, ...rows.map((row) => row.length));
+  const lastColumn = columnName(columnCount - 1);
+  const inputs = new Set(inputColumns);
+  const columns = Array.from(
+    { length: columnCount },
+    (_, index) =>
+      `<col min="${index + 1}" max="${index + 1}" width="${widths[index] || 20}" customWidth="1"/>`,
+  ).join('');
+  // Style indexes: header, read-only identifiers, and clearly marked entry cells.
+  // Values remain inline strings, including formula-like text and leading zeroes.
   const sheet = rows
     .map(
       (row, index) =>
-        `<row r="${index + 1}">${row.map((value, column) => `<c r="${columnName(column)}${index + 1}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(value)}</t></is></c>`).join('')}</row>`,
+        `<row r="${index + 1}" ht="${index === 0 ? 30 : 24}" customHeight="1">${row.map((value, column) => `<c r="${columnName(column)}${index + 1}" s="${index === 0 ? 1 : inputs.has(column) ? 3 : 2}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(value)}</t></is></c>`).join('')}</row>`,
     )
     .join('');
   return zip([
     [
+      'xl/styles.xml',
+      `<?xml version="1.0" encoding="UTF-8"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+        <fonts count="2"><font><sz val="11"/><name val="Calibri"/><color rgb="FF243746"/></font><font><b/><sz val="11"/><name val="Calibri"/><color rgb="FFFFFFFF"/></font></fonts>
+        <fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF334E68"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF3F6F9"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFF8DF"/><bgColor indexed="64"/></patternFill></fill></fills>
+        <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+        <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+        <cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="4" borderId="0" xfId="0" applyFill="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf></cellXfs>
+        <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+      </styleSheet>`,
+    ],
+    [
       '[Content_Types].xml',
-      '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+      '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
     ],
     [
       '_rels/.rels',
@@ -332,11 +365,11 @@ export function writeSpreadsheet(rows) {
     ],
     [
       'xl/_rels/workbook.xml.rels',
-      '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>',
+      '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
     ],
     [
       'xl/worksheets/sheet1.xml',
-      `<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="10" customWidth="1"/><col min="2" max="6" width="20" customWidth="1"/><col min="7" max="7" width="50" customWidth="1"/></cols><sheetData>${sheet}</sheetData><autoFilter ref="A1:G${rows.length}"/></worksheet>`,
+      `<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${lastColumn}${Math.max(1, rows.length)}"/><sheetViews><sheetView workbookViewId="0"><pane ${freezeColumns ? `xSplit="${freezeColumns}" ` : ''}ySplit="1" topLeftCell="${columnName(freezeColumns)}2" activePane="${freezeColumns ? 'bottomRight' : 'bottomLeft'}" state="frozen"/></sheetView></sheetViews><cols>${columns}</cols><sheetData>${sheet}</sheetData><autoFilter ref="A1:${lastColumn}${Math.max(1, rows.length)}"/></worksheet>`,
     ],
   ]);
 }

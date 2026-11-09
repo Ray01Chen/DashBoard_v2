@@ -252,8 +252,41 @@
   min-width: 0;
 }
 .entry-import-preview h3 {
-  margin: 0 0 10px;
+  margin: 0 0 4px;
   font-size: 14px;
+}
+.entry-import-station {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.entry-import-station > div {
+  min-width: 0;
+  flex: 1 1 240px;
+}
+.entry-import-station .production-identity {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.entry-import-station .production-model-single {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.entry-import-station small {
+  color: var(--muted);
+}
+.entry-import-shift {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--soft);
+  color: var(--primary-dark);
+  font-size: 11px;
+  white-space: nowrap;
 }
 .entry-import-preview p {
   display: flex;

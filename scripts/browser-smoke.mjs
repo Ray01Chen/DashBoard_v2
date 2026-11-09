@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { existsSync } from 'node:fs';
-import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -325,6 +325,16 @@ try {
     [test.id, pack.id],
   );
   await page.locator('[data-view="overview"]').click();
+  for (const theme of ['green', 'indigo', 'amber', 'rose', 'delta']) {
+    await page.locator('#theme-select').selectOption(theme);
+    assert.equal(await page.locator('html').getAttribute('data-theme'), theme);
+    assert.equal(await page.locator('.brand img[alt="DELTA"]').evaluate((img) =>
+      img.complete && img.naturalWidth > 0), true);
+  }
+  await page.locator('#collapse-sidebar').click();
+  assert.equal(await page.locator('#collapse-sidebar').getAttribute('aria-expanded'), 'false');
+  await page.locator('#collapse-sidebar').click();
+  assert.equal(await page.locator('#collapse-sidebar').getAttribute('aria-expanded'), 'true');
   await page.locator('#enter-fullscreen').click();
   await page
     .locator('[data-monitor-line]')
@@ -351,8 +361,8 @@ try {
       ...new Set(
         templateRows
           .slice(1)
-          .filter((row) => row[1] === 'DEMO-A' && row[10] === model)
-          .map((row) => Number(row[0])),
+          .filter((row) => row[templateRows[0].indexOf('Line')] === 'DEMO-A' && row[templateRows[0].indexOf('Model')] === model)
+          .map((row) => Number(row[templateRows[0].indexOf('Row ID')])),
       ),
     ],
     [test.id, pack.id],
@@ -593,6 +603,9 @@ try {
   const issueButton = (id, index = 0) => station(id).locator('[data-issue-cell]').nth(index);
   const issueEditor = page.locator('.entry-issue-dialog textarea');
   const editIssue = async (id, note, index = 0) => {
+    // Numeric blur can acknowledge and redraw a row before its issue click.
+    // Start the note step after that independent save has settled.
+    await saved();
     await issueButton(id, index).click();
     await issueEditor.fill(note);
     await page.locator('.entry-issue-footer [data-entry-action="close-issue"]').click();
@@ -881,11 +894,31 @@ try {
   record(
     'Station version conflicts require review, merge only changed cells and preserve other stations',
   );
-  const workbook = writeSpreadsheet([
-    ['Row ID', 'Time slot', 'Actual', 'Target', 'Issue', 'Date', 'Shift'],
-    [pack.id, '08:00-08:20', 55, 155, 'Excel Pack', reportDate, 'day'],
-    [test.id, '08:00-08:20', 44, 144, 'Excel Test', reportDate, 'day'],
-  ]);
+  const sampleResponse = await context.request.get(
+    `${baseURL}/api/import/template?date=${reportDate}&shift=all`,
+  );
+  assert.equal(sampleResponse.status(), 200);
+  const sampleWorkbook = await sampleResponse.body();
+  const sampleRows = readSpreadsheet('sample.xlsx', sampleWorkbook.toString('base64'))
+    .map((row) => row.map((cell) => cell.value));
+  const sampleHeader = sampleRows[0];
+  const sampleColumn = (name) => sampleHeader.indexOf(name);
+  assert.equal(sampleColumn('Actual'), sampleColumn('Target') + 1);
+  const filledRows = [[pack.id, 155, 55, 'Excel Pack'], [test.id, 144, 44, 'Excel Test']]
+    .map(([id, target, actual, issue]) => {
+      const row = [...sampleRows.find((row, index) => index &&
+        Number(row[sampleColumn('Row ID')]) === id &&
+        row[sampleColumn('Shift')] === 'day')];
+      row[sampleColumn('Target')] = target;
+      row[sampleColumn('Actual')] = actual;
+      row[sampleColumn('Issue')] = issue;
+      return row;
+    });
+  const workbook = writeSpreadsheet([sampleHeader, ...filledRows]);
+  if (screenshots) {
+    await mkdir(path.join(root, 'docs/examples'), { recursive: true });
+    await writeFile(path.join(root, 'docs/examples/production-import-template.xlsx'), sampleWorkbook);
+  }
   await page.locator('.entry-import-scope > summary').click();
   await page.locator('[data-entry-action="open-import"][data-import-shift="day"]').click();
   await page.locator('[data-entry-file]').setInputFiles({
@@ -897,6 +930,16 @@ try {
     () => !document.querySelector('[data-entry-action="apply-import"]').disabled,
   );
   assert.equal(await page.locator('.entry-import-preview section').count(), 2);
+  assert.deepEqual(await page.locator('.entry-import-station small').allTextContents(),
+    ['PD / Pack', 'QA / Test']);
+  assert.ok((await page.locator('.entry-import-shift').allTextContents())
+    .every((label) => label === 'Day shift'));
+  for (const width of [1440, 1024, 768, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    assert.equal(await page.locator('.entry-import-dialog').evaluate((dialog) =>
+      dialog.scrollWidth > dialog.clientWidth + 1), false);
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await screenshot('.entry-import-dialog', 'excel-preview');
   await page.locator('[data-entry-action="apply-import"]').click();
   await page.locator('.entry-import-result .entry-success').waitFor();
@@ -973,6 +1016,11 @@ try {
   await page.locator('#slot-tabs [data-slot]').last().click();
   assert.match(await page.locator('#records-body .team-cell').first().innerText(), /Blake Night/);
   await page.locator('[data-view="overview"]').click();
+  if (screenshots) {
+    await page.locator('#toast').waitFor({ state: 'hidden' });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: path.join(root, 'docs/images/production-overview.png') });
+  }
   await page.locator('#enter-fullscreen').click();
   await page.locator('.board-display-options summary').click();
   for (const width of [1440, 1024, 768, 390]) {

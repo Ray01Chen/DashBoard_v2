@@ -393,7 +393,7 @@ function updateHeadings() {
   const view = state.view;
   document.title = `BP9 · ${t(view)}`;
   $('#breadcrumb').textContent = t(view);
-  $('#page-title').innerHTML = `${esc(t(view))}<span class="title-dot">.</span>`;
+  $('#page-title').textContent = t(view);
   $('#page-description').textContent = t(`${view}Desc`);
   $('#table-heading').textContent = t('tableTitle');
   $('#table-description').textContent = t('tableDesc');
@@ -436,7 +436,7 @@ function updateSettingsNavigation() {
     }[state.settingsTab] || ['settings', 'settingsDesc'];
     $('#breadcrumb').textContent = t('settings') + ' / ' + t(title);
     document.title = `BP9 · ${t(title)}`;
-    $('#page-title').innerHTML = esc(t(title)) + '<span class="title-dot">.</span>';
+    $('#page-title').textContent = t(title);
     $('#page-description').textContent = t(description);
   }
   if (!canManage()) $('#save-settings').hidden = true;

@@ -2,6 +2,8 @@
 
 Open <http://10.201.169.250:43871/>. manager / manager manages shared settings; member / member enters production, imports and reviews reports. The in-app User guide follows the logged-in role. Language choices are Chinese / English / Thai in every interface language.
 
+The refreshed shell uses DELTA branding, a soft theme-coloured header, an active navigation marker and consistent filter/card spacing. Language, theme and account controls stay in the upper-right corner; sidebar collapse and all production actions remain available. [Overview screenshot](./images/production-overview.png).
+
 ## Manager: eight setup steps
 
 1. **Master data & shift times:** maintain Lines, Models, Jobs, Stations and the English issue quick-text list. Add each allowed Line/Model pair with dropdowns; one line can use several models. Define production/break intervals for both shifts without overlap.
@@ -76,6 +78,10 @@ A configured line/model with no enabled stations remains selectable and shows it
 ## Excel import
 
 Expand **Excel import & templates**, download the production-date/shift template and retain identifiers. Enter Target, Actual and Issue on each station’s own rows; different counts at different stations are valid. Blank cells preserve saved values; 0 writes zero. The Excel menu offers whole-day, day-shift and night-shift templates and imports. A whole-day file contains both shifts.
+
+Columns are **Date, Shift, Line, Model, Job, Station, Time slot, Target, Actual, Issue, Row ID**. Yellow cells identify the input area. The header and identity columns stay frozen, with filters covering every column. Rows follow line/model and configured station order; each station's day rows precede its night rows, retaining overnight schedule order. Preview uses the same grouping and labels each station's job and shift separately. Older column orders remain supported by header name.
+
+[Download the DEMO whole-day template](./examples/production-import-template.xlsx) to inspect the layout. Download a fresh template from the app for your actual date and station identities.
 
 CSV uses Row ID + Time slot, or an unambiguous Line + Model + Job/Station + Time slot. Line/model alone is rejected if it matches several stations. Preview all affected station rows before importing. Any stale station/configuration version rejects the entire batch. Historical station/model/interval identifiers remain supported.
 
