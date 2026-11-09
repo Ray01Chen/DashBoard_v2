@@ -125,6 +125,8 @@ const state = {
   chartLine: '',
   date: today(),
   shift: 'day',
+  overviewScope: 'all',
+  loadedScope: '',
   line: '',
   slotId: '',
   search: '',
@@ -160,6 +162,16 @@ const sum = (values) => {
   const entered = values.filter((v) => v !== null && v !== undefined);
   return entered.length ? entered.reduce((a, b) => a + b, 0) : null;
 };
+const reportScope = () => (state.view === 'overview' ? state.overviewScope : state.shift);
+function syncReportScopeButtons() {
+  const scope = reportScope();
+  for (const button of $$('[data-report-scope]')) {
+    const selected = button.dataset.reportScope === scope;
+    button.hidden = button.dataset.reportScope === 'all' && state.view !== 'overview';
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  }
+}
 const label = (s) => `${s.start}–${s.end}`;
 const minutes = (s) => {
   const [h, m] = s.split(':').map(Number);
@@ -289,11 +301,7 @@ async function initializeWorkspace(user) {
         }
     state.scopeInitialized = true;
     $('#report-date').value = state.date;
-    for (const button of $$('[data-shift]')) {
-      const selected = button.dataset.shift === state.shift;
-      button.classList.toggle('selected', selected);
-      button.setAttribute('aria-pressed', String(selected));
-    }
+    syncReportScopeButtons();
   }
   if (!stored('bp-theme')) applyTheme(state.config.theme);
   if (!stored('bp-language')) applyLanguage(state.config.language);
@@ -396,6 +404,7 @@ function updateHeadings() {
   // Entry shows both shifts or explicit interval buttons. A second shift picker
   // in the report toolbar would imply that it filters the whole-day sheet.
   $('.filter-bar .segmented').hidden = view === 'entry';
+  syncReportScopeButtons();
   $('#export').hidden = view === 'entry';
   $('#help-content').hidden = view !== 'help';
   $('#settings-content').hidden = view !== 'settings';
@@ -471,7 +480,10 @@ function getRows() {
   );
 }
 function schedule() {
-  return state.config?.schedules[state.shift] || [];
+  const scope = reportScope();
+  return scope === 'all'
+    ? [...(state.config?.schedules.day || []), ...(state.config?.schedules.night || [])]
+    : state.config?.schedules[scope] || [];
 }
 function allSlots() {
   const slots = schedule()
@@ -519,6 +531,67 @@ function populateLineFilters() {
   $('#detail-group').value = state.detailGroupId;
   $('#line-total').textContent = t('lineCount', { count: values.length });
 }
+function combineShiftReports(reports) {
+  const savedByShift = Object.fromEntries(
+    reports.map(([shift, data]) => [shift, new Map(data.records.map((row) => [row.rowId, row]))]),
+  );
+  const defaultsByShift = Object.fromEntries(
+    reports.map(([shift, data]) => [shift, data.defaults || {}]),
+  );
+  const savedIds = new Set(
+    reports.flatMap(([, data]) => data.records.map((record) => record.rowId)),
+  );
+  const defaultIds = new Set(
+    reports.flatMap(([, data]) => Object.keys(data.defaults || {}).map(Number)),
+  );
+  const combined = (rowId, includeUnsaved) => {
+    const halves = reports.map(([shift]) => {
+      const saved = savedByShift[shift].get(rowId);
+      const value = saved || defaultsByShift[shift][rowId];
+      return value
+        ? {
+            shift,
+            saved,
+            value,
+            slots: (value.slots || []).map((slot) => ({
+              ...slot,
+              shift,
+              ...(saved ? {} : { actual: slot.lineShared ? slot.actual : null, issue: '' }),
+            })),
+          }
+        : null;
+    }).filter(Boolean);
+    if (!halves.length || (!includeUnsaved && !halves.some((half) => half.saved))) return null;
+    const saved = halves.map((half) => half.saved).find(Boolean);
+    const base = saved || halves[0].value;
+    return {
+      ...base,
+      rowId,
+      version: Math.max(0, ...halves.map((half) => half.saved?.version || 0)),
+      dayTeam: halves.find((half) => half.shift === 'day')?.value.dayTeam,
+      nightTeam: halves.find((half) => half.shift === 'night')?.value.nightTeam,
+      owner: halves.find((half) => half.value.owner)?.value.owner,
+      slots: halves.flatMap((half) => half.slots),
+    };
+  };
+  return {
+    configVersion: reports[0]?.[1].configVersion,
+    serverTime: Math.max(...reports.map(([, data]) => data.serverTime || 0)),
+    records: [...savedIds].map((id) => combined(id, false)).filter(Boolean),
+    defaults: Object.fromEntries(
+      [...defaultIds].map((id) => [id, combined(id, true)]).filter(([, value]) => value),
+    ),
+    rowVersions: Object.fromEntries(
+      [...new Set(reports.flatMap(([, data]) => Object.keys(data.rowVersions || {}).map(Number)))].map(
+        (id) => [
+          id,
+          Math.max(...reports.map(([, data]) => data.rowVersions?.[id] || 0)),
+        ],
+      ),
+    ),
+    activity: Object.assign({}, ...reports.map(([, data]) => data.activity || {})),
+  };
+}
 async function loadRecords(background = false) {
   background = background === true;
   if (!state.config || (background && state.refreshing)) return;
@@ -534,20 +607,30 @@ async function loadRecords(background = false) {
   $('#error-banner').hidden = true;
   updateConnection();
   try {
-    const data = await api(`/api/records?date=${state.date}&shift=${state.shift}`),
-      defaultData = data.defaults
-        ? { rows: data.defaults }
-        : await api(`/api/defaults?date=${state.date}&shift=${state.shift}`);
+    const scope = reportScope();
+    const shifts = scope === 'all' ? ['day', 'night'] : [scope];
+    const reports = await Promise.all(
+      shifts.map(async (shift) => {
+        const data = await api(`/api/records?date=${state.date}&shift=${shift}`);
+        if (!data.defaults) {
+          const defaults = await api(`/api/defaults?date=${state.date}&shift=${shift}`);
+          data.defaults = defaults.rows || defaults.defaults || defaults;
+        }
+        return [shift, data];
+      }),
+    );
+    const data = scope === 'all' ? combineShiftReports(reports) : reports[0][1];
     if (seq !== state.sequence) return;
     if (data.configVersion !== state.config.version) {
       state.config = await api('/api/config');
       if (seq !== state.sequence) return;
     }
-    state.defaults = data.defaults || defaultData.rows || defaultData.defaults || defaultData;
+    state.defaults = data.defaults || {};
     state.records = new Map(data.records.map((r) => [r.rowId, r]));
     state.rowVersions = data.rowVersions || {};
     state.activity = data.activity || {};
     state.serverOffset = (data.serverTime || Date.now()) - Date.now();
+    state.loadedScope = `${state.date}|${scope}`;
     state.loading = false;
     state.connection = 'connected';
     state.lastTime = Date.now();
@@ -588,7 +671,8 @@ function render() {
   $('.records-panel').hidden = state.view !== 'details';
   $('#detail-heading').hidden = state.view !== 'details';
   $('#detail-filters').hidden = state.view !== 'details';
-  $('#board-context').textContent = state.date + ' / ' + t(state.shift);
+  $('#board-context').textContent =
+    state.date + ' / ' + t(reportScope() === 'all' ? 'overviewAll' : reportScope());
   renderVisuals();
   renderSlotTabs();
   renderTable();
@@ -620,11 +704,22 @@ function monitorRecords() {
   return records;
 }
 function monitorContext() {
+  const scope = reportScope();
+  const config =
+    scope === 'all'
+      ? {
+          ...state.config,
+          schedules: {
+            ...state.config.schedules,
+            all: [...state.config.schedules.day, ...state.config.schedules.night],
+          },
+        }
+      : state.config;
   return {
-    config: state.config,
+    config,
     records: monitorRecords(),
     date: state.date,
-    shift: state.shift,
+    shift: scope,
     activity: state.activity,
     now: Date.now() + state.serverOffset,
     groupId: state.view === 'details' ? state.detailGroupId : state.groupId,
@@ -756,13 +851,16 @@ function renderTable() {
   $('#previous-page').disabled = state.page === 1;
   $('#next-page').disabled = state.page >= pages;
 }
-function confirmAction(title, description, yes = 'confirm', no = 'continueEditing', params = {}) {
-  $('#confirm-title').textContent = t(title);
-  $('#confirm-description').textContent = t(description, params);
-  $('#confirm-yes').textContent = t(yes);
-  $('#confirm-no').textContent = t(no);
+function confirmText(title, description, yes, no) {
+  $('#confirm-title').textContent = title;
+  $('#confirm-description').textContent = description;
+  $('#confirm-yes').textContent = yes;
+  $('#confirm-no').textContent = no;
   $('#confirm-dialog').showModal();
   return new Promise((resolve) => (confirmResolve = resolve));
+}
+function confirmAction(title, description, yes = 'confirm', no = 'continueEditing', params = {}) {
+  return confirmText(t(title), t(description, params), t(yes), t(no));
 }
 function finishConfirm(value) {
   $('#confirm-dialog').close();
@@ -879,6 +977,8 @@ async function setView(view, options = {}) {
   if (options.history !== false) syncPageAddress();
   updateHeadings();
   if (view === 'settings') renderSettings();
+  else if (!['help'].includes(view) && state.loadedScope !== `${state.date}|${reportScope()}`)
+    await loadRecords();
   else render();
   return true;
 }
@@ -1735,18 +1835,17 @@ $('#today').onclick = async () => {
   state.page = 1;
   loadRecords();
 };
-$$('[data-shift]').forEach(
+$$('[data-report-scope]').forEach(
   (b) =>
     (b.onclick = async () => {
-      if (state.shift === b.dataset.shift) return;
+      const scope = b.dataset.reportScope;
+      if (reportScope() === scope) return;
       if (!(await entryController?.canLeave())) return toast(t('resolveEntryChanges'));
-      state.shift = b.dataset.shift;
+      if (state.view === 'overview') state.overviewScope = scope;
+      if (scope !== 'all') state.shift = scope;
       state.page = 1;
       state.slotId = '';
-      $$('[data-shift]').forEach((v) => {
-        v.classList.toggle('selected', v === b);
-        v.setAttribute('aria-pressed', String(v === b));
-      });
+      syncReportScopeButtons();
       loadRecords();
     }),
 );
@@ -1867,18 +1966,31 @@ $('#export').onclick = async () => {
   const b = $('#export');
   b.disabled = true;
   try {
-    const response = await fetch(
-      `/api/export?date=${state.date}&shift=${state.shift}&lang=${state.language}${state.line ? `&line=${encodeURIComponent(state.line)}` : ''}${state.view === 'details' && state.detailGroupId ? `&group=${encodeURIComponent(state.detailGroupId)}` : ''}`,
+    const scope = reportScope();
+    const suffix = `${state.line ? `&line=${encodeURIComponent(state.line)}` : ''}${state.view === 'details' && state.detailGroupId ? `&group=${encodeURIComponent(state.detailGroupId)}` : ''}`;
+    const responses = await Promise.all(
+      (scope === 'all' ? ['day', 'night'] : [scope]).map((shift) =>
+        fetch(
+          `/api/export?date=${state.date}&shift=${shift}&lang=${state.language}${suffix}`,
+        ),
+      ),
     );
-    if (response.status === 401) {
+    if (responses.some((response) => response.status === 401)) {
       showLogin(true);
       throw new Error(t('errAuth'));
     }
-    if (!response.ok) throw new Error(t('errServer'));
-    const url = URL.createObjectURL(await response.blob()),
+    if (responses.some((response) => !response.ok)) throw new Error(t('errServer'));
+    const csv = await Promise.all(responses.map((response) => response.text()));
+    const combined =
+      scope === 'all'
+        ? [csv[0].trimEnd(), ...csv.slice(1).map((value) => value.split(/\r?\n/).slice(1).join('\n').trimEnd())]
+            .filter(Boolean)
+            .join('\n') + '\n'
+        : csv[0];
+    const url = URL.createObjectURL(new Blob([combined], { type: 'text/csv;charset=utf-8' })),
       a = document.createElement('a');
     a.href = url;
-    a.download = `BP9-${state.date}-${state.shift}-${state.language}.csv`;
+    a.download = `BP9-${state.date}-${scope}-${state.language}.csv`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast(t('exported'));
@@ -1913,10 +2025,22 @@ document.addEventListener('click', (e) => {
 });
 function updateCurrentInterval() {
   if (!state.config) return;
+  const scope = reportScope();
+  const currentShift =
+    scope === 'all'
+      ? ['day', 'night'].find((shift) =>
+          currentScheduleInterval(
+            state.config,
+            state.date,
+            shift,
+            Date.now() + state.serverOffset,
+          ),
+        ) || state.shift
+      : scope;
   const slot = currentScheduleInterval(
       state.config,
       state.date,
-      state.shift,
+      currentShift,
       Date.now() + state.serverOffset,
     ),
     text = slot
@@ -1925,7 +2049,7 @@ function updateCurrentInterval() {
           monitoringPeriodState(
             state.config,
             state.date,
-            state.shift,
+            currentShift,
             Date.now() + state.serverOffset,
           ),
         );
@@ -2090,13 +2214,11 @@ entryController = createEntryController({
     state.date = date;
     state.shift = shift;
     $('#report-date').value = date;
-    for (const button of $$('[data-shift]')) {
-      const selected = button.dataset.shift === shift;
-      button.classList.toggle('selected', selected);
-      button.setAttribute('aria-pressed', String(selected));
-    }
+    syncReportScopeButtons();
     await loadRecords();
   },
+  onConfirm: ({ title, description, confirm, cancel }) =>
+    confirmText(title, description, confirm, cancel),
   onConfigure: async (unit) => {
     if (!canManage()) return;
     await setView('settings');

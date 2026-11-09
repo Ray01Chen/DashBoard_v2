@@ -52,11 +52,12 @@ const guides = {
           'Choose production date, Line and Model; all stations are listed without a station selector. Each station row has Target, Actual and Issue for every interval. Counts and notes are independent across stations, models and shifts.',
           'If a configured combination has no enabled stations, the page retains its Line/Model choices and shows the daily-target allocation preview. Managers can open the exact Line configuration; members are told to contact a manager. Preview fields do not save production. Enable stations and Save settings before entering results.',
           'Whole-day spreadsheet shows both shifts. Each station has adjacent Target/Actual inputs and a one-line issue preview. The fixed left column includes station, job and day/night/whole-day totals; personnel are in production details.',
-          'Use Fill interval at the left of the command bar. Choose date, Line, Model and interval. Apply Target, Actual or Issue to all stations, then edit individual cells; Apply keeps the window open. Blank shared fields preserve values; 0 writes zero.',
+          'Use Fill interval at the left of the command bar. Choose date, Line, Model and interval. Apply Target, Actual or Issue to all stations, then edit individual cells; Apply keeps the window open. Applying a blank clears that field for every station; 0 writes zero.',
           'Changing date, Line, Model or interval saves the current scope before loading the destination. Save now keeps the window open. X, Esc or clicking outside saves and closes, then returns entry to the selected destination.',
           'Invalid values or version conflicts keep drafts open; no part of a conflicting batch is saved. Refresh preview, review changed fields and save again.',
           'Click Add issue or its one-line preview to open the note editor for the displayed station/date/interval. English quick text comes from the Master data list; edit freely, use Enter for new lines, or Clear note to remove text. Done, Esc, a click outside or Ctrl+Enter closes and saves. Opening a note without changes does not write data; long notes never enlarge the table row.',
           'Click another numeric cell to autosave and confirm Saved. Blank is not reported; 0 is confirmed zero production. Day/Night switches to that whole shift; Go to current time slot selects the active Bangkok interval. Tab moves across intervals within the same field, Enter moves down stations, F2 opens the current cell’s issue, and Ctrl+Enter returns to that cell. Paste spreadsheet rectangles directly: each row is the next station and adjacent Target/Actual columns stay in one interval; following column pairs continue to following intervals. A single column alternates Target/Actual down the rows. Overflow is ignored without wrapping. Excel offers whole-day or single-shift templates and imports.',
+          'Reset asks for confirmation, then clears Target, Actual and Issue for every station in the selected line/model across both shifts on that production date.',
           'Invalid values and unresolved saves prevent leaving the page. Review latest shows only the affected station. Use latest data or Save my changed cells merges changed cells against the latest version. Other stations are never overwritten.',
         ],
       },
@@ -71,9 +72,9 @@ const guides = {
       {
         title: 'Overview, details and full-screen board',
         paragraphs: [
-          'Overview shows one row per line/model using its selected output station. Group totals add these unit results, not all station entries, so products passing several stations are not counted repeatedly. Source labels identify the station being monitored.',
-          'Normal line clicks open details. Full screen clicks open a station-detail dialog; X or Esc returns to the same group/page. The board shows at most seven units per page and reserves space for wrapped model names and charts. Use paging to view the remaining units.',
-          'Display options independently toggle group trend and output share. Missing output remains blank rather than invented as zero. Station issues and captured personnel are visible in details.',
+          'Overview defaults to Whole day, so Target, Actual and Gap cover both shifts. Use Whole day / Day / Night above the board to change the scope. Each line/model uses its selected output station; group totals never double-count every station.',
+          'Normal line clicks open details. Full screen clicks open a station-detail dialog; X or Esc returns to the same group/page. Its blue header keeps line, model, owner, Target, Actual and Gap together. Assigned personnel appear inside their station cards.',
+          'The hourly chart uses the full dialog width with a larger plot. Display options independently toggle group trend and output share. Missing output remains blank rather than invented as zero. The board shows at most seven units per page.',
         ],
       },
       {
@@ -148,11 +149,12 @@ const guides = {
           '確認生產日期、Line、Model，不需選站點，下方直接列各站。每站每時段都有 Target、Actual、Issue；各站、各 Model、各班別的數值與異常獨立。',
           '若配對沒有啟用站點，產線／Model 選項仍保留，並顯示日目標分配預覽。管理員可直接前往該組配置，member 會看到聯繫管理員提示；預覽欄位不建立填報。先啟用站點並儲存設定，再填寫結果。',
           '整日雙班試算表、單班與單時段表格皆將 Target、Actual 並排，異常只顯示一行。固定左欄包含站點、職務及早晚班與整日合計；人員可到生產明細查看。',
-          '工具列最左側「同時段批次填寫」可選日期、產線、Model 與時段，分別套用目標、實績、異常，再逐站修改；套用後視窗保持開啟。批次欄空白保留原值，0 寫入零。',
+          '工具列最左側「同時段批次填寫」可選日期、產線、Model 與時段，分別套用目標、實績、異常，再逐站修改；套用後視窗保持開啟。空白也能套用，用來清除所有站的該欄；0 寫入零。',
           '切換日期、產線、Model 或時段前先儲存原範圍。立即儲存保留視窗；X、Esc 或點外面儲存後關閉，填報表回到所選日期與配對。',
           '無效值或版本衝突時保留視窗與修改，衝突整批不寫入。更新預覽後核對修改，再儲存。',
           '點「新增異常」或一行摘要，編輯窗會標明站點、日期、班別及時段。英文快捷文字來自基礎資料清單，可選取後再補充；Enter 換行，清除說明可清空。完成、Esc、點視窗外或 Ctrl+Enter 關閉並自動儲存；只開啟不改字不會寫入資料，長異常不會撐高表格。',
           '離開數字欄位自動儲存，確認 Saved。空白未填報，0 是確認零產出；早班／晚班切到該整班，前往目前時段依曼谷時間選取進行中的時段。Tab 同欄跨時段、Enter 往下一站、F2 開啟當格異常，Ctrl+Enter 完成後回到原數字欄。矩形直接照表貼：每列是下一站，相鄰目標／實績兩欄留在同一時段，後續欄位對再往後續時段；單欄才依上下列交錯目標／實績。超出容量忽略且不換行。Excel 可下載與匯入整日雙班或單班範本，包含 Target、Actual、Issue。',
+          '「重設」會先要求確認，再清除所選日期、產線／Model 兩班所有站點的 Target、Actual 與異常。',
           '無效值、儲存失敗或衝突須先處理才能離開。檢視最新資料只顯示該站，選採用最新或儲存我修改的欄位；合併時保留別人改過而自己未改的欄位，不會覆寫其他站。',
         ],
       },
@@ -167,9 +169,9 @@ const guides = {
       {
         title: '總覽、細節與全螢幕看板',
         paragraphs: [
-          '總覽每組產線／Model 使用所選來源站的數值；分組合計加總各組結果，不加總同產品經過的所有站，避免重複計產量。來源標籤會顯示監控站點。',
-          '一般模式點線開細節，全螢幕點線開各站明細彈窗；X 或 Esc 關閉後保留分組與頁次。每頁最多七組，實際列數依名稱、視窗高度與圖表空間調整，其他組用底部分頁查看。',
-          '顯示選項分別控制產量趨勢與占比；未填報保持空白，不會當作零產出。明細可查看各站異常及保存的人員。',
+          '總覽預設「全天」，目標、實績與差異合併兩班；上方可切換全天／早班／晚班。每組產線／Model 仍只使用所選來源站，避免重複計產量。',
+          '全螢幕明細的藍色頂部集中產線、機種、負責人、目標、實績與差異；當班人員放在各自站點字卡。X 或 Esc 關閉後保留分組與頁次。',
+          '每小時產量圖放大並貼合明細寬度。顯示選項仍可分別控制產量趨勢與占比；未填報保持空白。每頁最多七組，其他組用底部分頁查看。',
         ],
       },
       {
@@ -245,11 +247,12 @@ const guides = {
           'เลือกวันที่ Line และ Model ทุกสถานีแสดงอัตโนมัติ ไม่ต้องเลือกสถานี แต่ละสถานีมี Target, Actual และ Issue ทุกช่วงเวลา ข้อมูลแยกตามสถานี Model และกะ',
           'หากคู่ยังไม่มีสถานีที่เปิดใช้ รายการสาย/Model ยังอยู่และแสดงตัวอย่างการแบ่งเป้าหมาย manager เปิดหน้าตั้งค่าคู่นั้นได้ member ติดต่อ manager ช่องตัวอย่างไม่บันทึก ต้องเปิดสถานีและบันทึกการตั้งค่าก่อน',
           'ตารางทั้งสองกะตลอดวันมีช่อง Target และ Actual อยู่คู่กัน ปัญหาแสดงบรรทัดเดียว ด้านซ้ายตรึงชื่อสถานี หน้าที่ และยอดรวมกะเช้า กะกลางคืน และทั้งวัน ดูบุคลากรในรายละเอียดการผลิต',
-          'ปุ่มกรอกช่วงเวลาอยู่ซ้ายสุด เลือกวันที่ สาย Model และช่วงเวลา ใช้เป้าหมาย ผลจริง หรือปัญหากับทุกสถานี แล้วแก้ไขรายสถานีได้ หน้าต่างยังเปิดอยู่ ช่องว่างด้านบนไม่เปลี่ยนค่า 0 คือศูนย์',
+          'ปุ่มกรอกช่วงเวลาอยู่ซ้ายสุด เลือกวันที่ สาย Model และช่วงเวลา ใช้เป้าหมาย ผลจริง หรือปัญหากับทุกสถานี แล้วแก้ไขรายสถานีได้ หน้าต่างยังเปิดอยู่ ใช้ช่องว่างเพื่อล้างช่องนั้นทุกสถานี 0 คือศูนย์',
           'เปลี่ยนวันที่ สาย Model หรือช่วงเวลาจะบันทึกขอบเขตเดิมก่อน ปุ่มบันทึกยังเปิดหน้าต่างไว้ X, Esc หรือคลิกด้านนอกจะบันทึกแล้วปิด กลับไปยังวันที่และคู่ที่เลือก',
           'ค่าผิดหรือข้อมูลขัดแย้งจะเก็บฉบับร่างและหน้าต่างไว้ ชุดที่ขัดแย้งไม่บันทึก ให้รีเฟรช ตรวจสอบ แล้วบันทึกอีกครั้ง',
           'คลิกเพิ่มปัญหาหรือข้อความย่อเพื่อเปิดหน้าต่างที่ระบุสถานี วันที่ กะและช่วงเวลา ข้อความด่วนภาษาอังกฤษมาจากรายการข้อมูลหลักและแก้ไขต่อได้ Enter ขึ้นบรรทัดใหม่ ล้างข้อความเพื่อลบ กดเสร็จสิ้น Esc คลิกนอกหน้าต่างหรือ Ctrl+Enter เพื่อปิดและบันทึก เปิดโดยไม่แก้ไขจะไม่เขียนข้อมูล ข้อความยาวไม่เพิ่มความสูงของแถว',
           'ออกจากช่องตัวเลขเพื่อบันทึกและตรวจ Saved ว่างคือยังไม่กรอก 0 คือยืนยันศูนย์ ปุ่มกะเช้า/กลางคืนเปิดทั้งกะ และปุ่มช่วงเวลาปัจจุบันเลือกช่วงที่กำลังผลิตตามเวลากรุงเทพฯ Tab ไปช่วงถัดไป Enter ลงสถานีถัดไป F2 เปิดปัญหา Ctrl+Enter กลับช่องเดิม วางตารางโดยแต่ละแถวเป็นสถานีถัดไป คอลัมน์ Target/Actual ที่อยู่ติดกันอยู่ในช่วงเวลาเดียว คู่คอลัมน์ถัดไปจึงไปช่วงเวลาถัดไป ถ้ามีคอลัมน์เดียวจึงสลับ Target/Actual ตามแถว ส่วนเกินจะถูกละเว้น เปิดเมนู Excel สำหรับแบบทั้งวันหรือแยกกะ',
+          'ปุ่มรีเซ็ตขอการยืนยันก่อนล้าง Target, Actual และปัญหาของทุกสถานีทั้งสองกะในวันที่และสาย/Model ที่เลือก',
           'แก้ค่าผิด การบันทึกไม่สำเร็จหรือรุ่นขัดแย้งก่อนออก ดูข้อมูลล่าสุดเฉพาะสถานีที่ขัดแย้ง เลือกข้อมูลล่าสุดหรือบันทึกเฉพาะช่องที่แก้ รักษาช่องอื่นที่ผู้อื่นแก้ไว้และไม่เขียนสถานีอื่น',
         ],
       },
@@ -264,9 +267,9 @@ const guides = {
       {
         title: 'ภาพรวม รายละเอียด และกระดานเต็มหน้าจอ',
         paragraphs: [
-          'ภาพรวมแสดงแต่ละสาย/Model จากสถานีแหล่งผลผลิตที่เลือก กลุ่มรวมผลแต่ละคู่ ไม่รวมทุกสถานีที่สินค้าผ่านเพื่อหลีกเลี่ยงนับซ้ำ ป้ายแหล่งข้อมูลระบุสถานี',
-          'โหมดปกติคลิกสายเปิดรายละเอียด เต็มหน้าจอคลิกเปิดหน้าต่างทุกสถานี X หรือ Esc กลับกลุ่ม/หน้าเดิม สูงสุดเจ็ดคู่ต่อหน้า จำนวนจริงขึ้นกับความสูง ชื่อยาวและกราฟ ใช้ปุ่มเปลี่ยนหน้า',
-          'ตัวเลือกแสดงเปิดกราฟแนวโน้มและสัดส่วนแยกกัน ไม่กรอกไม่ถือเป็นศูนย์ รายละเอียดแสดงปัญหาและบุคลากรที่บันทึกไว้',
+          'ภาพรวมเริ่มต้นที่ทั้งวัน รวม Target, Actual และ Gap ของสองกะ เลือกทั้งวัน/กะเช้า/กะกลางคืนด้านบนได้ แต่ละสาย/Model ยังใช้สถานีแหล่งผลผลิตเดียวเพื่อไม่ให้นับซ้ำ',
+          'หน้าต่างเต็มหน้าจอรวมสาย Model ผู้รับผิดชอบ Target Actual และ Gap ไว้ในหัวสีน้ำเงิน บุคลากรประจำกะแสดงในการ์ดสถานีของตน X หรือ Esc กลับกลุ่ม/หน้าเดิม',
+          'กราฟรายชั่วโมงใหญ่ขึ้นและใช้ความกว้างเต็มหน้าต่าง ตัวเลือกแสดงยังเปิดแนวโน้มและสัดส่วนแยกกัน ไม่กรอกไม่ถือเป็นศูนย์ สูงสุดเจ็ดคู่ต่อหน้า',
         ],
       },
       {
@@ -334,7 +337,7 @@ const exampleLabels = {
       'One-time interval fill with editable station values',
       'No-output stations stay visible with read-only history',
       'Excel import preview',
-      'Fullscreen line details',
+      'Fullscreen line details with owner, totals and station personnel',
     ],
   },
   zh: {
@@ -354,7 +357,7 @@ const exampleLabels = {
       '同時段批次填寫，之後仍可個別修改',
       '無產出站保留顯示與歷史查閱',
       'Excel 匯入預覽',
-      '全螢幕產線明細',
+      '全螢幕產線、負責人、合計與各站人員',
     ],
   },
   th: {
@@ -374,7 +377,7 @@ const exampleLabels = {
       'กรอกทุกสถานีตามช่วงและแก้รายสถานีภายหลัง',
       'สถานีไม่มีผลผลิตและประวัติแบบอ่านอย่างเดียว',
       'ตัวอย่างนำเข้า Excel',
-      'รายละเอียดเต็มจอ',
+      'รายละเอียดเต็มจอพร้อมผู้รับผิดชอบ ยอดรวม และบุคลากรแต่ละสถานี',
     ],
   },
 };

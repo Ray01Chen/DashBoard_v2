@@ -510,6 +510,10 @@ test('fullscreen line details retain historical interval labels, assigned staff 
   assert.ok(content.innerHTML.includes('07:40–08:00'));
   assert.ok(content.innerHTML.includes('Saved person'));
   assert.ok(content.innerHTML.includes('Saved owner'));
+  assert.ok(content.innerHTML.includes('line-modal-owner'));
+  assert.ok(content.innerHTML.includes('line-modal-station-people'));
+  assert.ok(!content.innerHTML.includes('line-modal-people'));
+  assert.ok(content.innerHTML.includes('viewBox="0 0 1040 320"'));
   assert.ok(content.innerHTML.includes('&lt;script&gt;unsafe&lt;/script&gt;'));
   assert.ok(!content.innerHTML.includes('<script>'));
   close.onclick();

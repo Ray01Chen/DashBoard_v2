@@ -197,7 +197,12 @@ try {
   config = await response.json();
   await page.reload();
   await page.locator('#language-select').selectOption('en');
-  await page.locator('[data-shift="day"]').click();
+  assert.equal(
+    await page.locator('[data-report-scope="all"]').getAttribute('aria-pressed'),
+    'true',
+  );
+  assert.match(await page.locator('#board-context').innerText(), /Whole day/);
+  await page.locator('[data-report-scope="day"]').click();
   await page.locator('#report-date').fill(reportDate);
   await page.locator('#report-date').dispatchEvent('change');
   await page.locator('[data-view="entry"]').click();
@@ -328,8 +333,8 @@ try {
     .first()
     .click();
   assert.deepEqual(await page.locator('.line-modal-stations section h3').allTextContents(), [
-    'Test QA',
-    'Pack PD',
+    'TestQA',
+    'PackPD',
   ]);
   await page.locator('[data-close-line-dialog]').click();
   await page.locator('#exit-fullscreen').click();
@@ -576,7 +581,7 @@ try {
     'People-by-job linkage, same-job teams and the English issue list in Master data remain available',
   );
   await page.locator('[data-view="overview"]').click();
-  await page.locator('[data-shift="day"]').click();
+  await page.locator('[data-report-scope="day"]').click();
   await page.locator('#report-date').fill(reportDate);
   await page.locator('#report-date').dispatchEvent('change');
   await page.locator('[data-view="entry"]').click();
@@ -943,6 +948,21 @@ try {
   record(
     'Dashboard output and target use only the chosen station; changing the source takes effect on existing entries',
   );
+  const dayTarget = Number(
+    (await card.locator('.line-card-values > span').first().locator('b').innerText()).replaceAll(
+      ',',
+      '',
+    ),
+  );
+  await page.locator('[data-report-scope="all"]').click();
+  await page.waitForFunction(() => document.querySelector('#board-context').textContent.includes('Whole day'));
+  const wholeDayTarget = Number(
+    (await card.locator('.line-card-values > span').first().locator('b').innerText()).replaceAll(
+      ',',
+      '',
+    ),
+  );
+  assert.ok(wholeDayTarget > dayTarget);
   await page.locator('#enter-fullscreen').click();
   await page.locator('.board-display-options summary').click();
   for (const width of [1440, 1024, 768, 390]) {
@@ -968,11 +988,33 @@ try {
   await card.click();
   assert.equal(await page.locator('.line-modal-stations section').count(), 2);
   assert.match(await page.locator('.line-modal-body').innerText(), /Excel Pack/);
-  assert.match(await page.locator('.line-modal-body').innerText(), /Alex Day/);
+  assert.equal(await page.locator('.line-modal-people').count(), 0);
+  assert.match(await page.locator('.line-modal-owner').innerText(), /Morgan Owner/);
+  assert.equal(await page.locator('.line-modal-totals > div').count(), 3);
+  assert.equal(await page.locator('.line-modal-station-people').count(), 2);
+  assert.match(await page.locator('.line-modal-stations').innerText(), /Alex Day/);
+  const trendBounds = await page.locator('.line-modal-trend').boundingBox();
+  const svgBounds = await page.locator('.line-modal-trend svg').boundingBox();
+  assert.ok(svgBounds.width >= trendBounds.width - 2);
+  assert.ok(svgBounds.height >= 285);
+  for (const width of [1024, 768, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    const dialogBounds = await page.locator('#line-detail-dialog').boundingBox();
+    assert.ok(dialogBounds.x >= 0 && dialogBounds.x + dialogBounds.width <= width + 1);
+    assert.equal(
+      await page.locator('#line-detail-content').evaluate(
+        (content) => content.scrollWidth > content.clientWidth + 1,
+      ),
+      false,
+    );
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await screenshot('#line-detail-dialog', 'line-details');
   await page.locator('[data-close-line-dialog]').click();
   await page.locator('#exit-fullscreen').click();
-  record('Fullscreen chart modes and station detail dialogs fit desktop, tablet and phone');
+  record(
+    'Whole-day overview is selectable and default; fullscreen details place owner/totals in the blue header, personnel in station cards and use a full-width larger chart on desktop, tablet and phone',
+  );
   await page.locator('[data-view="settings"]').click();
   for (const width of [1440, 1024, 768, 390]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -1076,7 +1118,7 @@ try {
   assert.equal(await page.locator('[data-bulk-line]').inputValue(), 'DEMO-A');
   assert.equal(await page.locator('[data-bulk-model]').inputValue(), model);
   assert.equal(await page.locator('[data-bulk-row]').count(), 2);
-  assert.equal(await page.locator('[data-bulk-apply-field="target"]').isDisabled(), true);
+  assert.equal(await page.locator('[data-bulk-apply-field="target"]').isDisabled(), false);
   await page.locator('[data-bulk-field="target"]').fill('33');
   await page.locator('[data-bulk-field="actual"]').fill('44');
   await screenshot('.entry-bulk-dialog', 'interval-batch');
@@ -1126,8 +1168,20 @@ try {
   assert.equal(await field(pack.id, 'target').inputValue(), '99');
   assert.equal(await field(test.id, 'target').inputValue(), '99');
   assert.equal(await field(pack.id, 'actual').inputValue(), '0');
+  await bulkOpen();
+  assert.equal(await page.locator('[data-bulk-apply-field="target"]').isDisabled(), false);
+  await page.locator('[data-bulk-apply-field="target"]').click();
+  assert.deepEqual(
+    await page
+      .locator('[data-bulk-cell="target"]')
+      .evaluateAll((inputs) => inputs.map((input) => input.value)),
+    ['', ''],
+  );
+  await bulkApply();
+  assert.equal(await field(pack.id, 'target').inputValue(), '');
+  assert.equal(await field(test.id, 'target').inputValue(), '');
   record(
-    'Individual edits after interval fill remain independent; target-only, actual-only and explicit zero work without sticky synchronization',
+    'Individual edits remain independent; target-only, actual-only, explicit zero and blank Apply clearing work without sticky synchronization',
   );
   await bulkOpen();
   await page.locator('[data-bulk-field="target"]').fill('-1');
@@ -1269,6 +1323,39 @@ try {
   await page.locator('#report-date').dispatchEvent('change');
   await page.waitForFunction(() => document.querySelectorAll('[data-entry-field="actual"]').length === 6);
   record('Batch applies stay open; paired paste, quick text, individual issues, editable dates and backdrop autosave persist exact station values');
+
+  const resetDate = '2026-11-17';
+  await page.locator('#report-date').fill(resetDate);
+  await page.locator('#report-date').dispatchEvent('change');
+  await field(pack.id, 'target').fill('88');
+  await field(pack.id, 'actual').fill('99');
+  await editIssue(pack.id, 'Reset this report');
+  await page.locator('[data-entry-action="reset-unit"]').click();
+  assert.match(await page.locator('#confirm-title').innerText(), /Reset this production report/);
+  await page.locator('#confirm-no').click();
+  assert.equal(await field(pack.id, 'actual').inputValue(), '99');
+  await page.locator('[data-entry-action="reset-unit"]').click();
+  await page.locator('#confirm-yes').click();
+  await saved();
+  for (const shift of ['day', 'night']) {
+    const cleared = await readReport(resetDate, shift);
+    assert.equal(cleared.records.length, 2);
+    assert.ok(
+      cleared.records.every((row) =>
+        row.slots.every(
+          (slot) => slot.target === null && slot.actual === null && slot.issue === '',
+        ),
+      ),
+    );
+  }
+  assert.equal(await field(pack.id, 'target').inputValue(), '');
+  assert.equal(await field(pack.id, 'actual').inputValue(), '');
+  await page.locator('#report-date').fill(batchDate);
+  await page.locator('#report-date').dispatchEvent('change');
+  await page.waitForFunction(() => document.querySelectorAll('[data-entry-field="actual"]').length === 6);
+  record(
+    'Production reset requires confirmation, cancel preserves data, and confirm clears Target/Actual/Issue for every station across both shifts',
+  );
 
   const retainedTest = (await readReport(batchDate)).records.find((row) => row.rowId === test.id);
   await page.locator('[data-view="settings"]').click();

@@ -130,9 +130,11 @@
               ><button class="button today-button" id="today" data-i18n="today"></button
               ><span class="filter-separator"></span>
               <div class="segmented">
-                <button data-shift="day" class="selected" aria-pressed="true">
+                <button data-report-scope="all" class="selected" aria-pressed="true">
+                  <span data-icon="layers"></span><span data-i18n="overviewAll"></span></button
+                ><button data-report-scope="day" aria-pressed="false">
                   <span data-icon="sun"></span><span data-i18n="day"></span></button
-                ><button data-shift="night" aria-pressed="false">
+                ><button data-report-scope="night" aria-pressed="false">
                   <span data-icon="moon"></span><span data-i18n="night"></span>
                 </button>
               </div>

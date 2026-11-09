@@ -37,7 +37,7 @@ const messages = {
     bulkOpen: 'Fill interval',
     bulkTitle: 'Edit production interval',
     bulkHint:
-      'Entered columns replace previous individual values for this interval. Blank leaves a column unchanged. Issues, other intervals and the daily preset remain unchanged.',
+      'Apply replaces this field for every station in the interval. Applying a blank clears that field. Other intervals and the daily preset remain unchanged.',
     bulkRefresh: 'Refresh preview',
     bulkConflict:
       'Nothing was changed. Refresh preview, review the current values and apply again.',
@@ -93,6 +93,12 @@ const messages = {
     latest: 'Latest saved data',
     mine: 'Your changes',
     saveNow: 'Save now',
+    reset: 'Reset',
+    resetTitle: 'Reset this production report?',
+    resetDescription:
+      'Clear Target, Actual and Issue for every station in {line} · {model} on {date}, across both shifts? This cannot be undone.',
+    resetConfirm: 'Reset report',
+    resetFailed: 'The report could not be reset. Review pending or conflicting station changes.',
     autosave: 'Autosave',
     reportHint:
       'Targets follow the daily preset and production minutes. Changes affect only this station’s report.',
@@ -159,7 +165,7 @@ const messages = {
     bulkOpen: '同時段批次填寫',
     bulkTitle: '編輯時段目標與實績',
     bulkHint:
-      '填入的欄位會覆蓋此時段各站原本的個別值；空白欄位保留原值。異常、其他時段與日目標預設不變。',
+      '按「套用」會覆蓋此時段所有站的該欄；空白也能套用，用來清除該欄。其他時段與日目標預設不變。',
     bulkRefresh: '更新預覽',
     bulkConflict: '本次未變更資料。請更新預覽，核對最新值後再套用。',
     bulkReview: '無法確認結果。請先更新預覽，確認已存數值後再套用。',
@@ -208,6 +214,12 @@ const messages = {
     latest: '最新已儲存資料',
     mine: '我的修改',
     saveNow: '立即儲存',
+    reset: '重設',
+    resetTitle: '要重設這份生產填報嗎？',
+    resetDescription:
+      '清除 {date} 的 {line} · {model} 兩班所有站點 Target、Actual 與異常？此操作無法復原。',
+    resetConfirm: '清除填報資料',
+    resetFailed: '無法重設填報，請先處理尚未儲存或衝突的站點資料。',
     autosave: '自動儲存',
     reportHint: '目標依日目標預設與生產分鐘分配；修改只影響本站當日填報。',
     noRows: '此選項沒有可填報的站點。',
@@ -274,7 +286,7 @@ const messages = {
     bulkOpen: 'กรอกทั้งสายตามช่วง',
     bulkTitle: 'แก้เป้าหมายและผลจริงตามช่วง',
     bulkHint:
-      'คอลัมน์ที่กรอกจะทับค่ารายสถานีในช่วงนี้ ช่องว่างเก็บค่าเดิม ปัญหา ช่วงอื่นและเป้ารายวันเริ่มต้นไม่เปลี่ยน',
+      'กดใช้เพื่อแทนค่าช่องนี้ของทุกสถานีในช่วงเวลา ใช้ช่องว่างเพื่อล้างค่า ช่วงอื่นและเป้ารายวันเริ่มต้นไม่เปลี่ยน',
     bulkRefresh: 'โหลดตัวอย่างใหม่',
     bulkConflict: 'ยังไม่เปลี่ยนข้อมูล โหลดตัวอย่างใหม่ ตรวจค่าปัจจุบันแล้วใช้ค่าอีกครั้ง',
     bulkReview: 'ยังยืนยันผลไม่ได้ โหลดตัวอย่างเพื่อตรวจค่าที่บันทึกก่อนลองอีกครั้ง',
@@ -326,6 +338,12 @@ const messages = {
     latest: 'ข้อมูลที่บันทึกล่าสุด',
     mine: 'การแก้ไขของคุณ',
     saveNow: 'บันทึกตอนนี้',
+    reset: 'รีเซ็ต',
+    resetTitle: 'รีเซ็ตรายงานการผลิตนี้หรือไม่',
+    resetDescription:
+      'ล้าง Target, Actual และปัญหาของทุกสถานีทั้งสองกะสำหรับ {line} · {model} วันที่ {date} หรือไม่ การดำเนินการนี้ย้อนกลับไม่ได้',
+    resetConfirm: 'ล้างข้อมูลรายงาน',
+    resetFailed: 'รีเซ็ตรายงานไม่ได้ โปรดจัดการข้อมูลที่ยังไม่บันทึกหรือขัดแย้งก่อน',
     autosave: 'บันทึกอัตโนมัติ',
     reportHint: 'เป้าหมายแบ่งตามค่าเริ่มต้นรายวันและนาทีผลิต การแก้ไขมีผลเฉพาะรายงานของสถานีนี้',
     noRows: 'ไม่มีสถานีสำหรับตัวเลือกนี้',
@@ -875,6 +893,7 @@ export function createEntryController({
   onImported = () => {},
   onConfigure = () => {},
   onNavigate = async () => {},
+  onConfirm = async () => true,
   language = () => 'en',
   esc = htmlEscape,
   number = (value) => (value == null ? '—' : String(value)),
@@ -1222,8 +1241,7 @@ export function createEntryController({
       button.disabled =
         locked ||
         !editor.rows.length ||
-        !parseBulkValue(input.dataset.bulkField, input.value).valid ||
-        input.value.trim() === '';
+        !parseBulkValue(input.dataset.bulkField, input.value).valid;
     }
     const save = bulkDialog.querySelector('[data-entry-action="bulk-save"]');
     const validBars = [...bulkDialog.querySelectorAll('[data-bulk-field]')].every(
@@ -1391,7 +1409,7 @@ export function createEntryController({
       return false;
     }
     for (const input of inputs) {
-      if (input.value.trim() === '') continue;
+      if (!field && input.value.trim() === '') continue;
       for (const row of editor.rows) row.draft[input.dataset.bulkField] = input.value.trim();
       input.value = '';
     }
@@ -1760,6 +1778,55 @@ export function createEntryController({
       : '';
   }
 
+  async function resetUnit(unit) {
+    const context = getContext();
+    const contexts = contextsFor(context);
+    if (!unit || !contexts.day || !contexts.night) return setBanner(text('loading'));
+    if (!(await queue.flush()) || invalid.size) return setBanner(text('pending'));
+    const description = Object.entries({
+      line: unit.line,
+      model: modelOf(unit),
+      date: context.date,
+    }).reduce(
+      (value, [key, replacement]) => value.replaceAll(`{${key}}`, replacement),
+      text('resetDescription'),
+    );
+    if (
+      !(await onConfirm({
+        title: text('resetTitle'),
+        description,
+        confirm: text('resetConfirm'),
+        cancel: text('close'),
+      }))
+    )
+      return false;
+    for (const shift of ['day', 'night']) {
+      const shiftContext = contexts[shift];
+      for (const row of rowsFor(shiftContext).filter(
+        (row) => sameProduction(row, unit) && stationHasOutput(row, context.config),
+      )) {
+        const key = keyFor(shiftContext, row.id);
+        const entry = queue.ensure(key, rowPayload(shiftContext, row));
+        const draft = copy(entry.latest);
+        draft.slots = draft.slots.map((slot) => ({
+          ...slot,
+          target: null,
+          actual: null,
+          issue: '',
+        }));
+        for (const invalidKey of invalid.keys())
+          if (invalidKey.startsWith(key + '|')) invalid.delete(invalidKey);
+        queue.pause(key, false);
+        queue.update(key, draft);
+      }
+    }
+    render();
+    const saved = await queue.flush();
+    setBanner(saved ? '' : text('resetFailed'));
+    render();
+    return saved;
+  }
+
   /** One stationary command area for shifts, entry, templates and imports.
    * The wide station grid scrolls independently below these controls. */
   function sheetTools(context, unit) {
@@ -1784,7 +1851,7 @@ export function createEntryController({
         return `<div><strong>${esc(text(shift === 'all' ? 'wholeDay' : shift))}</strong><button type="button" class="button" data-entry-action="template" data-import-shift="${shift}" ${!ready || importState.busy ? 'disabled' : ''}>${esc(text('template'))}</button><button type="button" class="button" data-entry-action="open-import" data-import-shift="${shift}" ${!ready || importState.busy ? 'disabled' : ''}>${esc(text('importExcel'))}</button></div>`;
       })
       .join('')}</div></details>`;
-    return `<div class="entry-sheet-tools"><div class="entry-sheet-primary">${bulkLaunch(currentUnit)}<div class="entry-sheet-identity">${unit ? productionIdentityMarkup(unit, esc, { singleLine: true }) : `<strong>${esc(line || text('allLines'))}</strong><span>${esc(model || text('allModels'))}</span>`}</div></div><div class="entry-sheet-actions">${shiftPicker(context)}<button type="button" class="button" data-entry-action="current-slot">${esc(text('currentSlot'))}</button>${excel}<button type="button" class="button" data-entry-action="save-all">${esc(text('saveNow'))}</button><span data-entry-overall role="status"></span></div></div>`;
+    return `<div class="entry-sheet-tools"><div class="entry-sheet-primary">${bulkLaunch(currentUnit)}<div class="entry-sheet-identity">${unit ? productionIdentityMarkup(unit, esc, { singleLine: true }) : `<strong>${esc(line || text('allLines'))}</strong><span>${esc(model || text('allModels'))}</span>`}</div></div><div class="entry-sheet-actions">${shiftPicker(context)}<button type="button" class="button" data-entry-action="current-slot">${esc(text('currentSlot'))}</button>${excel}${unit ? `<button type="button" class="button entry-reset" data-entry-action="reset-unit" data-reset-unit="${esc(productionKey(unit))}">${esc(text('reset'))}</button>` : ''}<button type="button" class="button" data-entry-action="save-all">${esc(text('saveNow'))}</button><span data-entry-overall role="status"></span></div></div>`;
   }
 
   /** One row per station across the full production day. The line daily preset
@@ -2485,6 +2552,10 @@ export function createEntryController({
     if (action === 'bulk-refresh') return loadBulkPreview();
     if (action === 'bulk-apply') return applyBulk(button.dataset.bulkApplyField);
     if (action === 'bulk-save') return saveBulk();
+    if (action === 'reset-unit') {
+      const [resetLine, resetModel] = JSON.parse(button.dataset.resetUnit);
+      return resetUnit({ line: resetLine, model: resetModel });
+    }
     if (action === 'bulk-issue-preset') {
       if (!bulkEditor || bulkEditor.busy || bulkEditor.loading) return;
       const preset = issuePresets(getContext().config).find((item) =>

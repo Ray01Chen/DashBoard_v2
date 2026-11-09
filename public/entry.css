@@ -943,6 +943,15 @@
   font-size: 12px;
 }
 .entry-sheet-actions .entry-interval-picker { margin: 0; }
+.entry-reset {
+  color: #b42318;
+  border-color: #f2b8b5;
+  background: #fff7f6;
+}
+.entry-reset:hover {
+  border-color: #d92d20;
+  background: #feeceb;
+}
 .entry-import-scope { position: relative; }
 .entry-excel-menu {
   position: absolute;
