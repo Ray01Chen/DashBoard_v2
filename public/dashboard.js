@@ -1,5 +1,5 @@
 import { buildLineMonitor, boardPage, monitoringPeriodState } from './monitor.js';
-import { productionKey, productionLabel, productionIdentityMarkup } from './production-models.js';
+import { productionLabel, productionIdentityMarkup } from './production-models.js';
 
 /** Aggregate by stable interval ID, including intervals retired after a report was saved. */
 export function aggregateMonitorSeries(lines, scheduledSlots) {

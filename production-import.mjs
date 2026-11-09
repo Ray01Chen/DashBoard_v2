@@ -1,11 +1,8 @@
 import { messages } from './public/i18n.js';
 import { readSpreadsheet, writeSpreadsheet } from './spreadsheet.mjs';
 import { importDiagnostic } from './import-messages.mjs';
-import { matchingInterval } from './line-production.mjs';
 import {
   modelOf,
-  productionKey,
-  sameProduction,
   orderedStationRows,
   stationHasOutput,
 } from './public/production-models.js';

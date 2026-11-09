@@ -789,24 +789,6 @@
 .entry-bulk-dialog::backdrop {
   background: #10263880;
 }
-.entry-bulk-dialog > p,
-.entry-bulk-context {
-  font-size: 12px;
-  line-height: 1.6;
-}
-.entry-bulk-context {
-  display: grid;
-  gap: 6px;
-  margin-top: 14px;
-  overflow-wrap: anywhere;
-}
-.entry-bulk-warning {
-  padding: 10px;
-  border: 1px solid #e6c78c;
-  background: #fff9ed;
-  border-radius: 5px;
-}
-.entry-bulk-interval,
 .entry-bulk-selectors label,
 .entry-bulk-values label {
   display: grid;
@@ -958,13 +940,20 @@
   min-width: 0;
   font-size: 12px;
 }
+.entry-sheet-identity .production-line {
+  flex-shrink: 0;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .entry-sheet-actions .entry-interval-picker { margin: 0; }
-.entry-reset {
+.entry-restore-defaults {
   color: #b42318;
   border-color: #f2b8b5;
   background: #fff7f6;
 }
-.entry-reset:hover {
+.entry-restore-defaults:hover {
   border-color: #d92d20;
   background: #feeceb;
 }

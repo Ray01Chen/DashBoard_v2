@@ -420,7 +420,8 @@ test('report target overrides and atomic shared line output', async (t) => {
         const first = await saveStation(3, 0, { target: 111, actual: 23, issue: 'Station A only' });
         assert.equal(first.status, 200, await first.clone().text());
         const a = await first.json();
-        const { activity: _activity, ...persistedA } = a;
+        const persistedA = { ...a };
+        delete persistedA.activity;
         assert.equal(a.dailyTarget, defaultsA.dailyTarget - defaultsA.slots[0].target + 111);
         assert.equal(a.slots[0].lineShared, undefined);
         assert.equal(a.slots[0].targetShared, undefined);

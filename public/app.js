@@ -158,10 +158,6 @@ const canManage = () => state.user?.role === 'admin';
 const t = (key, params) => translate(state.language, key, params);
 const number = (v) =>
   v == null ? '—' : new Intl.NumberFormat(localeTags[state.language]).format(v);
-const sum = (values) => {
-  const entered = values.filter((v) => v !== null && v !== undefined);
-  return entered.length ? entered.reduce((a, b) => a + b, 0) : null;
-};
 const hasWholeDayScope = () => ['overview', 'details'].includes(state.view);
 const reportScope = () => (hasWholeDayScope() ? state.overviewScope : state.shift);
 function syncReportScopeButtons() {
@@ -536,6 +532,8 @@ function populateLineFilters() {
   $('#line-total').textContent = t('lineCount', { count: values.length });
 }
 function combineShiftReports(reports) {
+  // Whole-day records are read-only projections. Entry must load each shift's
+  // own revision before saving; the merged version is only for display.
   const savedByShift = Object.fromEntries(
     reports.map(([shift, data]) => [shift, new Map(data.records.map((row) => [row.rowId, row]))]),
   );

@@ -12,7 +12,7 @@ import { lineDailyTarget, allocateDailyTarget } from './production-targets.js';
 import { issuePresets, issueLabel } from './issue-presets.js';
 
 /**
- * Production entry is deliberately separate from reporting. Only actual output
+ * Production entry is deliberately separate from reporting. Only output counts,
  * targets and issue notes are editable; staffing uses server-owned snapshots.
  * Every queue item captures its report date/shift so a later UI selection cannot
  * accidentally redirect an in-flight write into another report.
@@ -33,12 +33,8 @@ const messages = {
     noOutputHint: 'This station stays visible. Saved production and issues are read-only.',
     bulkNoOutput:
       'No enabled output stations in this line/model. Choose another combination or ask a manager to update its configuration.',
-    bulkChooseHint:
-      'Choose a Line and Model. Entered values stay here when switching; closing returns to the selected line/model.',
     bulkOpen: 'Fill interval',
     bulkTitle: 'Edit production interval',
-    bulkHint:
-      'Apply replaces this field for every station in the interval. Applying a blank clears that field; Restore default targets uses the daily preset allocation. Other intervals and the daily preset remain unchanged.',
     bulkRefresh: 'Refresh preview',
     bulkConflict:
       'Nothing was changed. Refresh preview, review the current values and apply again.',
@@ -55,13 +51,8 @@ const messages = {
     configurationPreview:
       'Preview of interval targets from the daily preset. Enable and save station configuration to enter Actual and Issue; these preview fields do not save reports.',
     allModels: 'All models',
-    unifiedHint:
-      'Each station saves independently. Blank is unreported; 0 is confirmed zero output.',
-    dailyTotal: 'Day + night target',
     defaultTarget: 'Default daily target',
     title: 'Production entry',
-    description:
-      'Enter Target and Actual directly. Click Add issue or a note preview to edit; changes save automatically.',
     line: 'Line',
     station: 'Station',
     allLines: 'All lines',
@@ -73,12 +64,8 @@ const messages = {
     issueHelp:
       'Saves automatically. Done, Esc or a click outside closes and saves. Ctrl+Enter closes; Enter adds a new line.',
     quickReasons: 'Quick text',
-    equipment: 'Equipment downtime',
-    material: 'Material shortage',
-    quality: 'Quality issue',
     clearIssue: 'Clear note',
     issueLimit: 'Maximum 2,000 characters.',
-    excelTools: 'Excel import & templates',
     target: 'Target',
     job: 'Job',
     saving: 'Saving…',
@@ -94,15 +81,13 @@ const messages = {
     latest: 'Latest saved data',
     mine: 'Your changes',
     saveNow: 'Save now',
-    reset: 'Reset',
-    resetTitle: 'Reset this production report?',
-    resetDescription:
+    restoreDefaults: 'Restore defaults',
+    restoreDefaultsTitle: 'Restore production defaults?',
+    restoreDefaultsDescription:
       'Restore Target from the daily preset and clear Actual and Issue for every station in {line} · {model} on {date}, across both shifts? This cannot be undone.',
-    resetConfirm: 'Reset report',
-    resetFailed: 'The report could not be reset. Review pending or conflicting station changes.',
+    restoreDefaultsConfirm: 'Restore defaults',
+    restoreDefaultsFailed: 'Unable to restore production defaults. Review pending or conflicting station changes.',
     autosave: 'Autosave',
-    reportHint:
-      'Targets follow the daily preset and production minutes. Changes affect only this station’s report.',
     noRows: 'No stations are available for this selection.',
     loading: 'Loading…',
     invalidActual: 'Enter a whole number from 0 to 99,999,999, or leave it blank.',
@@ -166,8 +151,6 @@ const messages = {
     bulkNoOutput: '這組產線／Model 沒有啟用的產出站點，請切換配對或請管理員調整配置。',
     bulkOpen: '同時段批次填寫',
     bulkTitle: '編輯時段目標與實績',
-    bulkHint:
-      '按「套用」會覆蓋此時段所有站的該欄；空白可清除該欄，「恢復預設目標」會依日目標配置還原。其他時段與日目標預設不變。',
     bulkRefresh: '更新預覽',
     bulkConflict: '本次未變更資料。請更新預覽，核對最新值後再套用。',
     bulkReview: '無法確認結果。請先更新預覽，確認已存數值後再套用。',
@@ -180,11 +163,8 @@ const messages = {
     configurationPreview:
       '下表預覽日目標分配到各時段的數值。先啟用並儲存站點配置，再填實績及異常；這些預覽欄位不會建立報表。',
     allModels: '全部 Model',
-    unifiedHint: '各站獨立儲存；空白表示未填報，0 表示確認零產出。',
-    dailyTotal: '全日目標',
     defaultTarget: '預設日目標',
     title: '生產填報',
-    description: '直接填 Target、Actual；點「新增異常」或說明摘要編輯異常，修改會自動儲存。',
     line: '產線',
     station: '站點',
     allLines: '全部產線',
@@ -195,12 +175,8 @@ const messages = {
     issueDetails: '發生什麼狀況？',
     issueHelp: '自動儲存；按完成、Esc 或點視窗外會關閉並儲存。Ctrl+Enter 完成，Enter 換行。',
     quickReasons: '快捷文字',
-    equipment: '設備停機',
-    material: '缺料',
-    quality: '品質異常',
     clearIssue: '清除說明',
     issueLimit: '最多 2,000 字元。',
-    excelTools: 'Excel 匯入與範本',
     target: '目標',
     job: '職務',
     saving: '儲存中…',
@@ -216,14 +192,13 @@ const messages = {
     latest: '最新已儲存資料',
     mine: '我的修改',
     saveNow: '立即儲存',
-    reset: '重設',
-    resetTitle: '要重設這份生產填報嗎？',
-    resetDescription:
+    restoreDefaults: '恢復預設',
+    restoreDefaultsTitle: '要恢復這份生產填報的預設值嗎？',
+    restoreDefaultsDescription:
       '將 {date} 的 {line} · {model} 兩班所有站點 Target 恢復為日目標預設配置，並清除 Actual 與異常？此操作無法復原。',
-    resetConfirm: '清除填報資料',
-    resetFailed: '無法重設填報，請先處理尚未儲存或衝突的站點資料。',
+    restoreDefaultsConfirm: '恢復預設',
+    restoreDefaultsFailed: '無法恢復填報預設值，請先處理尚未儲存或衝突的站點資料。',
     autosave: '自動儲存',
-    reportHint: '目標依日目標預設與生產分鐘分配；修改只影響本站當日填報。',
     noRows: '此選項沒有可填報的站點。',
     loading: '載入中…',
     invalidActual: '請輸入 0～99,999,999 的整數，或留空。',
@@ -284,12 +259,8 @@ const messages = {
     noOutput: 'ไม่มีผลผลิต · ไม่ต้องบันทึก',
     noOutputHint: 'ยังแสดงสถานี ผลผลิตและปัญหาเดิมดูได้อย่างเดียว',
     bulkNoOutput: 'คู่นี้ไม่มีสถานีที่เปิดใช้และมีผลผลิต เลือกคู่อื่นหรือให้ผู้จัดการแก้การตั้งค่า',
-    bulkChooseHint:
-      'เลือกสายและ Model ตัวเลขที่ยังไม่ใช้จะคงอยู่เมื่อเปลี่ยนคู่ ปิดแล้วกลับไปคู่ที่เลือก',
     bulkOpen: 'กรอกทั้งสายตามช่วง',
     bulkTitle: 'แก้เป้าหมายและผลจริงตามช่วง',
-    bulkHint:
-      'กดใช้เพื่อแทนค่าช่องนี้ของทุกสถานี ใช้ช่องว่างเพื่อล้างค่า หรือคืนค่าเป้าหมายจากเป้ารายวัน ช่วงอื่นและค่าเป้ารายวันไม่เปลี่ยน',
     bulkRefresh: 'โหลดตัวอย่างใหม่',
     bulkConflict: 'ยังไม่เปลี่ยนข้อมูล โหลดตัวอย่างใหม่ ตรวจค่าปัจจุบันแล้วใช้ค่าอีกครั้ง',
     bulkReview: 'ยังยืนยันผลไม่ได้ โหลดตัวอย่างเพื่อตรวจค่าที่บันทึกก่อนลองอีกครั้ง',
@@ -303,12 +274,8 @@ const messages = {
     configurationPreview:
       'ตัวอย่างเป้าหมายแต่ละช่วงจากค่าเริ่มต้น เปิดใช้และบันทึกสถานีก่อนกรอกผลจริงและปัญหา ช่องตัวอย่างนี้ไม่สร้างรายงาน',
     allModels: 'ทุก Model',
-    unifiedHint: 'แต่ละสถานีบันทึกแยกกัน ว่างคือยังไม่รายงาน 0 คือยืนยันผลผลิตเป็นศูนย์',
-    dailyTotal: 'เป้าหมายรวมวัน',
     defaultTarget: 'เป้าหมายรายวันเริ่มต้น',
     title: 'บันทึกการผลิต',
-    description:
-      'กรอก Target และ Actual โดยตรง คลิกเพิ่มปัญหาหรือข้อความย่อเพื่อแก้ไข บันทึกอัตโนมัติ',
     line: 'สายการผลิต',
     station: 'สถานี',
     allLines: 'ทุกสายการผลิต',
@@ -320,12 +287,8 @@ const messages = {
     issueHelp:
       'บันทึกอัตโนมัติ กดเสร็จสิ้น Esc หรือคลิกนอกหน้าต่างเพื่อปิดและบันทึก Ctrl+Enter ปิด Enter ขึ้นบรรทัดใหม่',
     quickReasons: 'ข้อความด่วน',
-    equipment: 'เครื่องจักรหยุด',
-    material: 'ขาดวัสดุ',
-    quality: 'ปัญหาคุณภาพ',
     clearIssue: 'ล้างข้อความ',
     issueLimit: 'สูงสุด 2,000 ตัวอักษร',
-    excelTools: 'นำเข้า Excel และแม่แบบ',
     target: 'เป้าหมาย',
     job: 'งาน',
     saving: 'กำลังบันทึก…',
@@ -341,14 +304,13 @@ const messages = {
     latest: 'ข้อมูลที่บันทึกล่าสุด',
     mine: 'การแก้ไขของคุณ',
     saveNow: 'บันทึกตอนนี้',
-    reset: 'รีเซ็ต',
-    resetTitle: 'รีเซ็ตรายงานการผลิตนี้หรือไม่',
-    resetDescription:
+    restoreDefaults: 'คืนค่าเริ่มต้น',
+    restoreDefaultsTitle: 'คืนค่าเริ่มต้นของรายงานการผลิตนี้หรือไม่',
+    restoreDefaultsDescription:
       'คืน Target จากเป้ารายวันและล้าง Actual กับปัญหาของทุกสถานีทั้งสองกะสำหรับ {line} · {model} วันที่ {date} หรือไม่ การดำเนินการนี้ย้อนกลับไม่ได้',
-    resetConfirm: 'ล้างข้อมูลรายงาน',
-    resetFailed: 'รีเซ็ตรายงานไม่ได้ โปรดจัดการข้อมูลที่ยังไม่บันทึกหรือขัดแย้งก่อน',
+    restoreDefaultsConfirm: 'คืนค่าเริ่มต้น',
+    restoreDefaultsFailed: 'คืนค่าเริ่มต้นรายงานไม่ได้ โปรดจัดการข้อมูลที่ยังไม่บันทึกหรือขัดแย้งก่อน',
     autosave: 'บันทึกอัตโนมัติ',
-    reportHint: 'เป้าหมายแบ่งตามค่าเริ่มต้นรายวันและนาทีผลิต การแก้ไขมีผลเฉพาะรายงานของสถานีนี้',
     noRows: 'ไม่มีสถานีสำหรับตัวเลือกนี้',
     loading: 'กำลังโหลด…',
     invalidActual: 'กรอกจำนวนเต็มตั้งแต่ 0 ถึง 99,999,999 หรือเว้นว่าง',
@@ -397,8 +359,6 @@ const messages = {
     configChanged: 'การตั้งค่าการผลิตเปลี่ยนแล้ว โปรดรีเฟรชรายงานก่อนโหลดทั้งสองกะ',
   },
 };
-
-export const entryMessages = messages;
 
 const copy = (value) => structuredClone(value);
 const slotValue = (slot, field) =>
@@ -1430,6 +1390,9 @@ export function createEntryController({
   function applyBulkDefaultTargets() {
     const editor = bulkEditor;
     if (!editor || editor.busy || editor.loading || !editor.rows.length) return false;
+    // Discard an unapplied shared target so saving cannot overwrite the defaults.
+    bulkDialog.querySelector('[data-bulk-field="target"]').value = '';
+    // Restore targets without changing station actuals or issue drafts.
     for (const row of editor.rows)
       row.draft.target = row.defaultTarget == null ? '' : String(row.defaultTarget);
     renderBulkRows();
@@ -1798,7 +1761,9 @@ export function createEntryController({
       : '';
   }
 
-  async function resetUnit(unit) {
+  /** Restore the selected production day using server-provided shift targets.
+   * Staffing snapshots stay captured; saves use the version-checked queue. */
+  async function restoreUnitDefaults(unit) {
     const context = getContext();
     const contexts = contextsFor(context);
     if (!unit || !contexts.day || !contexts.night) return setBanner(text('loading'));
@@ -1809,13 +1774,13 @@ export function createEntryController({
       date: context.date,
     }).reduce(
       (value, [key, replacement]) => value.replaceAll(`{${key}}`, replacement),
-      text('resetDescription'),
+      text('restoreDefaultsDescription'),
     );
     if (
       !(await onConfirm({
-        title: text('resetTitle'),
+        title: text('restoreDefaultsTitle'),
         description,
-        confirm: text('resetConfirm'),
+        confirm: text('restoreDefaultsConfirm'),
         cancel: text('close'),
       }))
     )
@@ -1848,7 +1813,7 @@ export function createEntryController({
     }
     render();
     const saved = await queue.flush();
-    setBanner(saved ? '' : text('resetFailed'));
+    setBanner(saved ? '' : text('restoreDefaultsFailed'));
     render();
     return saved;
   }
@@ -1877,7 +1842,7 @@ export function createEntryController({
         return `<div><strong>${esc(text(shift === 'all' ? 'wholeDay' : shift))}</strong><button type="button" class="button" data-entry-action="template" data-import-shift="${shift}" ${!ready || importState.busy ? 'disabled' : ''}>${esc(text('template'))}</button><button type="button" class="button" data-entry-action="open-import" data-import-shift="${shift}" ${!ready || importState.busy ? 'disabled' : ''}>${esc(text('importExcel'))}</button></div>`;
       })
       .join('')}</div></details>`;
-    return `<div class="entry-sheet-tools"><div class="entry-sheet-primary">${bulkLaunch(currentUnit)}<div class="entry-sheet-identity">${unit ? productionIdentityMarkup(unit, esc, { singleLine: true }) : `<strong>${esc(line || text('allLines'))}</strong><span>${esc(model || text('allModels'))}</span>`}</div></div><div class="entry-sheet-actions">${shiftPicker(context)}<button type="button" class="button" data-entry-action="current-slot">${esc(text('currentSlot'))}</button>${excel}${unit ? `<button type="button" class="button entry-reset" data-entry-action="reset-unit" data-reset-unit="${esc(productionKey(unit))}">${esc(text('reset'))}</button>` : ''}<button type="button" class="button" data-entry-action="save-all">${esc(text('saveNow'))}</button><span data-entry-overall role="status"></span></div></div>`;
+    return `<div class="entry-sheet-tools"><div class="entry-sheet-primary">${bulkLaunch(currentUnit)}<div class="entry-sheet-identity">${unit ? productionIdentityMarkup(unit, esc, { singleLine: true }) : `<strong>${esc(line || text('allLines'))}</strong><span>${esc(model || text('allModels'))}</span>`}</div></div><div class="entry-sheet-actions">${shiftPicker(context)}<button type="button" class="button" data-entry-action="current-slot">${esc(text('currentSlot'))}</button>${excel}${unit ? `<button type="button" class="button entry-restore-defaults" data-entry-action="restore-defaults" data-restore-defaults="${esc(productionKey(unit))}">${esc(text('restoreDefaults'))}</button>` : ''}<button type="button" class="button" data-entry-action="save-all">${esc(text('saveNow'))}</button><span data-entry-overall role="status"></span></div></div>`;
   }
 
   /** One row per station across the full production day. The line daily preset
@@ -2579,9 +2544,9 @@ export function createEntryController({
     if (action === 'bulk-apply') return applyBulk(button.dataset.bulkApplyField);
     if (action === 'bulk-default-target') return applyBulkDefaultTargets();
     if (action === 'bulk-save') return saveBulk();
-    if (action === 'reset-unit') {
-      const [resetLine, resetModel] = JSON.parse(button.dataset.resetUnit);
-      return resetUnit({ line: resetLine, model: resetModel });
+    if (action === 'restore-defaults') {
+      const [restoreLine, restoreModel] = JSON.parse(button.dataset.restoreDefaults);
+      return restoreUnitDefaults({ line: restoreLine, model: restoreModel });
     }
     if (action === 'bulk-issue-preset') {
       if (!bulkEditor || bulkEditor.busy || bulkEditor.loading) return;

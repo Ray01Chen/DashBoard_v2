@@ -1205,7 +1205,9 @@ try {
   assert.equal(await field(pack.id, 'target').inputValue(), '');
   assert.equal(await field(test.id, 'target').inputValue(), '');
   await bulkOpen();
+  await page.locator('[data-bulk-field="target"]').fill('999');
   await page.locator('[data-entry-action="bulk-default-target"]').click();
+  assert.equal(await page.locator('[data-bulk-field="target"]').inputValue(), '');
   assert.deepEqual(
     await page
       .locator('[data-bulk-cell="target"]')
@@ -1375,11 +1377,11 @@ try {
   await field(pack.id, 'actual', 2).fill('55');
   await field(pack.id, 'actual', 2).blur();
   await saved();
-  await page.locator('[data-entry-action="reset-unit"]').click();
-  assert.match(await page.locator('#confirm-title').innerText(), /Reset this production report/);
+  await page.locator('[data-entry-action="restore-defaults"]').click();
+  assert.match(await page.locator('#confirm-title').innerText(), /Restore production defaults/);
   await page.locator('#confirm-no').click();
   assert.equal(await field(pack.id, 'actual').inputValue(), '99');
-  await page.locator('[data-entry-action="reset-unit"]').click();
+  await page.locator('[data-entry-action="restore-defaults"]').click();
   await page.locator('#confirm-yes').click();
   await saved();
   for (const shift of ['day', 'night']) {
@@ -1410,7 +1412,7 @@ try {
   await page.locator('#report-date').dispatchEvent('change');
   await page.waitForFunction(() => document.querySelectorAll('[data-entry-field="actual"]').length === 6);
   record(
-    'Production reset requires confirmation, cancel preserves data, and confirm restores preset Targets while clearing Actual/Issue for every station across both shifts',
+    'Restore defaults requires confirmation, cancel preserves data, and confirm restores preset Targets while clearing Actual/Issue for every station across both shifts',
   );
 
   const retainedTest = (await readReport(batchDate)).records.find((row) => row.rowId === test.id);
