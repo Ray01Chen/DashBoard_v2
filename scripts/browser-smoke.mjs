@@ -754,7 +754,7 @@ try {
   await field(pack.id, 'actual').focus();
   await field(pack.id, 'actual').evaluate((input) => {
     const transfer = new DataTransfer();
-    transfer.setData('text/plain', '121\t122\n21\t22\n131\t132\n31\t32');
+    transfer.setData('text/plain', '121\t21\t122\t22\n131\t31\t132\t32');
     input.dispatchEvent(
       new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer }),
     );
@@ -786,7 +786,7 @@ try {
     String(test.id),
   );
   record(
-    'Main-grid paired paste maps odd rows to Target and even rows to Actual across stations; keyboard navigation remains independent',
+    'Main-grid paste maps adjacent Target/Actual columns to stations and following column pairs to intervals; keyboard navigation remains independent',
   );
   for (const [mode, count] of [
     ['sheet', 2],
@@ -1326,33 +1326,28 @@ try {
     'No-output stations stay ordered and visible without writable fields in all modes; history survives and batch skips them',
   );
 
-  // Any source row count follows odd=Target/even=Actual. The visible capacity
-  // clips overflow instead of wrapping it into another station or interval.
+  // Reproduce the reported 6 station x 2 field clipboard rectangle exactly.
+  // Target/Actual columns must stay together in the selected interval.
   const beforeVariablePasteConfig = await readConfig();
   const variablePasteDraft = structuredClone(beforeVariablePasteConfig);
   for (const row of variablePasteDraft.rows)
     if (row.id === test.id || row.id === pack.id) row.hasOutput = true;
-  variablePasteDraft.rows.push({
-    id: 'new-browser-variable-row-paste',
-    line: 'DEMO-A',
-    model,
-    job: 'PD',
-    station: 'Test',
-    active: true,
-    hasOutput: true,
-  });
+  const pasteStations = ['Paste station 3', 'Paste station 4', 'Paste station 5', 'Paste station 6'];
+  variablePasteDraft.stations.push(...pasteStations);
+  variablePasteDraft.rows.push(
+    ...pasteStations.map((station, index) => ({
+      id: `new-browser-paste-row-${index}`,
+      line: 'DEMO-A',
+      model,
+      job: 'PD',
+      station,
+      active: true,
+      hasOutput: true,
+    })),
+  );
   response = await context.request.put(baseURL + '/api/config', { data: variablePasteDraft });
   assert.equal(response.status(), 200, await response.text());
   const variablePasteConfig = await response.json();
-  const thirdPasteRow = variablePasteConfig.rows.find(
-    (row) =>
-      row.active &&
-      row.line === 'DEMO-A' &&
-      row.model === model &&
-      row.job === 'PD' &&
-      row.station === 'Test',
-  );
-  assert.ok(thirdPasteRow);
   const variablePasteDate = '2026-11-16';
   await page.goto(baseURL + '/entry');
   await page.locator('[data-entry-line]').selectOption('DEMO-A');
@@ -1363,12 +1358,12 @@ try {
   await page.locator('[data-entry-select-shift="day"]').click();
   await page.locator('[data-entry-mode]').selectOption('sheet');
   await page.waitForFunction(
-    () => document.querySelectorAll('[data-entry-field="actual"]').length === 3,
+    () => document.querySelectorAll('[data-entry-field="actual"]').length === 6,
   );
   const variablePasteOrder = await page
     .locator('[data-entry-station-row]:not([data-entry-no-output])')
     .evaluateAll((rows) => rows.map((row) => Number(row.dataset.entryStationRow)));
-  assert.equal(variablePasteOrder.length, 3);
+  assert.equal(variablePasteOrder.length, 6);
   await page.locator('[data-entry-field="actual"]').first().evaluate((input) => {
     const transfer = new DataTransfer();
     transfer.setData('text/plain', '299');
@@ -1380,7 +1375,7 @@ try {
   assert.equal(await page.locator('[data-entry-field="actual"]').first().inputValue(), '');
   await page.locator('[data-entry-field="actual"]').first().evaluate((input) => {
     const transfer = new DataTransfer();
-    transfer.setData('text/plain', '301\n31\n302\n32\n303\n33\n999');
+    transfer.setData('text/plain', '5\t0\n5\t0\n5\t0\n5\t12\n5\t0\n5\t0');
     input.dispatchEvent(
       new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer }),
     );
@@ -1388,16 +1383,17 @@ try {
   await page.locator('[data-entry-action="save-all"]').click();
   await saved();
   const variablePasteReport = await readReport(variablePasteDate);
+  const expectedActuals = [0, 0, 0, 12, 0, 0];
   for (const [index, rowId] of variablePasteOrder.entries()) {
     const row = variablePasteReport.records.find((record) => record.rowId === rowId);
-    assert.equal(row.slots[0].target, 301 + index);
-    assert.equal(row.slots[0].actual, 31 + index);
-    assert.notEqual(row.slots[1]?.target, 301 + index);
-    assert.notEqual(row.slots[1]?.actual, 31 + index);
+    assert.equal(row.slots[0].target, 5);
+    assert.equal(row.slots[0].actual, expectedActuals[index]);
+    assert.notEqual(row.slots[1]?.target, 5);
+    assert.notEqual(row.slots[1]?.actual, expectedActuals[index]);
   }
   await screenshot('.entry-unified', 'production-entry-paste');
   record(
-    'Any clipboard row count follows odd Target/even Actual; overflow is ignored without wrapping into another interval',
+    'The reported six-station Target/Actual rectangle stays entirely in the selected interval; single-column fallback and overflow clipping remain valid',
   );
   response = await context.request.put(baseURL + '/api/config', {
     data: { ...beforeVariablePasteConfig, version: variablePasteConfig.version },

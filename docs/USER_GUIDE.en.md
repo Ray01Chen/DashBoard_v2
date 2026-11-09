@@ -21,9 +21,9 @@ Save settings at top/bottom publishes the draft. Save draft stays in this browse
 
 ![Station production entry](./images/production-entry.png)
 
-Paste any number of rows vertically. Odd source rows are Target and even source rows are Actual for successive stations. Only the portion that fits the remaining stations and intervals is pasted; overflow is ignored and never wraps.
+Paste the spreadsheet rectangle directly: each source row is the next station, column 1 is Target and column 2 is Actual in the same interval. Columns 3/4 are the next interval. A single source column alone alternates Target/Actual down the rows. Overflow is ignored and never wraps.
 
-![Odd/even row Target and Actual paste](./images/production-entry-paste.png)
+![Adjacent Target and Actual columns stay in one interval](./images/production-entry-paste.png)
 
 Choose production date, Line and Model. All stations appear automatically; there is no station selector. The fixed left column shows Job/Station and day/night/whole-day totals. Each interval has adjacent **Target / Actual** inputs and a one-line issue button. Individual edits affect only that station. People and owners remain automatically captured and can be viewed in production details.
 
@@ -33,7 +33,7 @@ Whole-day spreadsheet shows both shifts; Whole-shift spreadsheet shows the selec
 
 The **Day shift** and **Night shift** buttons open that complete shift. **Go to current time slot** uses Bangkok time to open the active single interval and focus Actual; when the selected production date has no active interval, the page explains why.
 
-Click another numeric cell to autosave and confirm Saved. Tab moves across intervals within the same field; Enter moves down stations. Paste any row count: odd rows are Target, even rows are Actual, and columns follow intervals. Values beyond the remaining grid capacity are ignored instead of wrapping. Failed saves retain input. Review a station version conflict before Use latest data or Save my changed cells; only changed cells are merged and other stations stay independent.
+Click another numeric cell to autosave and confirm Saved. Tab moves across intervals within the same field; Enter moves down stations. In a pasted rectangle, each row is a station and adjacent Target/Actual columns stay in one interval; later column pairs continue to later intervals. A one-column list alternates Target/Actual down the rows. Values beyond the remaining grid capacity are ignored instead of wrapping. Failed saves retain input. Review a station version conflict before Use latest data or Save my changed cells; only changed cells are merged and other stations stay independent.
 
 Click **Add issue** or its preview, or press **F2** in a numeric cell. The editor identifies the station, date, shift and interval. Quick text inserts equipment, material or quality reasons; edit freely and use Enter for new lines, up to 2,000 characters. Done, X, Esc, Ctrl+Enter or a click outside closes and saves. Clear note removes the saved note. Opening without changes never creates a report. Long notes stay one line in the table; reopening shows the full text. F2 returns to the original numeric cell after closing. Save failures retain text and expose recovery controls beside the totals.
 
@@ -51,7 +51,7 @@ Click **Fill interval** at the left of the entry command bar. Select production 
 
 **Save now** saves without closing. X, Esc or clicking outside saves before closing; invalid values or conflicts keep the window and drafts open. Changing date/unit/interval saves the original scope before loading the destination. Closing returns entry to that destination. A conflicting batch saves nothing; Refresh preview retains changed fields for review before retrying.
 
-Paste adjacent Target/Actual columns into the batch sheet, or a single column alternating Target then Actual for each station. The main grid accepts paired rows across intervals: odd rows Target, even rows Actual, then the next station. Invalid or out-of-range rectangles are rejected in full. Other intervals and daily presets stay unchanged.
+Paste adjacent Target/Actual columns into the batch sheet, or a single column alternating Target then Actual for each station. The main grid also maps each source row to a station and each adjacent Target/Actual column pair to one interval. Invalid values inside the available area are rejected; overflow outside the main grid is ignored. Other intervals and daily presets stay unchanged.
 
 ## Stations without output
 

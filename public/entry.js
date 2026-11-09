@@ -22,7 +22,7 @@ const messages = {
     bulkApplyIssue: 'Apply issues',
     wholeDay: 'Whole day',
     pasteHint:
-      'Paste any number of rows: odd rows are Target, even rows are Actual. Values that exceed the remaining stations or time slots are ignored.',
+      'Paste rows directly: odd columns are Target, even columns are Actual; each row is the next station. A single column alternates Target/Actual by row. Overflow is ignored.',
     bulkDateInvalid: 'Choose a valid production date.',
     bulkApplyActual: 'Apply actuals',
     bulkApplyTarget: 'Apply targets',
@@ -147,7 +147,7 @@ const messages = {
   zh: {
     bulkApplyIssue: '套用異常',
     wholeDay: '一整天',
-    pasteHint: '可貼任意列數：單數列是目標、雙數列是實績；超過剩餘站點或時段的值不貼上。',
+    pasteHint: '直接照表貼上：單數欄是目標、雙數欄是實績，每列是下一站；單欄資料才依列交錯目標／實績。超出容量不貼上。',
     bulkDateInvalid: '請選擇有效的生產日期。',
     bulkApplyActual: '套用實績',
     bulkApplyTarget: '套用目標',
@@ -260,7 +260,7 @@ const messages = {
   th: {
     bulkApplyIssue: 'ใช้ปัญหากับทุกสถานี',
     wholeDay: 'ทั้งวัน',
-    pasteHint: 'วางกี่แถวก็ได้: แถวคี่เป็น Target แถวคู่เป็น Actual ค่าที่เกินสถานีหรือช่วงเวลาที่เหลือจะไม่ถูกวาง',
+    pasteHint: 'วางตามตาราง: คอลัมน์คี่เป็น Target คอลัมน์คู่เป็น Actual แต่ละแถวคือสถานีถัดไป ถ้ามีคอลัมน์เดียวจึงสลับ Target/Actual ตามแถว ส่วนเกินจะไม่ถูกวาง',
     bulkDateInvalid: 'เลือกวันที่ผลิตที่ถูกต้อง',
     bulkApplyActual: 'ใช้ผลจริง',
     bulkApplyTarget: 'ใช้เป้าหมาย',
@@ -447,10 +447,17 @@ export function planEntryPaste(tsv, grid, row, column, pairedGrids = null) {
   for (let y = 0; y < values.length; y++) {
     for (let x = 0; x < width; x++) {
       const paired = Boolean(pairedGrids);
-      const destinationField = paired ? (y % 2 === 0 ? 'target' : 'actual') : field;
+      const adjacentFields = paired && width > 1;
+      const destinationField = paired
+        ? (adjacentFields ? x : y) % 2 === 0
+          ? 'target'
+          : 'actual'
+        : field;
       const destination = paired ? pairedGrids[destinationField] : grid;
-      const destinationRow = row + (paired ? Math.floor(y / 2) : y);
-      const destinationColumn = column + x;
+      const destinationRow =
+        row + (paired ? (adjacentFields ? y : Math.floor(y / 2)) : y);
+      const destinationColumn =
+        column + (paired ? (adjacentFields ? Math.floor(x / 2) : x) : x);
       // The production grid follows spreadsheet edge behavior: paste the part
       // that fits from the selected cell and never wrap overflow into another
       // station or interval. Non-edge holes still reject the full paste.

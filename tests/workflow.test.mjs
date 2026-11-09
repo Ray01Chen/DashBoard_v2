@@ -288,7 +288,7 @@ test('Excel paste preflights the full rectangle, preserves blanks and zero, and 
   assert.equal(planEntryPaste('1\t2\n3\t4', grid, 0, 0).valid, false);
 });
 
-test('main entry paired paste maps odd rows to Target and even rows to Actual', () => {
+test('main entry rectangle maps adjacent Target/Actual columns and rows to stations', () => {
   const paired = Object.fromEntries(
     ['target', 'actual'].map((field) => [
       field,
@@ -302,7 +302,7 @@ test('main entry paired paste maps odd rows to Target and even rows to Actual', 
     ]),
   );
   const plan = planEntryPaste(
-    '10\t11\n20\t21\n30\t31\n40\t41',
+    '10\t20\t11\t21\n30\t40\t31\t41',
     paired.actual,
     0,
     0,
@@ -313,18 +313,18 @@ test('main entry paired paste maps odd rows to Target and even rows to Actual', 
     plan.edits.map(({ rowKey, slotId, field, value }) => [rowKey, slotId, field, value]),
     [
       ['row-0', 'slot-0', 'target', 10],
-      ['row-0', 'slot-1', 'target', 11],
       ['row-0', 'slot-0', 'actual', 20],
+      ['row-0', 'slot-1', 'target', 11],
       ['row-0', 'slot-1', 'actual', 21],
       ['row-1', 'slot-0', 'target', 30],
-      ['row-1', 'slot-1', 'target', 31],
       ['row-1', 'slot-0', 'actual', 40],
+      ['row-1', 'slot-1', 'target', 31],
       ['row-1', 'slot-1', 'actual', 41],
     ],
   );
 });
 
-test('main entry paste accepts any row count, follows odd/even fields and clips overflow', () => {
+test('single-column main entry paste alternates Target/Actual rows and clips overflow', () => {
   const paired = Object.fromEntries(
     ['target', 'actual'].map((field) => [
       field,
@@ -370,6 +370,37 @@ test('main entry paste accepts any row count, follows odd/even fields and clips 
       ['station-2', 'actual', 4],
     ],
   );
+});
+
+test('six station rows with Target/Actual columns stay in the selected interval', () => {
+  const paired = Object.fromEntries(
+    ['target', 'actual'].map((field) => [
+      field,
+      Array.from({ length: 6 }, (_, row) =>
+        [0, 1].map((column) => ({
+          rowKey: `station-${row}`,
+          slotId: `slot-${column}`,
+          field,
+        })),
+      ),
+    ]),
+  );
+  const plan = planEntryPaste(
+    '5\t0\n5\t0\n5\t0\n5\t12\n5\t0\n5\t0',
+    paired.actual,
+    0,
+    0,
+    paired,
+  );
+  assert.equal(plan.valid, true);
+  assert.deepEqual(
+    plan.edits.map(({ rowKey, slotId, field, value }) => [rowKey, slotId, field, value]),
+    Array.from({ length: 6 }, (_, row) => [
+      [`station-${row}`, 'slot-0', 'target', 5],
+      [`station-${row}`, 'slot-0', 'actual', row === 3 ? 12 : 0],
+    ]).flat(),
+  );
+  assert.ok(plan.edits.every((edit) => edit.slotId === 'slot-0'));
 });
 
 test('spreadsheet keyboard navigation skips unavailable cells and exits at Tab boundaries', () => {
