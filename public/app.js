@@ -119,6 +119,7 @@ const state = {
   activity: {},
   serverOffset: 0,
   defaults: {},
+  dailyReport: null,
   detailGroupId: '',
   boardPage: 0,
   groupId: '',
@@ -603,6 +604,7 @@ async function loadRecords(background = false) {
   if (!background) {
     state.loading = true;
     state.records.clear();
+    state.dailyReport = null;
     render();
   }
   state.connection = 'syncing';
@@ -610,7 +612,7 @@ async function loadRecords(background = false) {
   updateConnection();
   try {
     const scope = reportScope();
-    const shifts = scope === 'all' ? ['day', 'night'] : [scope];
+    const shifts = hasWholeDayScope() ? ['day', 'night'] : [scope];
     const reports = await Promise.all(
       shifts.map(async (shift) => {
         const data = await api(`/api/records?date=${state.date}&shift=${shift}`);
@@ -621,12 +623,16 @@ async function loadRecords(background = false) {
         return [shift, data];
       }),
     );
-    const data = scope === 'all' ? combineShiftReports(reports) : reports[0][1];
+    if (new Set(reports.map(([, data]) => data.configVersion)).size > 1)
+      throw new Error(t('configChanged'));
+    const dailyReport = reports.length === 2 ? combineShiftReports(reports) : null;
+    const data = scope === 'all' ? dailyReport : reports.find(([shift]) => shift === scope)[1];
     if (seq !== state.sequence) return;
     if (data.configVersion !== state.config.version) {
       state.config = await api('/api/config');
       if (seq !== state.sequence) return;
     }
+    state.dailyReport = dailyReport;
     state.defaults = data.defaults || {};
     state.records = new Map(data.records.map((r) => [r.rowId, r]));
     state.rowVersions = data.rowVersions || {};
@@ -688,15 +694,15 @@ function renderVisuals() {
   renderChart();
 }
 // Planned targets are visible before an operator enters actual output. Saved snapshots win.
-function monitorRecords() {
-  const records = [...state.records.values()];
-  for (const row of state.config.rows.filter((r) => r.active && !state.records.has(r.id))) {
-    const defaults = state.defaults[row.id];
-    if (defaults)
+function monitorRecords(saved = state.records, defaults = state.defaults) {
+  const records = [...saved.values()];
+  for (const row of state.config.rows.filter((r) => r.active && !saved.has(r.id))) {
+    const initial = defaults[row.id];
+    if (initial)
       records.push({
-        ...defaults,
+        ...initial,
         rowId: row.id,
-        slots: (defaults.slots || []).map((s) => ({
+        slots: (initial.slots || []).map((s) => ({
           ...s,
           actual: s.lineShared ? s.actual : null,
           issue: '',
@@ -707,19 +713,22 @@ function monitorRecords() {
 }
 function monitorContext() {
   const scope = reportScope();
-  const config =
-    scope === 'all'
-      ? {
-          ...state.config,
-          schedules: {
-            ...state.config.schedules,
-            all: [...state.config.schedules.day, ...state.config.schedules.night],
-          },
-        }
-      : state.config;
+  const config = {
+    ...state.config,
+    schedules: {
+      ...state.config.schedules,
+      all: [...state.config.schedules.day, ...state.config.schedules.night],
+    },
+  };
   return {
     config,
     records: monitorRecords(),
+    dailyRecords: state.dailyReport
+      ? monitorRecords(
+          new Map(state.dailyReport.records.map((record) => [record.rowId, record])),
+          state.dailyReport.defaults,
+        )
+      : null,
     date: state.date,
     shift: scope,
     activity: state.activity,
@@ -733,13 +742,12 @@ function monitorContext() {
         1,
         Math.floor(
           (innerHeight -
-            (innerWidth <= 750 ? 260 : 230) -
+            (innerWidth <= 750 ? 320 : 280) -
             (stored('bp-board-trend') === 'true' || stored('bp-board-share') === 'true'
               ? 190
               : 0)) /
-            // Allow the full model label and source to wrap in every visible
-            // row; a dense seven-row page clipped real catalog names.
-            (innerWidth <= 750 ? 120 : 140),
+            // Budget space for six metrics and wrapped model/status labels.
+            (innerWidth <= 750 ? 190 : 150),
         ),
       ),
     ),
@@ -980,7 +988,11 @@ async function setView(view, options = {}) {
   if (options.history !== false) syncPageAddress();
   updateHeadings();
   if (view === 'settings') renderSettings();
-  else if (!['help'].includes(view) && state.loadedScope !== `${state.date}|${reportScope()}`)
+  else if (
+    view !== 'help' &&
+    (state.loadedScope !== `${state.date}|${reportScope()}` ||
+      (hasWholeDayScope() && !state.dailyReport))
+  )
     await loadRecords();
   else render();
   return true;

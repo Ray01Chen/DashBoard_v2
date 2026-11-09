@@ -16,12 +16,72 @@ export function aggregateMonitorSeries(lines, scheduledSlots) {
   });
 }
 
+const overviewMetricKeys = [
+  'currentTarget',
+  'currentActual',
+  'dailyTarget',
+  'cumulativeTarget',
+  'cumulativeActual',
+  'cumulativeGap',
+];
+
+export function overviewMetricsMarkup(metrics, { t, esc, number }) {
+  return overviewMetricKeys
+    .map((key) => {
+      const value = metrics[key];
+      const difference = key === 'cumulativeGap';
+      const tone =
+        difference && value != null
+          ? value < 0
+            ? 'negative'
+            : value > 0
+              ? 'positive'
+              : ''
+          : '';
+      return `<span class="production-metric" data-metric="${key}" title="${esc(t(key + 'Help'))}"><small>${esc(t(key))}</small><b class="${tone}" title="${esc(number(value))}">${difference && value > 0 ? '+' : ''}${number(value)}</b></span>`;
+    })
+    .join('');
+}
+
+function updateOverviewMetrics(element, metrics, { number }) {
+  if (!element) return;
+  for (const key of overviewMetricKeys) {
+    const value = metrics[key];
+    const output = element.querySelector(`[data-metric="${key}"] b`);
+    if (!output) continue;
+    output.textContent = (key === 'cumulativeGap' && value > 0 ? '+' : '') + number(value);
+    output.title = number(value);
+    output.className =
+      key === 'cumulativeGap' && value != null
+        ? value < 0
+          ? 'negative'
+          : value > 0
+            ? 'positive'
+            : ''
+        : '';
+  }
+}
+
 export function renderMonitoring(ctx, { chart = true } = {}) {
   const { config, records, date, shift, activity, now, groupId, chartLine, t, esc, number } =
     ctx;
-  const all = buildLineMonitor(config, records, date, shift, activity, now),
-    group = config.monitoring.groups.find((g) => g.id === groupId),
-    lines = all.filter((l) => !group || group.lines.includes(l.line));
+  const all = buildLineMonitor(config, records, date, shift, activity, now);
+  const daily =
+    shift === 'all' || !ctx.dailyRecords
+      ? all
+      : buildLineMonitor(config, ctx.dailyRecords, date, 'all', activity, now);
+  const dailyTargets = new Map(daily.map((line) => [line.key || line.line, line.target]));
+  const group = config.monitoring.groups.find((g) => g.id === groupId);
+  const lines = all
+    .filter((line) => !group || group.lines.includes(line.line))
+    .map((line) => ({ ...line, dailyTarget: dailyTargets.get(line.key || line.line) ?? null }));
+  const totals = Object.fromEntries(
+    overviewMetricKeys.map((key) => [key, sum(lines.map((line) => line[key]))]),
+  );
+  totals.cumulativeGap =
+    totals.cumulativeTarget == null || totals.cumulativeActual == null
+      ? null
+      : totals.cumulativeActual - totals.cumulativeTarget;
   const cards = document.querySelector('#line-cards');
   document.querySelector('#alert-summary').textContent = t('alertCount', {
     count: lines.filter((l) => l.rule).length,
@@ -33,11 +93,11 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
       .map((l) => {
         const period = monitoringPeriodState(config, date, shift, now),
           progress =
-            l.actual === null
+            l.cumulativeActual === null
               ? t('waiting')
-              : l.gap === null
+              : l.cumulativeGap === null
                 ? t('noComparableTarget')
-                : t(l.gap < 0 ? 'belowTarget' : 'onTarget');
+                : t(l.cumulativeGap < 0 ? 'belowTarget' : 'onTarget');
         const status = t('outputStatus') + ': ' + progress,
           monitor =
             t('monitoringStatus') +
@@ -51,6 +111,7 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
             (c) => c.dataset.monitorLine === (l.key || l.line),
           );
           if (card) {
+            updateOverviewMetrics(card, l, ctx);
             const classes =
               'line-card alarm-' +
               l.status +
@@ -67,7 +128,7 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
           }
           return '';
         }
-        return `<button class="line-card alarm-${l.status} ${l.blink ? 'blinking-frame' : ''} ${chartLine === (l.key || l.line) ? 'selected' : ''}" data-monitor-line="${esc(l.key || l.line)}" aria-label="${esc(productionLabel(l))}" aria-pressed="${chartLine === (l.key || l.line)}"><span class="line-card-top">${productionIdentityMarkup(l, esc)}<span class="signal-lamp lamp-${l.status} " role="img" aria-label="${esc(status)}"></span></span><span class="line-source">${esc(t('sourceLabel', { name: l.sourceLabel || t('noSource') }))}</span><span class="line-card-values"><span>${esc(t('target'))}<b title="${number(l.target)}">${number(l.target)}</b></span><span>${esc(t('actual'))}<b title="${number(l.actual)}">${number(l.actual)}</b></span><span>${esc(t('gap'))}<b class="${l.gap < 0 ? 'negative' : l.gap > 0 ? 'positive' : ''}">${l.gap > 0 ? '+' : ''}${number(l.gap)}</b></span></span>${trendSvg(
+        return `<button class="line-card alarm-${l.status} ${l.blink ? 'blinking-frame' : ''} ${chartLine === (l.key || l.line) ? 'selected' : ''}" data-monitor-line="${esc(l.key || l.line)}" aria-label="${esc(productionLabel(l))}" aria-pressed="${chartLine === (l.key || l.line)}"><span class="line-card-top">${productionIdentityMarkup(l, esc)}<span class="signal-lamp lamp-${l.status} " role="img" aria-label="${esc(status)}"></span></span><span class="line-source">${esc(t('sourceLabel', { name: l.sourceLabel || t('noSource') }))}</span><span class="line-card-values">${overviewMetricsMarkup(l, ctx)}</span>${trendSvg(
           l.series.map((v) => ({
             ...v,
             slot: v,
@@ -77,7 +138,14 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
         )}<span class="line-card-status" title="${esc(t('achievementExplain') + ' / ' + monitor)}"><span class="${l.rule ? 'alert-text' : ''}">${esc(status)}</span><small>${esc(monitor)}</small></span></button>`;
       })
       .join('') || `<div class="empty-cell">${esc(t('emptyGroup'))}</div>`;
-  if (!chart) return;
+  if (!chart) {
+    updateOverviewMetrics(document.querySelector('#group-summary'), totals, ctx);
+    const dialog = document.querySelector('#line-detail-dialog[open]');
+    const detailKey = dialog?.querySelector('[data-detail-line]')?.dataset.detailLine;
+    const detail = lines.find((line) => (line.key || line.line) === detailKey);
+    if (detail) updateOverviewMetrics(dialog, detail, ctx);
+    return;
+  }
   cards.innerHTML = cardMarkup;
   document.querySelector('#board-pagination').innerHTML = ctx.board
     ? '<span>' +
@@ -100,12 +168,6 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
       ctx.icon('right') +
       '</button></div>'
     : '';
-  const totalOf = (key) => {
-    const values = lines.map((l) => l[key]).filter((v) => v !== null);
-    return values.length ? values.reduce((a, b) => a + b, 0) : null;
-  };
-  const actual = totalOf('actual'),
-    target = totalOf('target');
   document.querySelector('#group-summary').innerHTML =
     '<div class="group-heading">' +
     ctx.icon('layers') +
@@ -114,22 +176,7 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
     '</small><h2>' +
     esc(group?.name || t('allGroups')) +
     '</h2></div></div><div class="group-summary-values">' +
-    [
-      ['target', target],
-      ['actual', actual],
-      ['gap', totalOf('gap')],
-    ]
-      .map(
-        ([key, value]) =>
-          '<div class="group-stat"><small>' +
-          esc(t(key)) +
-          '</small><strong title="' +
-          number(value) +
-          '">' +
-          number(value) +
-          '</strong></div>',
-      )
-      .join('') +
+    overviewMetricsMarkup(totals, ctx) +
     '</div><span class="current-interval" id="current-interval"></span>';
   const production = config.schedules[shift].filter((s) => s.kind === 'production');
   const trend = document.querySelector('#group-trend');
@@ -150,7 +197,10 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
   const scrollLeft = trend.scrollLeft;
   trend.innerHTML = trendSvg(aggregateMonitorSeries(lines, production), { ...ctx, trendSize });
   trend.scrollLeft = scrollLeft;
-  document.querySelector('#output-share').innerHTML = shareMarkup(lines, ctx);
+  document.querySelector('#output-share').innerHTML = shareMarkup(
+    lines.map((line) => ({ ...line, actual: line.cumulativeActual })),
+    ctx,
+  );
   document.querySelector('#refresh-interval').textContent = t('refreshEvery', {
     seconds: config.monitoring.refreshSeconds,
   });
@@ -351,7 +401,7 @@ function shareMarkup(lines, { t, esc, number }) {
     '<text x="80" y="77" text-anchor="middle" class="donut-total">' +
     number(total) +
     '</text><text x="80" y="97" text-anchor="middle">' +
-    esc(t('actual')) +
+    esc(t('cumulativeActual')) +
     '</text></svg><div class="share-legend">' +
     shares
       .map(

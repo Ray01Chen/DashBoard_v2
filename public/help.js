@@ -72,8 +72,8 @@ const guides = {
       {
         title: 'Overview, details and full-screen board',
         paragraphs: [
-          'Overview defaults to Whole day, so Target, Actual and Gap cover both shifts. Whole day / Day / Night is available above both Overview and Production details. Each line/model uses its selected output station; group totals never double-count every station.',
-          'Normal line clicks open details. Full screen clicks open a station-detail dialog; X or Esc returns to the same group/page. Its header follows the active colour theme and keeps line, model, owner, Target, Actual and Gap together. Each station labels Day and Night personnel separately.',
+          'Overview defaults to Whole day. Cards and group totals show Interval target/actual, Daily target, Target/Actual to now and Cumulative gap. Daily target always covers both shifts; cumulative values include the full target of intervals started by now, excluding future intervals. Missing values stay —, and shortfall alerts use the same cumulative comparison. Whole day / Day / Night is available above both Overview and Production details. Each line/model uses its selected output station; group totals never double-count every station.',
+          'Normal line clicks open details. Full screen clicks open a station-detail dialog; X or Esc returns to the same group/page. Its header follows the active colour theme and keeps line, model, owner and the six interval/daily/cumulative metrics together. Each station labels Day and Night personnel separately.',
           'The group trend keeps every time label readable; dense schedules scroll horizontally inside the chart, including fullscreen. Hover or Tab to an interval to see its values. Refresh keeps the scroll position. Display options independently toggle group trend and output share. Missing output remains blank. The board shows at most seven units per page.',
         ],
       },
@@ -169,8 +169,8 @@ const guides = {
       {
         title: '總覽、細節與全螢幕看板',
         paragraphs: [
-          '總覽預設「全天」，目標、實績與差異合併兩班；生產總覽與生產細節上方都可切換全天／早班／晚班。每組產線／Model 仍只使用所選來源站，避免重複計產量。',
-          '全螢幕明細頂部沿用目前主題配色，集中產線、機種、負責人、目標、實績與差異；各站人員分早班、晚班標示。X 或 Esc 關閉後保留分組與頁次。',
+          '總覽預設「全天」。卡片與合計顯示時段目標／實績、每日目標、累計目標／實績／差額；每日目標固定涵蓋雙班，累計只計到目前已開始時段（含目前時段完整目標），不扣未來目標；缺值顯示 —，缺口警示採相同累計比較。生產總覽與生產細節上方都可切換全天／早班／晚班。每組產線／Model 仍只使用所選來源站，避免重複計產量。',
+          '全螢幕明細頂部沿用目前主題配色，集中產線、機種、負責人及六項時段／全日／累計數字；各站人員分早班、晚班標示。X 或 Esc 關閉後保留分組與頁次。',
           '分組總產量趨勢保留每個時段名稱與間距；時段較多時在圖表內左右捲動，全螢幕也適用。滑鼠停留或 Tab 聚焦查看數值，刷新保留捲動位置。顯示選項可分別控制趨勢與占比；未填報保持空白。每頁最多七組。',
         ],
       },
@@ -267,8 +267,8 @@ const guides = {
       {
         title: 'ภาพรวม รายละเอียด และกระดานเต็มหน้าจอ',
         paragraphs: [
-          'ภาพรวมเริ่มต้นที่ทั้งวัน รวม Target, Actual และ Gap ของสองกะ ทั้งหน้าภาพรวมและรายละเอียดเลือกทั้งวัน/กะเช้า/กะกลางคืนได้ แต่ละสาย/Model ยังใช้สถานีแหล่งผลผลิตเดียวเพื่อไม่ให้นับซ้ำ',
-          'หน้าต่างเต็มหน้าจอใช้สีตามธีมและรวมสาย Model ผู้รับผิดชอบ Target Actual และ Gap ไว้ด้านบน การ์ดแต่ละสถานีแยกบุคลากรกะเช้าและกะกลางคืน X หรือ Esc กลับกลุ่ม/หน้าเดิม',
+          'ภาพรวมเริ่มต้นที่ทั้งวัน แสดงเป้า/ผลจริงช่วงปัจจุบัน เป้ารายวัน เป้า/ผลจริงสะสม และผลต่างสะสม เป้ารายวันรวมสองกะ ส่วนสะสมรวมเฉพาะช่วงที่เริ่มแล้วโดยใช้เป้าเต็มช่วง ไม่รวมอนาคต ไม่มีข้อมูลแสดง — และแจ้งเตือนใช้ผลต่างสะสมเดียวกัน ทั้งหน้าภาพรวมและรายละเอียดเลือกทั้งวัน/กะเช้า/กะกลางคืนได้ แต่ละสาย/Model ยังใช้สถานีแหล่งผลผลิตเดียวเพื่อไม่ให้นับซ้ำ',
+          'หน้าต่างเต็มหน้าจอใช้สีตามธีมและรวมสาย Model ผู้รับผิดชอบ และหกค่าของช่วงปัจจุบัน รายวัน และสะสมไว้ด้านบน การ์ดแต่ละสถานีแยกบุคลากรกะเช้าและกะกลางคืน X หรือ Esc กลับกลุ่ม/หน้าเดิม',
           'กราฟรวมรักษาระยะห่างของป้ายเวลาทุกช่วง หากมีหลายช่วงให้เลื่อนแนวนอนในกราฟ รวมถึงเต็มหน้าจอ ชี้เมาส์หรือกด Tab เพื่อดูค่า รีเฟรชเก็บตำแหน่งเลื่อนเดิม ตัวเลือกเปิดแนวโน้มและสัดส่วนแยกกัน ไม่กรอกไม่ถือเป็นศูนย์ สูงสุดเจ็ดคู่ต่อหน้า',
         ],
       },

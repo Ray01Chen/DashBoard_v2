@@ -1,5 +1,5 @@
 import { buildLineMonitor } from './monitor.js';
-import { trendSvg, sum } from './dashboard.js';
+import { trendSvg, sum, overviewMetricsMarkup } from './dashboard.js';
 import {
   sameProduction,
   productionIdentityMarkup,
@@ -48,28 +48,30 @@ export function showLineDetail(dialog, context) {
   ];
   const owners = assignedNames('owners', 'owner');
   const owner = owners[0] || '';
+  const dailyMonitor =
+    shift !== 'all' && context.dailyRecords
+      ? buildLineMonitor(
+          config,
+          context.dailyRecords,
+          date,
+          'all',
+          context.activity,
+          context.now,
+        ).find((item) => (item.key || item.line) === line)
+      : monitor;
   const trend = trendSvg(series, {
     ...context,
     trendSize: { width: 1040, height: 320 },
   });
 
   dialog.querySelector('#line-detail-content').innerHTML = `
-    <header class="line-modal-header">
+    <header class="line-modal-header" data-detail-line="${esc(monitor.key || monitor.line)}">
       <div class="line-modal-identity">
         <span class="section-eyebrow">${esc(date)} · ${esc(t(shift === 'all' ? 'overviewAll' : shift))} · ${esc(t('details'))}</span>
         <h2 id="line-modal-title">${productionIdentityMarkup(monitor, esc, { singleLine: true })}</h2>
         <div class="line-modal-owner"><span>${esc(t('owner'))}</span><strong title="${esc(owners.join('\n'))}">${esc(owner || t('none'))}</strong>${owners.length > 1 ? `<small>+${owners.length - 1}</small>` : ''}</div>
       </div>
-      <div class="line-modal-totals">${[
-        ['target', monitor.target],
-        ['actual', monitor.actual],
-        ['gap', monitor.gap],
-      ]
-        .map(
-          ([key, value]) =>
-            `<div><small>${esc(t(key))}</small><strong>${number(value)}</strong></div>`,
-        )
-        .join('')}</div>
+      <div class="line-modal-totals">${overviewMetricsMarkup({ ...monitor, dailyTarget: dailyMonitor?.target ?? null }, context)}</div>
       <button class="icon-button" data-close-line-dialog aria-label="${esc(t('close'))}">${icon('close')}</button>
     </header>
     <div class="line-modal-body">

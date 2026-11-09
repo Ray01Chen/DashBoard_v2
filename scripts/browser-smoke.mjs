@@ -952,7 +952,15 @@ try {
   await screenshot('.entry-unified', 'production-entry');
   await screenshot('.entry-station-values', 'production-cell');
   record('Real XLSX preview and import preserve different station targets, actuals and issues');
+  // Keep server-authoritative time deterministic for current-interval metrics.
+  await page.route('**/api/records?**', async (route) => {
+    const response = await route.fetch();
+    const data = await response.json();
+    data.serverTime = Date.parse('2026-11-10T08:50:00+07:00');
+    await route.fulfill({ response, json: data });
+  });
   await page.locator('[data-view="overview"]').click();
+  await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
   const card = page
     .locator('[data-monitor-line]')
     .filter({ hasText: model.split('-')[0] })
@@ -967,7 +975,7 @@ try {
     );
   assert.match(await card.locator('.line-source').innerText(), /Test/);
   assert.equal(
-    (await card.locator('.line-card-values > span').nth(1).locator('b').innerText()).replaceAll(
+    (await card.locator('[data-metric="cumulativeActual"] b').innerText()).replaceAll(
       ',',
       '',
     ),
@@ -980,9 +988,10 @@ try {
   await page.locator('[data-unit-output-source]').selectOption(String(pack.id));
   await saveSettings();
   await page.locator('[data-view="overview"]').click();
+  await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
   assert.match(await card.locator('.line-source').innerText(), /Pack/);
   assert.equal(
-    (await card.locator('.line-card-values > span').nth(1).locator('b').innerText()).replaceAll(
+    (await card.locator('[data-metric="cumulativeActual"] b').innerText()).replaceAll(
       ',',
       '',
     ),
@@ -992,7 +1001,7 @@ try {
     'Dashboard output and target use only the chosen station; changing the source takes effect on existing entries',
   );
   const dayTarget = Number(
-    (await card.locator('.line-card-values > span').first().locator('b').innerText()).replaceAll(
+    (await card.locator('[data-metric="dailyTarget"] b').innerText()).replaceAll(
       ',',
       '',
     ),
@@ -1000,12 +1009,28 @@ try {
   await page.locator('[data-report-scope="all"]').click();
   await page.waitForFunction(() => document.querySelector('#board-context').textContent.includes('Whole day'));
   const wholeDayTarget = Number(
-    (await card.locator('.line-card-values > span').first().locator('b').innerText()).replaceAll(
+    (await card.locator('[data-metric="dailyTarget"] b').innerText()).replaceAll(
       ',',
       '',
     ),
   );
-  assert.ok(wholeDayTarget > dayTarget);
+  await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
+  assert.equal(wholeDayTarget, dayTarget);
+  assert.equal(await card.locator('[data-metric="currentTarget"] b').innerText(), '122');
+  assert.equal(await card.locator('[data-metric="currentActual"] b').innerText(), '22');
+  assert.equal(await card.locator('[data-metric="cumulativeTarget"] b').innerText(), '277');
+  assert.equal(await card.locator('[data-metric="cumulativeGap"] b').innerText(), '-200');
+  await page.locator('[data-report-scope="night"]').click();
+  await page.waitForFunction(() => document.querySelector('#board-context').textContent.includes('Night'));
+  await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
+  assert.equal(await card.locator('[data-metric="dailyTarget"] b').innerText(), '777');
+  assert.equal(await card.locator('[data-metric="currentTarget"] b').innerText(), '—');
+  assert.equal(await card.locator('[data-metric="cumulativeActual"] b').innerText(), '—');
+  await page.locator('[data-report-scope="day"]').click();
+  await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
+  await page.locator('[data-report-scope="all"]').click();
+  await page.waitForFunction(() => document.querySelector('#board-context').textContent.includes('Whole day'));
+
   await page.locator('[data-view="details"]').click();
   assert.equal(
     await page.locator('[data-report-scope="all"]').getAttribute('aria-pressed'),
@@ -1016,6 +1041,7 @@ try {
   await page.locator('#slot-tabs [data-slot]').last().click();
   assert.match(await page.locator('#records-body .team-cell').first().innerText(), /Blake Night/);
   await page.locator('[data-view="overview"]').click();
+  await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
   if (screenshots) {
     await page.locator('#toast').waitFor({ state: 'hidden' });
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -1048,7 +1074,22 @@ try {
   assert.match(await page.locator('.line-modal-body').innerText(), /Excel Pack/);
   assert.equal(await page.locator('.line-modal-people').count(), 0);
   assert.match(await page.locator('.line-modal-owner').innerText(), /Morgan Owner/);
-  assert.equal(await page.locator('.line-modal-totals > div').count(), 3);
+  assert.equal(await page.locator('.line-modal-totals [data-metric]').count(), 6);
+  await page.evaluate(() => {
+    window.__overviewNativeNow = Date.now;
+    Date.now = () => window.__overviewNativeNow() + 3600000;
+  });
+  await page.waitForFunction(() =>
+    document.querySelector('#line-detail-dialog [data-metric="currentTarget"] b').textContent === '—');
+  assert.equal(await card.locator('[data-metric="currentTarget"] b').innerText(), '—');
+  assert.equal(await page.locator('#line-detail-dialog [data-metric="cumulativeActual"] b').innerText(), '77');
+  await page.evaluate(() => {
+    Date.now = window.__overviewNativeNow;
+    delete window.__overviewNativeNow;
+  });
+  await page.waitForFunction(() =>
+    document.querySelector('#line-detail-dialog [data-metric="currentTarget"] b').textContent === '122');
+  record('Overview and open details distinguish interval, daily and cumulative values, exclude future intervals and update at time boundaries without reloading');
   assert.equal(await page.locator('.line-modal-station-people').count(), 2);
   assert.match(await page.locator('.line-modal-stations').innerText(), /Alex Day/);
   assert.match(await page.locator('.line-modal-stations').innerText(), /Day shift/);
@@ -1087,6 +1128,7 @@ try {
   record(
     'Whole-day overview and production details are selectable; fullscreen details follow the active theme, label day/night personnel and use a full-width larger chart on desktop, tablet and phone',
   );
+  await page.unroute('**/api/records?**');
   await page.locator('[data-view="settings"]').click();
   for (const width of [1440, 1024, 768, 390]) {
     await page.setViewportSize({ width, height: 1000 });

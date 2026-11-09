@@ -63,8 +63,11 @@ export function defaultMonitoring(config) {
       );
       return [
         line,
-        (rows.find((r) => r.station === 'Pack') || rows.filter((r) => r.station).at(-1) || rows[0])
-          ?.id ?? null,
+        (
+          rows.find((r) => r.station === 'Pack') ||
+          rows.filter((r) => r.station).at(-1) ||
+          rows[0]
+        )?.id ?? null,
       ];
     }),
   );
@@ -115,23 +118,25 @@ export function defaultMonitoring(config) {
     ],
   };
 }
-export function productionWindows(config, date, shift) {
-  const slots = config.schedules[shift],
-    anchor = slots[0]?.start || '00:00';
-  const base = Date.parse(date + 'T00:00:00+07:00'),
-    toMinutes = (time) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
-  return slots
-    .filter((s) => s.kind === 'production')
-    .map((s) => {
-      const offset = s.start < anchor ? 86400000 : 0,
-        start = base + offset + toMinutes(s.start) * 60000;
-      return {
-        ...s,
-        startAt: start,
-        endAt: start + ((toMinutes(s.end) - toMinutes(s.start) + 1440) % 1440) * 60000,
-      };
-    });
+function intervalWindow(slot, date, anchor) {
+  const toMinutes = (time) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
+  const base = Date.parse(date + 'T00:00:00+07:00');
+  const startAt = base + (slot.start < anchor ? 86400000 : 0) + toMinutes(slot.start) * 60000;
+  return {
+    ...slot,
+    startAt,
+    endAt: startAt + ((toMinutes(slot.end) - toMinutes(slot.start) + 1440) % 1440) * 60000,
+  };
 }
+
+export function productionWindows(config, date, shift) {
+  const slots = config.schedules[shift];
+  const anchor = slots[0]?.start || '00:00';
+  return slots
+    .filter((slot) => slot.kind === 'production')
+    .map((slot) => intervalWindow(slot, date, anchor));
+}
+
 export function productiveSeconds(windows, since, now) {
   return Math.max(
     0,
@@ -147,7 +152,37 @@ const total = (values) => {
   const items = values.filter((v) => v !== null && v !== undefined);
   return items.length ? items.reduce((a, b) => a + b, 0) : null;
 };
-export function buildLineMonitor(config, records, date, shift, activity = {}, now = Date.now()) {
+/** As-of-now counts include the current interval's full target, never future
+ * intervals. No reported actual remains unknown; an explicit zero is retained. */
+export function overviewMetrics(series, now) {
+  const active = series.filter((slot) => now >= slot.startAt && now < slot.endAt);
+  // An edited schedule can overlap captured history. Prefer the interval that
+  // actually owns report values over an empty current-configuration placeholder.
+  const current =
+    active.find((slot) => slot.target != null || slot.actual != null) || active[0];
+  const elapsed = series.filter((slot) => slot.startAt <= now);
+  const cumulativeTarget = total(elapsed.map((slot) => slot.target));
+  const cumulativeActual = total(elapsed.map((slot) => slot.actual));
+  return {
+    currentTarget: current?.target ?? null,
+    currentActual: current?.actual ?? null,
+    cumulativeTarget,
+    cumulativeActual,
+    cumulativeGap:
+      cumulativeTarget == null || cumulativeActual == null
+        ? null
+        : cumulativeActual - cumulativeTarget,
+  };
+}
+
+export function buildLineMonitor(
+  config,
+  records,
+  date,
+  shift,
+  activity = {},
+  now = Date.now(),
+) {
   // UI defaults have no saved revision or mapping snapshot. They may supply
   // current targets, but must never invent historical intervals or replace saves.
   const isDefault = (record) =>
@@ -161,7 +196,8 @@ export function buildLineMonitor(config, records, date, shift, activity = {}, no
       .map((row) => [row.id, map.get(row.id)?.rowSnapshot || row]),
   );
   for (const record of map.values())
-    if (!isDefault(record) && record.rowSnapshot) definitions.set(record.rowId, record.rowSnapshot);
+    if (!isDefault(record) && record.rowSnapshot)
+      definitions.set(record.rowId, record.rowSnapshot);
   const windows = productionWindows(config, date, shift),
     active = windows.some((w) => now >= w.startAt && now < w.endAt),
     firstStart = Math.min(...windows.map((w) => w.startAt));
@@ -219,13 +255,24 @@ export function buildLineMonitor(config, records, date, shift, activity = {}, no
     const rows = lineRows.filter((row) => source === 'all' || row.id === source),
       saved = rows.map((row) => map.get(row.id)).filter(Boolean),
       slots = new Map(windows.map((slot) => [slot.id, slot]));
-    for (const record of saved.filter((record) => !isDefault(record)))
+    for (const record of saved.filter((record) => !isDefault(record))) {
+      // Captured shifts may start earlier than today's edited schedule. Their
+      // original first interval anchors midnight, preserving historical dates.
+      const anchor =
+        record.slots.find((slot) => slot.start)?.start ||
+        config.schedules[shift][0]?.start ||
+        '00:00';
       for (const slot of record.slots)
-        if (slot.kind !== 'break') slots.set(slot.id, { ...slots.get(slot.id), ...slot });
+        if (slot.kind !== 'break') {
+          const captured = { ...slots.get(slot.id), ...slot };
+          slots.set(slot.id, intervalWindow(captured, date, anchor));
+        }
+    }
     const series = [...slots.values()].map((slot) => {
       let values = saved
         .map((record) => {
-          if (isDefault(record) && !windows.some((window) => window.id === slot.id)) return null;
+          if (isDefault(record) && !windows.some((window) => window.id === slot.id))
+            return null;
           const value = record.slots.find((savedSlot) => savedSlot.id === slot.id);
           return value ? { ...value, rowId: record.rowId } : null;
         })
@@ -239,12 +286,13 @@ export function buildLineMonitor(config, records, date, shift, activity = {}, no
         id: slot.id,
         start: slot.start,
         end: slot.end,
+        startAt: slot.startAt,
+        endAt: slot.endAt,
         target: total(targets.map((s) => s.target)),
         actual: total(actuals.map((s) => s.actual)),
       };
     });
-    const paired = series.filter((s) => s.target !== null && s.actual !== null),
-      gap = paired.length ? paired.reduce((sum, s) => sum + s.actual - s.target, 0) : null;
+    const metrics = overviewMetrics(series, now);
     const timestamps = rows
         .map((r) => activity[r.id]?.lastIncreaseAt)
         .filter(Boolean)
@@ -253,7 +301,8 @@ export function buildLineMonitor(config, records, date, shift, activity = {}, no
     const idleSeconds = rows.length
       ? productiveSeconds(windows, Math.max(firstStart, lastIncreaseAt || firstStart), now)
       : 0;
-    const shortfall = gap === null ? null : Math.max(0, -gap);
+    const shortfall =
+      metrics.cumulativeGap === null ? null : Math.max(0, -metrics.cumulativeGap);
     const matches = monitoring.rules
       .filter((rule) => {
         if (!rule.enabled || !rows.length) return false;
@@ -275,16 +324,16 @@ export function buildLineMonitor(config, records, date, shift, activity = {}, no
       sourceRows: rows.map((r) => r.id),
       sourceLabel: source === 'all' ? 'all' : rows[0]?.station || rows[0]?.job || null,
       series,
+      ...metrics,
       target: total(series.map((s) => s.target)),
       actual: total(series.map((s) => s.actual)),
-      gap,
       shortfall,
       lastIncreaseAt,
       idleSeconds,
       active,
       rule,
       matches,
-      status: rule ? rule.color : series.some((s) => s.actual !== null) ? 'green' : 'neutral',
+      status: rule ? rule.color : metrics.cumulativeActual !== null ? 'green' : 'neutral',
       blink: !!(rule?.blink && active),
     };
   });

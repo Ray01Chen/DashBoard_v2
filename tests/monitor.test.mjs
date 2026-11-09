@@ -5,6 +5,7 @@ import {
   buildLineMonitor,
   productionWindows,
   productiveSeconds,
+  overviewMetrics,
 } from '../public/monitor.js';
 function configuration() {
   const c = {
@@ -39,6 +40,75 @@ const record = (id, actual, target = 100) => ({
 });
 const line = (c, records = [], now = at('08:00'), activity = {}, shift = 'day') =>
   buildLineMonitor(c, records, '2026-11-04', shift, activity, now)[0];
+
+test('overview counts separate the active interval and cumulative totals from future targets', () => {
+  const series = [
+    { startAt: at('08:00'), endAt: at('09:00'), target: 100, actual: 90 },
+    { startAt: at('09:10'), endAt: at('10:00'), target: 200, actual: null },
+    { startAt: at('10:00'), endAt: at('11:00'), target: 300, actual: 777 },
+  ];
+  assert.deepEqual(overviewMetrics(series, at('08:30')), {
+    currentTarget: 100,
+    currentActual: 90,
+    cumulativeTarget: 100,
+    cumulativeActual: 90,
+    cumulativeGap: -10,
+  });
+  assert.deepEqual(overviewMetrics(series, at('09:05')), {
+    currentTarget: null,
+    currentActual: null,
+    cumulativeTarget: 100,
+    cumulativeActual: 90,
+    cumulativeGap: -10,
+  });
+  assert.equal(overviewMetrics(series, at('09:30')).cumulativeGap, -210);
+  assert.equal(overviewMetrics(series, at('07:59')).cumulativeTarget, null);
+  assert.equal(
+    overviewMetrics([{ ...series[0], target: null, actual: null }, series[0]], at('08:30'))
+      .currentTarget,
+    100,
+  );
+  assert.equal(overviewMetrics(series, at('11:00')).cumulativeActual, 867);
+  assert.equal(overviewMetrics(series, at('11:00')).currentTarget, null);
+  assert.equal(
+    overviewMetrics(
+      series.map((slot) => ({ ...slot, actual: null })),
+      at('11:00'),
+    ).cumulativeGap,
+    null,
+  );
+  assert.equal(overviewMetrics([{ ...series[0], actual: 0 }], at('08:30')).cumulativeActual, 0);
+});
+
+test('overview timing follows overnight windows and alarms exclude future entered values', () => {
+  const c = configuration();
+  c.schedules.all = [...c.schedules.day, ...c.schedules.night];
+  const slots = productionWindows(c, '2026-11-04', 'all').map((slot) => ({
+    ...slot,
+    target: 100,
+    actual: null,
+  }));
+  slots[0].actual = 100;
+  slots[2].actual = 0;
+  const result = line(c, [{ rowId: 4, slots }], at('08:10'), {}, 'all');
+  assert.equal(result.target, 400);
+  assert.equal(result.currentTarget, 100);
+  assert.equal(result.cumulativeActual, 100);
+  assert.equal(result.cumulativeGap, 0);
+  assert.ok(!result.matches.some((rule) => rule.type === 'gap'));
+  const overnight = line(
+    c,
+    [{ rowId: 4, slots }],
+    Date.parse('2026-11-05T00:15:00+07:00'),
+    {},
+    'all',
+  );
+  assert.equal(overnight.currentTarget, 100);
+  assert.equal(overnight.cumulativeTarget, 400);
+  assert.equal(overnight.cumulativeActual, 100);
+  assert.equal(overnight.cumulativeGap, -300);
+  assert.equal(line(c, [{ rowId: 4, slots }], at('07:59'), {}, 'all').status, 'neutral');
+});
 test('rule checkboxes alone control each alert type', () => {
   const c = configuration();
   c.monitoring.rules.filter((r) => r.type === 'idle').forEach((r) => (r.enabled = false));
@@ -55,7 +125,7 @@ test('monitoring uses configured output stations and avoids double-counting', ()
   assert.equal(c.monitoring.outputSources.CD303, 4);
   const l = line(c, [record(3, 200), record(4, 90)]);
   assert.equal(l.actual, 90);
-  assert.equal(l.gap, -10);
+  assert.equal(l.cumulativeGap, -10);
   assert.deepEqual(l.sourceRows, [4]);
   c.monitoring.outputSources.CD303 = 'all';
   assert.equal(line(c, [record(3, 200), record(4, 90)]).actual, 290);
@@ -73,7 +143,7 @@ test('shared line actuals count once under an old all-stations setting while sta
   assert.equal(shared.sharedOutput, true);
   assert.equal(shared.actual, 90);
   assert.equal(shared.target, 95);
-  assert.equal(shared.gap, -5);
+  assert.equal(shared.cumulativeGap, -5);
   records[0].slots[1] = { id: 'd2', actual: 3, target: 7 };
   records[1].slots[1] = { id: 'd2', actual: 4, target: 8 };
   const mixed = line(c, records);
@@ -86,7 +156,7 @@ test('shortfall rules honor greater-than and inclusive thresholds', () => {
   assert.equal(line(c, [record(4, 95)]).rule, null);
   assert.equal(line(c, [record(4, 94)]).rule.color, 'yellow');
   assert.equal(line(c, [record(4, 90)]).rule.color, 'red');
-  assert.equal(line(c, [record(4, 100)]).gap, 0);
+  assert.equal(line(c, [record(4, 100)]).cumulativeGap, 0);
   assert.equal(line(c, [record(4, 110)]).rule, null);
 });
 test('idle timer triggers the 300 and 600 second warning levels', () => {
@@ -144,7 +214,7 @@ test('missing actual values remain missing rather than becoming zero shortfalls'
   const c = configuration();
   const l = line(c, [record(4, null)], at('08:00'));
   assert.equal(l.actual, null);
-  assert.equal(l.gap, null);
+  assert.equal(l.cumulativeGap, null);
   assert.equal(l.status, 'neutral');
   assert.equal(line(c, [record(4, 0)], at('08:00')).actual, 0);
 });
@@ -156,7 +226,8 @@ test('night windows keep midnight intervals on the next calendar day', () => {
     since = Date.parse('2026-11-04T23:59:00+07:00');
   assert.equal(productiveSeconds(windows, since, now), 300);
   assert.equal(
-    line(c, [], now, { 4: { lastIncreaseAt: new Date(since).toISOString() } }, 'night').rule.color,
+    line(c, [], now, { 4: { lastIncreaseAt: new Date(since).toISOString() } }, 'night').rule
+      .color,
     'yellow',
   );
 });
@@ -188,7 +259,9 @@ test('historical slots and archived mappings retain their original line and outp
   assert.equal(historical.sourceLabel, 'Pack');
   assert.equal(historical.actual, 90);
   assert.equal(historical.target, 100);
-  assert.equal(historical.gap, -10);
+  assert.equal(historical.cumulativeGap, -10);
+  assert.equal(historical.cumulativeTarget, 100);
+  assert.equal(historical.cumulativeActual, 90);
   assert.equal(historical.series.find((slot) => slot.id === 'd1').start, '08:00');
   assert.equal(historical.series.filter((slot) => slot.id === 'd1').length, 1);
   assert.equal(lines.find((line) => line.line === 'NEW').actual, null);
@@ -203,7 +276,13 @@ test('historical slot union aggregates each saved cell once and preserves all-so
       rowSnapshot: c.rows.find((row) => row.id === id),
       defaultsSnapshot: { outputSource: 'all' },
       slots: [
-        { id: 'old-slot', start: '07:00', end: '08:00', target: 100, actual: id === 3 ? 200 : 90 },
+        {
+          id: 'old-slot',
+          start: '07:00',
+          end: '08:00',
+          target: 100,
+          actual: id === 3 ? 200 : 90,
+        },
       ],
     }));
   c.rows[1].active = false;
