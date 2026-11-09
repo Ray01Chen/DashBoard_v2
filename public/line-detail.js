@@ -78,20 +78,17 @@ export function showLineDetail(dialog, context) {
       <div class="line-modal-stations">${rows
         .map((row) => {
           const record = stationRecord(row);
-          const stationPeople =
-            shift === 'all'
-              ? [
-                  ...new Set([
-                    ...personnelNames(record, 'day', record?.dayTeam),
-                    ...personnelNames(record, 'night', record?.nightTeam),
-                  ]),
-                ]
-              : personnelNames(
-                  record,
-                  shift,
-                  record?.[shift === 'day' ? 'dayTeam' : 'nightTeam'],
-                );
-          return `<section><div class="line-modal-station-heading"><h3>${esc(row.station || t('noStation'))}<small>${esc(row.job || t('noJob'))}</small></h3><div class="line-modal-station-people"><b>${esc(t('assignedStaff'))}</b><span>${stationPeople.length ? stationPeople.map((name) => `<span class="person-name">${esc(name)}</span>`).join('') : esc(t('none'))}</span></div></div>
+          const peopleByShift = (shift === 'all' ? ['day', 'night'] : [shift]).map(
+            (workShift) => ({
+              shift: workShift,
+              names: personnelNames(
+                record,
+                workShift,
+                record?.[workShift === 'day' ? 'dayTeam' : 'nightTeam'],
+              ),
+            }),
+          );
+          return `<section><div class="line-modal-station-heading"><h3>${esc(row.station || t('noStation'))}<small>${esc(row.job || t('noJob'))}</small></h3><div class="line-modal-station-people"><b>${esc(t('assignedStaff'))}</b><div>${peopleByShift.map(({ shift: workShift, names }) => `<span class="line-modal-shift-people"><small>${esc(t(workShift))}</small><span>${names.length ? names.map((name) => `<span class="person-name">${esc(name)}</span>`).join('') : esc(t('none'))}</span></span>`).join('')}</div></div></div>
           ${stationHasOutput(row, config) ? '' : `<p class="muted">${esc(t('noOutput'))}</p>`}<dl><div><dt>${esc(t('target'))}</dt><dd>${number(sum(record?.slots.map((slot) => slot.target) || []))}</dd></div><div><dt>${esc(t('actual'))}</dt><dd>${number(sum(record?.slots.map((slot) => slot.actual) || []))}</dd></div></dl>
           ${
             (record?.slots || [])

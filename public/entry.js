@@ -26,6 +26,7 @@ const messages = {
     bulkDateInvalid: 'Choose a valid production date.',
     bulkApplyActual: 'Apply actuals',
     bulkApplyTarget: 'Apply targets',
+    bulkUseDefaultTargets: 'Restore default targets',
     bulkProduct: 'Product',
     savedHistory: 'Saved production (read-only)',
     noOutput: 'No output · reporting not required',
@@ -37,7 +38,7 @@ const messages = {
     bulkOpen: 'Fill interval',
     bulkTitle: 'Edit production interval',
     bulkHint:
-      'Apply replaces this field for every station in the interval. Applying a blank clears that field. Other intervals and the daily preset remain unchanged.',
+      'Apply replaces this field for every station in the interval. Applying a blank clears that field; Restore default targets uses the daily preset allocation. Other intervals and the daily preset remain unchanged.',
     bulkRefresh: 'Refresh preview',
     bulkConflict:
       'Nothing was changed. Refresh preview, review the current values and apply again.',
@@ -96,7 +97,7 @@ const messages = {
     reset: 'Reset',
     resetTitle: 'Reset this production report?',
     resetDescription:
-      'Clear Target, Actual and Issue for every station in {line} · {model} on {date}, across both shifts? This cannot be undone.',
+      'Restore Target from the daily preset and clear Actual and Issue for every station in {line} · {model} on {date}, across both shifts? This cannot be undone.',
     resetConfirm: 'Reset report',
     resetFailed: 'The report could not be reset. Review pending or conflicting station changes.',
     autosave: 'Autosave',
@@ -157,6 +158,7 @@ const messages = {
     bulkDateInvalid: '請選擇有效的生產日期。',
     bulkApplyActual: '套用實績',
     bulkApplyTarget: '套用目標',
+    bulkUseDefaultTargets: '恢復預設目標',
     bulkProduct: '機種',
     savedHistory: '已存生產資料（唯讀）',
     noOutput: '無產出・免填報',
@@ -165,7 +167,7 @@ const messages = {
     bulkOpen: '同時段批次填寫',
     bulkTitle: '編輯時段目標與實績',
     bulkHint:
-      '按「套用」會覆蓋此時段所有站的該欄；空白也能套用，用來清除該欄。其他時段與日目標預設不變。',
+      '按「套用」會覆蓋此時段所有站的該欄；空白可清除該欄，「恢復預設目標」會依日目標配置還原。其他時段與日目標預設不變。',
     bulkRefresh: '更新預覽',
     bulkConflict: '本次未變更資料。請更新預覽，核對最新值後再套用。',
     bulkReview: '無法確認結果。請先更新預覽，確認已存數值後再套用。',
@@ -217,7 +219,7 @@ const messages = {
     reset: '重設',
     resetTitle: '要重設這份生產填報嗎？',
     resetDescription:
-      '清除 {date} 的 {line} · {model} 兩班所有站點 Target、Actual 與異常？此操作無法復原。',
+      '將 {date} 的 {line} · {model} 兩班所有站點 Target 恢復為日目標預設配置，並清除 Actual 與異常？此操作無法復原。',
     resetConfirm: '清除填報資料',
     resetFailed: '無法重設填報，請先處理尚未儲存或衝突的站點資料。',
     autosave: '自動儲存',
@@ -276,6 +278,7 @@ const messages = {
     bulkDateInvalid: 'เลือกวันที่ผลิตที่ถูกต้อง',
     bulkApplyActual: 'ใช้ผลจริง',
     bulkApplyTarget: 'ใช้เป้าหมาย',
+    bulkUseDefaultTargets: 'คืนค่าเป้าหมายเริ่มต้น',
     bulkProduct: 'ผลิตภัณฑ์',
     savedHistory: 'ข้อมูลการผลิตเดิม (อ่านอย่างเดียว)',
     noOutput: 'ไม่มีผลผลิต · ไม่ต้องบันทึก',
@@ -286,7 +289,7 @@ const messages = {
     bulkOpen: 'กรอกทั้งสายตามช่วง',
     bulkTitle: 'แก้เป้าหมายและผลจริงตามช่วง',
     bulkHint:
-      'กดใช้เพื่อแทนค่าช่องนี้ของทุกสถานีในช่วงเวลา ใช้ช่องว่างเพื่อล้างค่า ช่วงอื่นและเป้ารายวันเริ่มต้นไม่เปลี่ยน',
+      'กดใช้เพื่อแทนค่าช่องนี้ของทุกสถานี ใช้ช่องว่างเพื่อล้างค่า หรือคืนค่าเป้าหมายจากเป้ารายวัน ช่วงอื่นและค่าเป้ารายวันไม่เปลี่ยน',
     bulkRefresh: 'โหลดตัวอย่างใหม่',
     bulkConflict: 'ยังไม่เปลี่ยนข้อมูล โหลดตัวอย่างใหม่ ตรวจค่าปัจจุบันแล้วใช้ค่าอีกครั้ง',
     bulkReview: 'ยังยืนยันผลไม่ได้ โหลดตัวอย่างเพื่อตรวจค่าที่บันทึกก่อนลองอีกครั้ง',
@@ -341,7 +344,7 @@ const messages = {
     reset: 'รีเซ็ต',
     resetTitle: 'รีเซ็ตรายงานการผลิตนี้หรือไม่',
     resetDescription:
-      'ล้าง Target, Actual และปัญหาของทุกสถานีทั้งสองกะสำหรับ {line} · {model} วันที่ {date} หรือไม่ การดำเนินการนี้ย้อนกลับไม่ได้',
+      'คืน Target จากเป้ารายวันและล้าง Actual กับปัญหาของทุกสถานีทั้งสองกะสำหรับ {line} · {model} วันที่ {date} หรือไม่ การดำเนินการนี้ย้อนกลับไม่ได้',
     resetConfirm: 'ล้างข้อมูลรายงาน',
     resetFailed: 'รีเซ็ตรายงานไม่ได้ โปรดจัดการข้อมูลที่ยังไม่บันทึกหรือขัดแย้งก่อน',
     autosave: 'บันทึกอัตโนมัติ',
@@ -1243,6 +1246,8 @@ export function createEntryController({
         !editor.rows.length ||
         !parseBulkValue(input.dataset.bulkField, input.value).valid;
     }
+    const defaultTarget = bulkDialog.querySelector('[data-entry-action="bulk-default-target"]');
+    if (defaultTarget) defaultTarget.disabled = locked || !editor.rows.length;
     const save = bulkDialog.querySelector('[data-entry-action="bulk-save"]');
     const validBars = [...bulkDialog.querySelectorAll('[data-bulk-field]')].every(
       (input) => parseBulkValue(input.dataset.bulkField, input.value).valid,
@@ -1362,10 +1367,14 @@ export function createEntryController({
           const matches = (record?.slots || []).filter(
             (slot) => slot.start === editor.interval.start && slot.end === editor.interval.end,
           );
+          const defaultMatches = (data.defaults?.[row.id]?.slots || []).filter(
+            (slot) => slot.start === editor.interval.start && slot.end === editor.interval.end,
+          );
           const slot = matches.length === 1 ? matches[0] : null;
           return {
             row,
             slot,
+            defaultTarget: defaultMatches.length === 1 ? defaultMatches[0].target : null,
             version: saved.get(row.id)?.version ?? data.rowVersions?.[row.id] ?? 0,
             draft: {
               target: String(slot?.target ?? ''),
@@ -1413,6 +1422,16 @@ export function createEntryController({
       for (const row of editor.rows) row.draft[input.dataset.bulkField] = input.value.trim();
       input.value = '';
     }
+    renderBulkRows();
+    updateBulkControls();
+    return true;
+  }
+
+  function applyBulkDefaultTargets() {
+    const editor = bulkEditor;
+    if (!editor || editor.busy || editor.loading || !editor.rows.length) return false;
+    for (const row of editor.rows)
+      row.draft.target = row.defaultTarget == null ? '' : String(row.defaultTarget);
     renderBulkRows();
     updateBulkControls();
     return true;
@@ -1622,7 +1641,8 @@ export function createEntryController({
     const lines = [...new Set(units.map((unit) => unit.line))];
     bulkDialog.innerHTML = `<div class="entry-issue-heading"><h2 id="entry-bulk-title">${esc(text('bulkTitle'))}</h2><button type="button" class="icon-button" data-entry-action="bulk-close" aria-label="${esc(text('close'))}">×</button></div>
       <div class="entry-bulk-selectors"><label>${esc(text('productionDate'))}<input type="date" data-bulk-date value="${esc(context.date)}"></label><label>${esc(text('line'))}<select data-bulk-line>${lines.map((value) => `<option value="${esc(value)}">${esc(value)}</option>`).join('')}</select></label><label>${esc(text('bulkProduct'))}<select data-bulk-model></select></label><label>${esc(text('interval'))}<select data-bulk-slot></select></label></div>
-      <div class="entry-bulk-values">${bulkFields.map((field) => `<div><label>${esc(text(field))}<input type="text" ${field === 'issue' ? '' : 'inputmode="numeric"'} maxlength="${field === 'issue' ? 2000 : 12}" autocomplete="off" data-bulk-field="${field}" aria-label="${esc(text(field))}"></label><button type="button" class="button" data-entry-action="bulk-apply" data-bulk-apply-field="${field}">${esc(text(field === 'target' ? 'bulkApplyTarget' : field === 'actual' ? 'bulkApplyActual' : 'bulkApplyIssue'))}</button></div>`).join('')}</div>
+      <div class="entry-bulk-values">${bulkFields.map((field) => `<div><label>${esc(text(field))}<input type="text" ${field === 'issue' ? '' : 'inputmode="numeric"'} maxlength="${field === 'issue' ? 2000 : 12}" autocomplete="off" data-bulk-field="${field}" aria-label="${esc(text(field))}"></label><div class="entry-bulk-field-actions"><button type="button" class="button" data-entry-action="bulk-apply" data-bulk-apply-field="${field}">${esc(text(field === 'target' ? 'bulkApplyTarget' : field === 'actual' ? 'bulkApplyActual' : 'bulkApplyIssue'))}</button></div></div>`).join('')}</div>
+      <div class="entry-bulk-secondary-actions"><button type="button" class="button" data-entry-action="bulk-default-target"><span aria-hidden="true">↻</span>${esc(text('bulkUseDefaultTargets'))}</button></div>
       <div class="entry-bulk-quick-text">${issuePresets(context.config).filter((item) => item.active).map((item) => `<button type="button" class="button" data-entry-action="bulk-issue-preset" data-issue-preset="${esc(item.id)}">${esc(issueLabel(item))}</button>`).join('')}</div>
       <div class="entry-bulk-preview" data-bulk-preview></div><p class="entry-error" data-bulk-error role="alert"></p><div class="entry-bulk-actions"><span data-bulk-status role="status"></span><div><button type="button" class="button" data-entry-action="bulk-refresh" hidden>${esc(text('bulkRefresh'))}</button><button type="button" class="button primary" data-entry-action="bulk-save">${esc(text('saveNow'))}</button></div></div>`;
     bulkScopeControls();
@@ -1808,9 +1828,15 @@ export function createEntryController({
         const key = keyFor(shiftContext, row.id);
         const entry = queue.ensure(key, rowPayload(shiftContext, row));
         const draft = copy(entry.latest);
+        const defaultSlots = shiftContext.defaults?.[row.id]?.slots || [];
         draft.slots = draft.slots.map((slot) => ({
           ...slot,
-          target: null,
+          target:
+            defaultSlots.find(
+              (candidate) =>
+                candidate.id === slot.id ||
+                (candidate.start === slot.start && candidate.end === slot.end),
+            )?.target ?? null,
           actual: null,
           issue: '',
         }));
@@ -2551,6 +2577,7 @@ export function createEntryController({
     if (action === 'bulk-close') return closeBulk();
     if (action === 'bulk-refresh') return loadBulkPreview();
     if (action === 'bulk-apply') return applyBulk(button.dataset.bulkApplyField);
+    if (action === 'bulk-default-target') return applyBulkDefaultTargets();
     if (action === 'bulk-save') return saveBulk();
     if (action === 'reset-unit') {
       const [resetLine, resetModel] = JSON.parse(button.dataset.resetUnit);

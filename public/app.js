@@ -162,12 +162,13 @@ const sum = (values) => {
   const entered = values.filter((v) => v !== null && v !== undefined);
   return entered.length ? entered.reduce((a, b) => a + b, 0) : null;
 };
-const reportScope = () => (state.view === 'overview' ? state.overviewScope : state.shift);
+const hasWholeDayScope = () => ['overview', 'details'].includes(state.view);
+const reportScope = () => (hasWholeDayScope() ? state.overviewScope : state.shift);
 function syncReportScopeButtons() {
   const scope = reportScope();
   for (const button of $$('[data-report-scope]')) {
     const selected = button.dataset.reportScope === scope;
-    button.hidden = button.dataset.reportScope === 'all' && state.view !== 'overview';
+    button.hidden = button.dataset.reportScope === 'all' && !hasWholeDayScope();
     button.classList.toggle('selected', selected);
     button.setAttribute('aria-pressed', String(selected));
   }
@@ -482,7 +483,10 @@ function getRows() {
 function schedule() {
   const scope = reportScope();
   return scope === 'all'
-    ? [...(state.config?.schedules.day || []), ...(state.config?.schedules.night || [])]
+    ? [
+        ...(state.config?.schedules.day || []).map((slot) => ({ ...slot, shift: 'day' })),
+        ...(state.config?.schedules.night || []).map((slot) => ({ ...slot, shift: 'night' })),
+      ]
     : state.config?.schedules[scope] || [];
 }
 function allSlots() {
@@ -829,11 +833,12 @@ function renderTable() {
                 ? 'filled'
                 : 'pending',
           archived = !state.config.rows.find((v) => v.id === row.id)?.active;
+        const staffShift = reportScope() === 'all' ? s?.shift || state.shift : state.shift;
         const assigned = personnelNames(
           r || state.defaults[row.id],
-          state.shift,
-          (state.shift === 'day' ? r?.dayTeam : r?.nightTeam) ||
-            state.defaults[row.id]?.[state.shift === 'day' ? 'dayTeam' : 'nightTeam'],
+          staffShift,
+          (staffShift === 'day' ? r?.dayTeam : r?.nightTeam) ||
+            state.defaults[row.id]?.[staffShift === 'day' ? 'dayTeam' : 'nightTeam'],
         );
         return `<tr><td class="entry-cell" data-label="${esc(t('actions'))}"><button class="edit-button" ${stationHasOutput(row, state.config) ? '' : 'disabled'} data-edit="${row.id}" aria-label="${esc(t('edit'))} ${esc(row.line)} ${esc(row.station || row.job)}">${icon('edit')}${esc(t(stationHasOutput(row, state.config) ? (r ? 'edit' : 'enter') : 'noOutput'))}</button></td><td data-label="${esc(t('lineStation'))}"><div class="station-cell"><span class="station-details">${productionIdentityMarkup(row, esc)}<small>${esc(row.station ? t('stationLabel', { name: row.station }) : t('noStation'))}${archived ? ' · ' + esc(t('archived')) : ''}</small></span></div></td><td data-label="${esc(t('job'))}">${row.job ? `<span class="job-tag" title="${esc(row.job)}">${esc(row.job)}</span>` : '—'}</td><td data-label="${esc(t('assignedStaff'))}" class="team-cell" tabindex="0" title="${esc(assigned.join('\n'))}"><span class="team-day">${assigned.map((name) => '<span class="person-name">' + esc(name) + '</span>').join('') || '—'}</span></td><td data-label="${esc(t('target'))}" class="number ${s?.target == null ? 'muted' : ''}">${number(s?.target)}</td><td data-label="${esc(t('actual'))}" class="number ${s?.actual == null ? 'muted' : ''}">${number(s?.actual)}</td><td data-label="${esc(t('gap'))}" class="number">${gapHtml(s?.target, s?.actual)}</td><td data-label="${esc(t('issueOwner'))}" class="issue-cell" tabindex="0" title="${esc(t('issue') + ': ' + (s?.issue || '\u2014') + '\n' + t('owner') + ': ' + (r?.owner || '\u2014'))}">${s?.issue ? `<span class="issue-text" title="${esc(s.issue)}">${esc(s.issue)}</span>` : '<span class="muted">—</span>'}${(r ? r.owner : state.defaults[row.id]?.owner) ? `<small class="issue-owner" title="${esc(r?.owner || state.defaults[row.id]?.owner)}">${esc(r?.owner || state.defaults[row.id]?.owner)}</small>` : ''}</td><td data-label="${esc(t('status'))}"><span class="status-tag ${status}"><i></i>${esc(t(status === 'issue' ? 'hasIssue' : status))}</span></td></tr>`;
       })
@@ -1810,6 +1815,8 @@ $('#theme-select').onchange = () => applyTheme($('#theme-select').value, true);
 $('#records-body').onclick = async (e) => {
   const b = e.target.closest('[data-edit]');
   if (b) {
+    const selected = allSlots().find((slot) => slot.id === state.slotId);
+    if (reportScope() === 'all' && selected?.shift) state.shift = selected.shift;
     await setView('entry');
     entryController?.openRow?.(Number(b.dataset.edit));
     window.scrollTo({ top: 0 });
@@ -1841,7 +1848,7 @@ $$('[data-report-scope]').forEach(
       const scope = b.dataset.reportScope;
       if (reportScope() === scope) return;
       if (!(await entryController?.canLeave())) return toast(t('resolveEntryChanges'));
-      if (state.view === 'overview') state.overviewScope = scope;
+      if (hasWholeDayScope()) state.overviewScope = scope;
       if (scope !== 'all') state.shift = scope;
       state.page = 1;
       state.slotId = '';

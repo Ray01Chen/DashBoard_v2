@@ -963,6 +963,16 @@ try {
     ),
   );
   assert.ok(wholeDayTarget > dayTarget);
+  await page.locator('[data-view="details"]').click();
+  assert.equal(
+    await page.locator('[data-report-scope="all"]').getAttribute('aria-pressed'),
+    'true',
+  );
+  assert.match(await page.locator('#board-context').innerText(), /Whole day/);
+  assert.equal(await page.locator('[data-report-scope="all"]').isVisible(), true);
+  await page.locator('#slot-tabs [data-slot]').last().click();
+  assert.match(await page.locator('#records-body .team-cell').first().innerText(), /Blake Night/);
+  await page.locator('[data-view="overview"]').click();
   await page.locator('#enter-fullscreen').click();
   await page.locator('.board-display-options summary').click();
   for (const width of [1440, 1024, 768, 390]) {
@@ -993,6 +1003,19 @@ try {
   assert.equal(await page.locator('.line-modal-totals > div').count(), 3);
   assert.equal(await page.locator('.line-modal-station-people').count(), 2);
   assert.match(await page.locator('.line-modal-stations').innerText(), /Alex Day/);
+  assert.match(await page.locator('.line-modal-stations').innerText(), /Day shift/);
+  assert.match(await page.locator('.line-modal-stations').innerText(), /Night shift/);
+  const deltaHeader = await page
+    .locator('.line-modal-header')
+    .evaluate((header) => getComputedStyle(header).backgroundImage);
+  await page.locator('#theme-select').evaluate((select) => {
+    select.value = 'green';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  const greenHeader = await page
+    .locator('.line-modal-header')
+    .evaluate((header) => getComputedStyle(header).backgroundImage);
+  assert.notEqual(greenHeader, deltaHeader);
   const trendBounds = await page.locator('.line-modal-trend').boundingBox();
   const svgBounds = await page.locator('.line-modal-trend svg').boundingBox();
   assert.ok(svgBounds.width >= trendBounds.width - 2);
@@ -1012,8 +1035,9 @@ try {
   await screenshot('#line-detail-dialog', 'line-details');
   await page.locator('[data-close-line-dialog]').click();
   await page.locator('#exit-fullscreen').click();
+  await page.locator('#theme-select').selectOption('delta');
   record(
-    'Whole-day overview is selectable and default; fullscreen details place owner/totals in the blue header, personnel in station cards and use a full-width larger chart on desktop, tablet and phone',
+    'Whole-day overview and production details are selectable; fullscreen details follow the active theme, label day/night personnel and use a full-width larger chart on desktop, tablet and phone',
   );
   await page.locator('[data-view="settings"]').click();
   for (const width of [1440, 1024, 768, 390]) {
@@ -1180,8 +1204,19 @@ try {
   await bulkApply();
   assert.equal(await field(pack.id, 'target').inputValue(), '');
   assert.equal(await field(test.id, 'target').inputValue(), '');
+  await bulkOpen();
+  await page.locator('[data-entry-action="bulk-default-target"]').click();
+  assert.deepEqual(
+    await page
+      .locator('[data-bulk-cell="target"]')
+      .evaluateAll((inputs) => inputs.map((input) => input.value)),
+    ['125', '125'],
+  );
+  await bulkApply();
+  assert.equal(await field(pack.id, 'target').inputValue(), '125');
+  assert.equal(await field(test.id, 'target').inputValue(), '125');
   record(
-    'Individual edits remain independent; target-only, actual-only, explicit zero and blank Apply clearing work without sticky synchronization',
+    'Individual edits remain independent; target-only, actual-only, explicit zero, blank clearing and restoring interval targets from the daily preset all work without sticky synchronization',
   );
   await bulkOpen();
   await page.locator('[data-bulk-field="target"]').fill('-1');
@@ -1327,9 +1362,19 @@ try {
   const resetDate = '2026-11-17';
   await page.locator('#report-date').fill(resetDate);
   await page.locator('#report-date').dispatchEvent('change');
+  const resetDefaults = Object.fromEntries(
+    await Promise.all(
+      ['day', 'night'].map(async (shift) => [shift, (await readReport(resetDate, shift)).defaults]),
+    ),
+  );
   await field(pack.id, 'target').fill('88');
   await field(pack.id, 'actual').fill('99');
   await editIssue(pack.id, 'Reset this report');
+  await field(test.id, 'target').fill('77');
+  await field(test.id, 'actual').fill('66');
+  await field(pack.id, 'actual', 2).fill('55');
+  await field(pack.id, 'actual', 2).blur();
+  await saved();
   await page.locator('[data-entry-action="reset-unit"]').click();
   assert.match(await page.locator('#confirm-title').innerText(), /Reset this production report/);
   await page.locator('#confirm-no').click();
@@ -1339,22 +1384,33 @@ try {
   await saved();
   for (const shift of ['day', 'night']) {
     const cleared = await readReport(resetDate, shift);
-    assert.equal(cleared.records.length, 2);
-    assert.ok(
-      cleared.records.every((row) =>
-        row.slots.every(
-          (slot) => slot.target === null && slot.actual === null && slot.issue === '',
+    for (const rowId of [pack.id, test.id]) {
+      const effective = cleared.records.find((row) => row.rowId === rowId) || cleared.defaults[rowId];
+      assert.ok(
+        effective.slots.every(
+          (slot) =>
+            slot.target ===
+              resetDefaults[shift][rowId].slots.find(
+                (defaultSlot) =>
+                  defaultSlot.id === slot.id ||
+                  (defaultSlot.start === slot.start && defaultSlot.end === slot.end),
+              )?.target &&
+            slot.actual === null &&
+            slot.issue === '',
         ),
-      ),
-    );
+      );
+    }
   }
-  assert.equal(await field(pack.id, 'target').inputValue(), '');
+  assert.equal(
+    await field(pack.id, 'target').inputValue(),
+    String(resetDefaults.day[pack.id].slots[0].target),
+  );
   assert.equal(await field(pack.id, 'actual').inputValue(), '');
   await page.locator('#report-date').fill(batchDate);
   await page.locator('#report-date').dispatchEvent('change');
   await page.waitForFunction(() => document.querySelectorAll('[data-entry-field="actual"]').length === 6);
   record(
-    'Production reset requires confirmation, cancel preserves data, and confirm clears Target/Actual/Issue for every station across both shifts',
+    'Production reset requires confirmation, cancel preserves data, and confirm restores preset Targets while clearing Actual/Issue for every station across both shifts',
   );
 
   const retainedTest = (await readReport(batchDate)).records.find((row) => row.rowId === test.id);

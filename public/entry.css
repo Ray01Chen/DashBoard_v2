@@ -565,6 +565,22 @@
   align-items: end;
   gap: 8px;
 }
+.entry-bulk-field-actions {
+  display: grid;
+  gap: 6px;
+}
+.entry-bulk-field-actions .button {
+  width: 100%;
+}
+.entry-bulk-secondary-actions {
+  display: flex;
+  margin-top: 10px;
+}
+.entry-bulk-secondary-actions .button {
+  color: var(--primary-dark, #0069ad);
+  border-color: var(--soft-strong, #c6e6fa);
+  background: var(--soft, #eef8fe);
+}
 .entry-bulk-actions {
   position: sticky;
   bottom: -20px;

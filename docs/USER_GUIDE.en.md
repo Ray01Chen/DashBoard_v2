@@ -33,13 +33,13 @@ Whole-day spreadsheet shows both shifts; Whole-shift spreadsheet shows the selec
 
 The **Day shift** and **Night shift** buttons open that complete shift. **Go to current time slot** uses Bangkok time to open the active single interval and focus Actual; when the selected production date has no active interval, the page explains why.
 
-**Reset** opens a confirmation dialog, then clears Target, Actual and Issue for every output station in the selected Line/Model across both shifts on that production date. In Fill interval, applying an empty shared field clears that field for every station; zero remains an explicit zero.
+**Reset** opens a confirmation dialog, restores Target from the daily preset allocation, and clears Actual and Issue for every output station in the selected Line/Model across both shifts on that production date. In Fill interval, applying an empty shared field clears that field for every station; **Restore default targets** restores the selected interval from the daily preset allocation, and zero remains an explicit zero.
 
 Click another numeric cell to autosave and confirm Saved. Tab moves across intervals within the same field; Enter moves down stations. In a pasted rectangle, each row is a station and adjacent Target/Actual columns stay in one interval; later column pairs continue to later intervals. A one-column list alternates Target/Actual down the rows. Values beyond the remaining grid capacity are ignored instead of wrapping. Failed saves retain input. Review a station version conflict before Use latest data or Save my changed cells; only changed cells are merged and other stations stay independent.
 
 Click **Add issue** or its preview, or press **F2** in a numeric cell. The editor identifies the station, date, shift and interval. Quick text inserts equipment, material or quality reasons; edit freely and use Enter for new lines, up to 2,000 characters. Done, X, Esc, Ctrl+Enter or a click outside closes and saves. Clear note removes the saved note. Opening without changes never creates a report. Long notes stay one line in the table; reopening shows the full text. F2 returns to the original numeric cell after closing. Save failures retain text and expose recovery controls beside the totals.
 
-Overview defaults to **Whole day**, with Target, Actual and Gap combined across both shifts. Use Whole day / Day / Night above the board to change scope. In fullscreen details, the blue header groups Line, Model, Owner and the three totals; assigned personnel appear in their station cards. The hourly chart fills the dialog width at a larger height.
+Overview defaults to **Whole day**, with Target, Actual and Gap combined across both shifts. Whole day / Day / Night is available in both Overview and Production details. In fullscreen details, the header follows the active colour theme and groups Line, Model, Owner and the three totals; each station labels Day and Night personnel separately. The hourly chart fills the dialog width at a larger height.
 
 ![Issue editor](./images/issue-editor.png)
 
@@ -51,7 +51,7 @@ Managers drag the grip in the far-left Order column to place a station before or
 
 ![Interval fill](./images/interval-batch.png)
 
-Click **Fill interval** at the left of the entry command bar. Select production date, Line, Model and interval. Edit Target, Actual and Issue for each station, or enter a shared value above and use its Apply button. Applying stays in the window for further edits. English issue quick text configured in Master data is also available. Blank shared fields preserve existing values; zero writes zero. Individual fields can be cleared.
+Click **Fill interval** at the left of the entry command bar. Select production date, Line, Model and interval. Edit Target, Actual and Issue for each station, or enter a shared value above and use its Apply button. Applying stays in the window for further edits. **Restore default targets** restores this interval from the daily preset allocation. English issue quick text configured in Master data is also available. Applying a blank shared field clears that field; zero writes zero.
 
 **Save now** saves without closing. X, Esc or clicking outside saves before closing; invalid values or conflicts keep the window and drafts open. Changing date/unit/interval saves the original scope before loading the destination. Closing returns entry to that destination. A conflicting batch saves nothing; Refresh preview retains changed fields for review before retrying.
 

@@ -353,21 +353,21 @@
   align-items: stretch;
   gap: 22px;
   padding: 22px 68px 22px 24px;
-  border-bottom: 0;
-  color: #fff;
-  background: linear-gradient(125deg, #006fb9 0%, #0087dc 58%, #29a6e8 100%);
+  border-bottom: 1px solid var(--soft-strong);
+  color: var(--ink);
+  background: linear-gradient(125deg, var(--tint) 0%, var(--soft) 58%, var(--soft-strong) 100%);
 }
 .line-modal-identity {
   flex: 1 1 48%;
   min-width: 0;
 }
 .line-modal-header .section-eyebrow {
-  color: #dff3ff;
+  color: var(--primary-dark);
 }
 .line-modal-header h2 {
   font-size: clamp(18px, 2vw, 25px);
   margin: 6px 0 13px;
-  color: #fff;
+  color: var(--ink);
 }
 .line-modal-header .production-identity {
   display: flex;
@@ -387,7 +387,7 @@
   font-size: 12px;
 }
 .line-modal-owner span {
-  color: #dff3ff;
+  color: var(--muted);
 }
 .line-modal-owner strong {
   min-width: 0;
@@ -398,7 +398,7 @@
 .line-modal-owner small {
   padding: 2px 6px;
   border-radius: 999px;
-  color: #00639f;
+  color: var(--primary-dark);
   background: #fff;
 }
 .line-modal-header .icon-button {
@@ -407,9 +407,9 @@
   right: 20px;
   min-width: 36px;
   min-height: 36px;
-  color: #fff;
-  border-color: #ffffff66;
-  background: #ffffff14;
+  color: var(--primary-dark);
+  border-color: var(--soft-strong);
+  background: #ffffffb8;
 }
 .line-modal-body {
   display: grid;
@@ -423,8 +423,8 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   padding: 8px;
-  background: #004f831f;
-  border: 1px solid #ffffff4d;
+  background: #ffffff75;
+  border: 1px solid var(--soft-strong);
   border-radius: 12px;
 }
 .line-modal-totals > div {
@@ -434,13 +434,13 @@
   min-width: 0;
   padding: 11px 14px;
   border-radius: 8px;
-  background: #ffffff17;
+  background: #ffffffc7;
 }
 .line-modal-totals small {
-  color: #dff3ff;
+  color: var(--muted);
 }
 .line-modal-totals strong {
-  color: #fff;
+  color: var(--primary-dark);
   font-size: clamp(22px, 2.6vw, 31px);
   font-variant-numeric: tabular-nums;
 }
@@ -561,7 +561,26 @@
   color: var(--muted);
   font-weight: 600;
 }
-.line-modal-station-people > span {
+.line-modal-station-people > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px;
+}
+.line-modal-shift-people {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+}
+.line-modal-shift-people > small {
+  width: fit-content;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: var(--primary-dark);
+  background: var(--soft);
+  font-weight: 700;
+}
+.line-modal-shift-people > span {
   display: grid;
   gap: 2px;
 }

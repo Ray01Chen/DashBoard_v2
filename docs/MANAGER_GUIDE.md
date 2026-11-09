@@ -58,7 +58,7 @@
 
 按 **Save settings** 後發布順序。整日／整班／單時段填報、站點細節、全螢幕明細及 Excel 範本／CSV 匯出都沿用，已存報表也按此順序顯示。排序不改站點 ID、人員、日目標或所選產量來源。停用站仍保留位置，重新啟用時回到原位置；已刪除的歷史站保留原識別。
 
-填報新增 **Fill interval／同時段批次填寫**，manager 與 member 都可一次套用 Target／Actual／Issue，再個別修改；輸入欄會覆蓋對應的舊值，空白批次欄保留原值，日目標預設不變。操作詳見[填報員教學](./MEMBER_GUIDE.md)。
+填報新增 **Fill interval／同時段批次填寫**，manager 與 member 都可一次套用 Target／Actual／Issue，再個別修改；輸入欄會覆蓋對應舊值，空白套用可清除該欄，也可將時段 Target 恢復為日目標預設配置。操作詳見[填報員教學](./MEMBER_GUIDE.md)。
 
 ## 設定站點是否有產出
 
