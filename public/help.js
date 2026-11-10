@@ -43,7 +43,7 @@ const guides = {
         paragraphs: [
           'Open Settings → Master data & shift times. Choose Default schedule template to edit the initial times, or select a saved template.',
           'Enter a name and choose Save as new template to keep another schedule. Adjust Day/Night production and break times, then Save settings. Rename and Remove manage saved templates.',
-          'Tick the lines under Lines to apply, choose Apply to selected lines, confirm, then Save settings. Editing a template alone does not change existing lines; all models on a selected line share its applied schedule.',
+          'Expand Choose lines and search by line or existing group. Tick a group or individual lines, or use Select all / Clear all. The count includes selected lines hidden by search. Selection only sets the apply scope: confirm Apply, then Save settings to publish; the nearby status distinguishes unsaved changes from saved settings. Editing a template alone never changes existing lines.',
           'The daily timeline separates production and breaks. Choose a line/model in Target preview and expand the table to see every start/end/type and preset target. Invalid times, overlaps across midnight and individual slots over 12 hours are flagged before saving.',
           'Use Schedule scope to inspect or adjust an individual line. Copy selected template copies the template currently selected above. Deleting a template retains the copies already applied to lines.',
           'Current and future entry and Excel use the selected line’s CONFIG only; removed slots disappear. Archived dates retain saved original slots and values, including original night-shift production dates.',
@@ -86,7 +86,7 @@ const guides = {
       {
         title: 'Overview, details and full-screen board',
         paragraphs: [
-          'The top navigation opens each workspace; language, theme and account controls stay at the right. Horizontal line cards show severity, schedule state, Target, Actual, Gap, achievement, trend and current/next interval. Use the status tabs alongside floor groups to narrow the list. Expand the arrow for every alert evaluation, use the reason arrows to page manually, or select the line identity to open production details. Seven collapsed rows fit desktop screens from 1280×720; smaller screens stack the content and scroll. Group charts remain below the list and optional in fullscreen.',
+          'Overview and Production entry are direct top navigation links; More groups Production details, Settings and User guide. The page is named Production Overview. The information order is scope filters, group totals, alert filters, line cards, then detailed charts in both ordinary and fullscreen modes. Cards show readable primary metrics, schedule state and localized alert summaries. On compact desktop screens, source and next-slot information move into the card expansion; full reasons and values remain available there and in tooltips. Seven standard collapsed rows fit desktop screens from 1280×720; larger numbers, zoom or smaller viewports grow/reflow the content instead of shrinking important text.',
           'Overview defaults to Whole day. Use Interval / Daily beside the title or in the fullscreen header; your choice persists after refresh. Interval shows the active target, actual and gap. Daily shows the complete two-shift target, reported actual and gap, regardless of the shift filter. Missing values stay —. Large per-line curves adapt to their containers. Alerts and output share retain their cumulative rules. Whole day / Day / Night is available above both Overview and Production details. Each line/model uses its selected output station; group totals never double-count every station.',
           'Normal line clicks open details. Full screen clicks open a station-detail dialog; X or Esc returns to the same group/page. Its header follows the active colour theme and keeps line, model, owner and the six interval/daily/cumulative metrics together. Each station labels Day and Night personnel separately.',
           'The group trend keeps every time label readable; dense schedules scroll horizontally inside the chart, including fullscreen. Hover or Tab to an interval to see its values. Refresh keeps the scroll position. Display options independently toggle group trend and output share. Missing output remains blank. The fullscreen board uses seven compact desktop rows per page, including with both charts enabled. Smaller screens scroll the list; additional units use pagination.',
@@ -105,6 +105,7 @@ const guides = {
       {
         title: 'Accounts, language and data',
         paragraphs: [
+          'Catalogs and ordinary option lists use language-aware natural order, such as CD2 before CD10. Sorting changes presentation only. Configured station order, shift/overnight interval sequence and explicit display order retain priority; selected IDs and saved history do not move.',
           'Managers configure shared presets and assignments. Members enter each station’s targets/actuals and issue notes, import and review reports; shared Settings are unavailable to members.',
           'Use the language control for English, Chinese or Thai and the theme control for your preferred colour. These browser preferences do not change another user’s view.',
           'Line/model headings omit the Model prefix. A name is split at its first hyphen: ECD16010094 appears on the first model line and (ORV3-PSU-3KW-AutoLine) on the second. Names without a hyphen use one line. The stored name and Excel identifiers are unchanged.',
@@ -156,7 +157,7 @@ const guides = {
         paragraphs: [
           '開啟「設定 → 基礎資料與班別時間」。在「已儲存班表範本」選「預設班表範本」，即可修改原本的時段；也可選其他已存範本。',
           '輸入範本名稱，按「另存新範本」。調整早晚班的生產、休息時間後按「儲存設定」。可儲存多份，並使用修改名稱、刪除管理。',
-          '在「選擇套用線體」勾選線體，按「套用至所選線體」，確認後再按「儲存設定」。只改範本不會自動改現有線體；同線所有 Model 共用套用結果。',
+          '展開「選擇產線」，可搜尋線體或既有分組、勾選整組／單線，也可全選及取消全選；已選數量包含搜尋暫時隱藏的線。選取只決定套用範圍，按「套用至所選線體」確認後仍是草稿，再按「儲存設定」才生效，旁邊會顯示未儲存／已儲存狀態。只改範本不會自動改現有線體。',
           '全天時間軸以主題色區分生產、灰色區分休息；在目標預覽選產線／Model，展開可核對各時段起訖、類型與預設目標。無效時間、跨午夜重疊或單段超過 12 小時會先提示，修正後再儲存。',
           '「班表範圍」可選某線查看或個別調整；「複製所選範本」會複製上方選中的範本。刪除範本不會刪除已套用的線體班表。',
           '目前及未來日期的填報與 Excel 只顯示該線 CONFIG，刪掉的時段不再出現。過去日期仍保留當天已存時段與數值；跨午夜夜班仍屬開班日。',
@@ -199,7 +200,7 @@ const guides = {
       {
         title: '總覽、細節與全螢幕看板',
         paragraphs: [
-          '頂部導覽切換各功能，右上角選語言、主題。橫向產線卡依序顯示總燈號、班表狀態、目標、實績、差額、達成率、曲線及目前／下一時段；狀態分頁可搭配樓層篩選。右側箭頭展開全部告警判斷，原因旁左右箭頭可手動切換；點產線名稱開生產細節。1280×720 以上桌面可同屏看七張未展開卡，較小螢幕改為分列及捲動。分組圖表保留在清單下方，全螢幕可獨立開關。',
+          '頂部直接開「生產總覽／生產填報」；「更多功能」分組提供生產細節、系統設定及操作教學，右上角保留語言與主題。一般與全螢幕都依篩選、分組總覽、告警摘要、產線卡片、詳細圖表排列。卡片使用本地化告警短摘要，完整數值與判斷可展開或停留查看；較窄桌面的來源、下一時段移到展開區。1280×720 以上可同屏看七張一般數值的未展開卡；大型數字、放大或更窄視窗會增加高度／分列及捲動，優先保持字級可讀。',
           '總覽預設「全天」。標題旁或全螢幕頂部可切「時段／每日」，重新整理保留選擇；時段顯示目前目標、實績、差額，每日顯示雙班完整目標、已填實績及差額，不受早晚班篩選影響。各產線大曲線隨容器調整；缺值顯示 —，警示與占比維持累計規則。生產總覽與生產細節上方都可切換全天／早班／晚班。每組產線／Model 仍只使用所選來源站，避免重複計產量。',
           '全螢幕明細頂部沿用目前主題配色，集中產線、機種、負責人及六項時段／全日／累計數字；各站人員分早班、晚班標示。X 或 Esc 關閉後保留分組與頁次。',
           '分組總產量趨勢保留每個時段名稱與間距；時段較多時在圖表內左右捲動，全螢幕也適用。滑鼠停留或 Tab 聚焦查看數值，刷新保留捲動位置。顯示選項可分別控制趨勢與占比；未填報保持空白。全螢幕固定每頁七組，桌面以單列精簡卡片顯示；較小螢幕可捲動，超過七組用頁次切換。',
@@ -218,6 +219,7 @@ const guides = {
       {
         title: '帳號、語言及資料保存',
         paragraphs: [
+          '一般目錄與選項依目前語言自然排序，例如 CD2 在 CD10 前；排序只改畫面。站點依配置順序，時段保留班別與跨日的設定序列，明確顯示順序優先，不改選取 ID 或歷史紀錄。',
           'manager 管理共用預設及人員配置；member 可填每站當日目標／實績及異常、匯入與查詢，但不能修改共享 Settings。',
           '右上角可選英文、中文、泰文及配色。個人瀏覽器的偏好不會改變其他使用者的畫面。',
           '產線標題不再加 Model 字樣。型號以第一個 - 分成兩行，例如第一行 ECD16010094，第二行 (ORV3-PSU-3KW-AutoLine)；沒有 - 就顯示一行。只是顯示格式，保存名稱與 Excel 識別不變。',
@@ -270,7 +272,7 @@ const guides = {
         paragraphs: [
           'เปิด Settings → ข้อมูลหลัก เลือกแม่แบบเริ่มต้นเพื่อแก้เวลาเดิม หรือเลือกแม่แบบที่บันทึกไว้',
           'ใส่ชื่อแล้วบันทึกเป็นแม่แบบใหม่ ปรับช่วงผลิตและพักของทั้งสองกะ แล้วบันทึกการตั้งค่า เปลี่ยนชื่อหรือลบแม่แบบได้',
-          'เลือกสายที่จะใช้ กดใช้แม่แบบ ยืนยัน แล้วบันทึกการตั้งค่า การแก้แม่แบบอย่างเดียวไม่เปลี่ยนสายเดิม ทุก Model ในสายใช้ตารางเดียวกัน',
+          'ขยายเลือกสาย ค้นหาสายหรือกลุ่ม เลือกกลุ่ม รายสาย ทั้งหมดหรือยกเลิกทั้งหมด จำนวนที่เลือกรวมสายที่ซ่อนจากการค้นหา การเลือกกำหนดขอบเขตเท่านั้น กดใช้และยืนยันจะเปลี่ยนร่าง จากนั้นบันทึกการตั้งค่าเพื่อใช้จริง สถานะข้างปุ่มแยกร่างที่ยังไม่บันทึกกับที่บันทึกแล้ว',
           'ไทม์ไลน์แยกผลิตและพัก เลือกสาย/รุ่นในตัวอย่างเป้าหมายแล้วขยายตารางเพื่อดูเวลาเริ่ม จบ ประเภทและเป้าหมาย ระบบแจ้งเวลาผิด ช่วงซ้อนทับข้ามเที่ยงคืนและช่วงเดียวยาวเกิน 12 ชั่วโมงก่อนบันทึก',
           'เลือกสายในขอบเขตตารางเวลาเพื่อดูหรือแก้รายสาย คัดลอกแม่แบบที่เลือกจากรายการด้านบน ลบแม่แบบไม่ลบตารางที่ใช้กับสายแล้ว',
           'วันที่ปัจจุบันและอนาคตแสดงเฉพาะ CONFIG ของสาย ช่วงที่ลบไม่แสดงในกรอกและ Excel วันที่เก่าใช้ช่วงเวลาและค่าที่บันทึก กะข้ามเที่ยงคืนยังเป็นวันเริ่มผลิต',
@@ -313,7 +315,7 @@ const guides = {
       {
         title: 'ภาพรวม รายละเอียด และกระดานเต็มหน้าจอ',
         paragraphs: [
-          'ใช้เมนูด้านบนเปลี่ยนหน้า เลือกภาษาและธีมที่มุมขวา การ์ดแนวนอนแสดงไฟรวม สถานะตาราง เป้า ผลจริง ผลต่าง อัตราบรรลุ กราฟและช่วงปัจจุบัน/ถัดไป กรองสถานะร่วมกับชั้นได้ ลูกศรขวาขยายผลแจ้งเตือนทั้งหมด ลูกศรข้างเหตุผลสลับด้วยตนเอง คลิกชื่อสายเปิดรายละเอียด เดสก์ท็อปตั้งแต่ 1280×720 แสดงเจ็ดแถวที่ยังไม่ขยาย จอเล็กจัดข้อมูลหลายแถวและเลื่อนดู กราฟรวมยังอยู่ใต้รายการและเลือกเปิดในโหมดเต็มจอได้',
+          'เมนูหลักเปิดภาพรวมการผลิตและกรอกผลผลิตได้ทันที เมนูเพิ่มเติมจัดกลุ่มรายละเอียด การตั้งค่าและคู่มือ ทั้งหน้าปกติและเต็มจอเรียงตัวกรอง สรุปกลุ่ม สรุปแจ้งเตือน การ์ดสาย แล้วกราฟละเอียด การ์ดแสดงตัวเลขหลักและสรุปแจ้งเตือนที่แปลแล้ว อ่านเหตุผลเต็มและค่าทั้งหมดโดยขยายหรือชี้เมาส์ จอเดสก์ท็อปแคบย้ายแหล่งข้อมูลและช่วงถัดไปไว้ในส่วนขยาย ตั้งแต่ 1280×720 แสดงเจ็ดแถวที่ยังไม่ขยายและใช้ตัวเลขปกติ ตัวเลขใหญ่หรือซูมจะเพิ่มความสูง จัดหลายแถวหรือเลื่อนแทนการลดตัวอักษร',
           'ภาพรวมเริ่มต้นที่ทั้งวัน สลับช่วงเวลา/รายวันข้างชื่อหน้าหรือด้านบนเต็มจอ จำตัวเลือกหลังรีเฟรช ช่วงเวลาแสดงเป้า ผลจริงและผลต่างปัจจุบัน รายวันแสดงเป้าเต็มวัน ผลจริงและผลต่างรวมสองกะโดยไม่ขึ้นกับตัวกรองกะ กราฟแต่ละสายขยายตามพื้นที่ ไม่มีข้อมูลแสดง — การแจ้งเตือนและสัดส่วนยังใช้ข้อมูลสะสม ทั้งหน้าภาพรวมและรายละเอียดเลือกทั้งวัน/กะเช้า/กะกลางคืนได้ แต่ละสาย/Model ยังใช้สถานีแหล่งผลผลิตเดียวเพื่อไม่ให้นับซ้ำ',
           'หน้าต่างเต็มหน้าจอใช้สีตามธีมและรวมสาย Model ผู้รับผิดชอบ และหกค่าของช่วงปัจจุบัน รายวัน และสะสมไว้ด้านบน การ์ดแต่ละสถานีแยกบุคลากรกะเช้าและกะกลางคืน X หรือ Esc กลับกลุ่ม/หน้าเดิม',
           'กราฟรวมรักษาระยะห่างของป้ายเวลาทุกช่วง หากมีหลายช่วงให้เลื่อนแนวนอนในกราฟ รวมถึงเต็มหน้าจอ ชี้เมาส์หรือกด Tab เพื่อดูค่า รีเฟรชเก็บตำแหน่งเลื่อนเดิม ตัวเลือกเปิดแนวโน้มและสัดส่วนแยกกัน ไม่กรอกไม่ถือเป็นศูนย์ เต็มหน้าจอแสดงเจ็ดคู่ต่อหน้าด้วยการ์ดแถวเดียวบนเดสก์ท็อป หน้าจอเล็กเลื่อนรายการได้ ใช้ปุ่มเปลี่ยนหน้าเมื่อเกินเจ็ดคู่',
@@ -332,6 +334,7 @@ const guides = {
       {
         title: 'บัญชี ภาษา และการเก็บข้อมูล',
         paragraphs: [
+          'รายการทั่วไปเรียงตามภาษาและตัวเลข เช่น CD2 ก่อน CD10 เปลี่ยนเฉพาะการแสดงผล สถานียังคงลำดับที่ตั้งไว้ ช่วงเวลาคงลำดับกะรวมข้ามคืน และใช้ลำดับแสดงผลที่กำหนดก่อน ไม่เปลี่ยนรหัสที่เลือกหรือประวัติ',
           'ผู้จัดการแก้ค่าเริ่มต้น การมอบหมายและลำดับสถานี ผู้บันทึกแก้ Target, Actual และปัญหารายสถานี ใช้กรอกทั้งสายตามช่วงและนำเข้าได้ แต่แก้ Settings ร่วมไม่ได้',
           'ส่วนหัวมีภาษาอังกฤษ จีน และไทย รวมถึงสีธีม ความชอบของเบราว์เซอร์หนึ่งไม่เปลี่ยนหน้าจอของผู้อื่น',
           'ชื่อผลิตภัณฑ์ไม่แสดงคำนำหน้า Model แบ่งที่ขีดแรก บรรทัดแรกเป็นรหัส บรรทัดที่สองเป็นข้อความส่วนที่เหลือในวงเล็บ ชื่อที่ไม่มีขีดใช้บรรทัดเดียว รหัสที่บันทึกและใน Excel ไม่เปลี่ยน',
@@ -353,7 +356,7 @@ const exampleScreens = [
     'line-people',
     'line-configuration',
   ],
-  ['line-schedules', 'schedule-timeline'],
+  ['line-schedules', 'line-selection', 'schedule-timeline'],
   [],
   [
     'production-entry',
@@ -378,6 +381,7 @@ const exampleLabels = {
       'models-and-lines': 'Line/model dropdown pairing',
       'issue-quick-text': 'English issue quick text in Master data',
       'daily-targets': 'One default target per line + model',
+      'line-selection': 'Search lines and groups, apply, then save settings',
       'line-schedules': 'Save a named schedule template, select lines and apply',
       'people-by-job': 'People filtered by job',
       'line-people': 'Line teams and owners',
@@ -405,6 +409,7 @@ const exampleLabels = {
       'models-and-lines': '下拉配對產線與 Model',
       'issue-quick-text': '基礎資料的英文異常快捷文字',
       'daily-targets': '每組產線＋Model 一個預設日目標',
+      'line-selection': '搜尋與分組選線、套用至草稿並儲存',
       'line-schedules': '儲存班表範本，再勾選線體套用',
       'people-by-job': '依職務篩選人員',
       'line-people': '產線兩班與負責人',
@@ -431,6 +436,7 @@ const exampleLabels = {
       'models-and-lines': 'จับคู่สาย / Model',
       'issue-quick-text': 'ข้อความปัญหาภาษาอังกฤษในข้อมูลหลัก',
       'daily-targets': 'เป้าหมายต่อสาย + Model',
+      'line-selection': 'ค้นหาและเลือกกลุ่มสาย ใช้กับร่างแล้วบันทึก',
       'line-schedules': 'บันทึกแม่แบบแล้วเลือกสายที่จะใช้',
       'people-by-job': 'บุคลากรตามหน้าที่',
       'line-people': 'ทีมและผู้รับผิดชอบ',

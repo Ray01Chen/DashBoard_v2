@@ -1,3 +1,4 @@
+import { naturalOrder, byProduction } from './list-order.js';
 /**
  * Manager-only settings renderers and pure draft helpers.
  * No API or production-record writes belong here. The host saves one versioned
@@ -526,7 +527,11 @@ export function addStaffAssignments(draft, unit, field, job, personIds) {
  * filters pending selections against current candidates without mutating data. */
 export function staffPickerMarkup({ draft, unit, field, job, personIds = [], esc, language }) {
   const text = labels(language);
-  const candidates = staffCandidates(draft, unit, field, job);
+  const candidates = naturalOrder(
+    staffCandidates(draft, unit, field, job),
+    language,
+    (person) => person.name,
+  );
   const selected = new Set(Array.isArray(personIds) ? personIds : []);
   const count = candidates.filter((person) => selected.has(person.id)).length;
   const jobPeople = (draft.personnel || []).filter((person) => person.job === job);
@@ -566,7 +571,7 @@ export function lineModelsMarkup({
   addModel = '',
 }) {
   const text = labels(language);
-  const units = productionUnits(draft);
+  const units = byProduction(productionUnits(draft), language);
   const line = draft.lines.includes(selectedLine) ? selectedLine : '';
   const people = new Map((draft.personnel || []).map((person) => [person.id, person]));
   const access = setupAccess(draft).staffing;
@@ -576,12 +581,36 @@ export function lineModelsMarkup({
     chosenLine && chosenModel && !!unitFor(draft, { line: chosenLine, model: chosenModel });
   return `<section class="panel model-assignment-panel"><h3>${esc(text('lineModelsTitle'))}</h3><p>${esc(text('lineModelsDescription'))}</p>
     <div class="unit-add-form">
-      <label>${esc(text('line'))}<select data-unit-add-line><option value="">${esc(text('chooseLine'))}</option>${draft.lines.map((value) => `<option value="${esc(value)}" ${value === chosenLine ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label>
-      <label>Model<select data-unit-add-model><option value="">${esc(text('chooseModel'))}</option>${(draft.models || []).map((value) => `<option value="${esc(value)}" ${value === chosenModel ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label>
+      <label>${esc(text('line'))}<select data-unit-add-line><option value="">${esc(text('chooseLine'))}</option>${naturalOrder(
+        draft.lines,
+        language,
+      )
+        .map(
+          (value) =>
+            `<option value="${esc(value)}" ${value === chosenLine ? 'selected' : ''}>${esc(value)}</option>`,
+        )
+        .join('')}</select></label>
+      <label>Model<select data-unit-add-model><option value="">${esc(text('chooseModel'))}</option>${naturalOrder(
+        draft.models || [],
+        language,
+      )
+        .map(
+          (value) =>
+            `<option value="${esc(value)}" ${value === chosenModel ? 'selected' : ''}>${esc(value)}</option>`,
+        )
+        .join('')}</select></label>
       <button type="button" class="button primary" data-action="add-unit" ${chosenLine && chosenModel && !duplicate ? '' : 'disabled'}>${icon('plus')}${esc(text('addCombination'))}</button>
       <span data-unit-add-status role="status">${duplicate ? esc(text('combinationExists')) : ''}</span>
     </div>
-    <div class="unit-list-filter"><label>${esc(text('line'))}<select data-unit-filter-line><option value="">${esc(text('allLines'))}</option>${draft.lines.map((value) => `<option value="${esc(value)}" ${value === line ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label></div>
+    <div class="unit-list-filter"><label>${esc(text('line'))}<select data-unit-filter-line><option value="">${esc(text('allLines'))}</option>${naturalOrder(
+      draft.lines,
+      language,
+    )
+      .map(
+        (value) =>
+          `<option value="${esc(value)}" ${value === line ? 'selected' : ''}>${esc(value)}</option>`,
+      )
+      .join('')}</select></label></div>
     <div class="table-scroll"><table class="unit-assignment-table"><thead><tr><th>${esc(text('line'))}</th><th>Model</th><th>${esc(text('lineOwners'))}</th><th>${esc(text('actions'))}</th></tr></thead><tbody>${
       units
         .filter((unit) => !line || unit.line === line)
@@ -853,11 +882,11 @@ export function addBatchMappings(
   return { ok: true, added: pending.length, skipped };
 }
 
-function selectOptions(values, selected, text, esc) {
+function selectOptions(values, selected, text, esc, language) {
   const available = [...values, ...(selected && !values.includes(selected) ? [selected] : [])];
   return (
     `<option value="">${esc(text('none'))}</option>` +
-    available
+    naturalOrder(available, language)
       .map(
         (value) =>
           `<option value="${esc(value)}" ${value === selected ? 'selected' : ''}>${esc(value)}</option>`,
@@ -870,7 +899,7 @@ function selectOptions(values, selected, text, esc) {
 export function workforceSettingsMarkup({ draft, esc, icon, language, selectedJob = null }) {
   const text = labels(language);
   const people = draft.personnel || [];
-  const jobs = draft.jobs;
+  const jobs = naturalOrder(draft.jobs, language);
   const job = selectedJob === '' || jobs.includes(selectedJob) ? selectedJob : jobs[0] || '';
   const panels = jobs
     .filter((value) => !job || value === job)
@@ -878,17 +907,26 @@ export function workforceSettingsMarkup({ draft, esc, icon, language, selectedJo
       const members = people
         .map((person, index) => ({ person, index }))
         .filter(({ person }) => person.job === job);
+      const sortedMembers = naturalOrder(members, language, ({ person }) => person.name);
       return `<section class="panel personnel-panel">
       <div class="panel-heading">
         <h3>${esc(job)}</h3>
         <button type="button" class="button" data-workforce-action="add-person" data-person-job="${esc(job)}">${icon('plus')}${esc(text('addPerson'))}</button>
       </div>
       <div class="personnel-list">${
-        members
+        sortedMembers
           .map(
             ({ person, index }) => `<div class="personnel-row">
         <label><span>${esc(text('personName'))}</span><input id="person-name-${index}" data-person-field="name" data-person-index="${index}" value="${esc(person.name)}" maxlength="200" required></label>
-        <label><span>${esc(text('personJob'))}</span><select data-person-field="job" data-person-index="${index}" aria-label="${esc(text('personJob') + ' · ' + person.name)}">${draft.jobs.map((value) => `<option value="${esc(value)}" ${value === person.job ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label>
+        <label><span>${esc(text('personJob'))}</span><select data-person-field="job" data-person-index="${index}" aria-label="${esc(text('personJob') + ' · ' + person.name)}">${naturalOrder(
+          draft.jobs,
+          language,
+        )
+          .map(
+            (value) =>
+              `<option value="${esc(value)}" ${value === person.job ? 'selected' : ''}>${esc(value)}</option>`,
+          )
+          .join('')}</select></label>
         <label class="switch-label"><input type="checkbox" data-person-field="active" data-person-index="${index}" ${person.active ? 'checked' : ''}><span>${esc(text('activePerson'))}</span></label>
         <button type="button" class="icon-button" data-workforce-action="remove-person" data-person-index="${index}" aria-label="${esc(text('removePerson'))}: ${esc(person.name)}">${icon('trash')}</button>
       </div>`,
@@ -899,7 +937,15 @@ export function workforceSettingsMarkup({ draft, esc, icon, language, selectedJo
     })
     .join('');
   return `<div class="settings-section-heading"><div><h2>${esc(text('peopleTitle'))}</h2><p>${esc(text('peopleDescription'))}</p></div></div>
-    <div class="panel target-filter"><label for="person-job-filter">${esc(text('jobFilter'))}</label><select id="person-job-filter" data-person-job-filter><option value="" ${job === '' ? 'selected' : ''}>${esc(text('allJobs'))}</option>${draft.jobs.map((value) => `<option value="${esc(value)}" ${value === job ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></div>
+    <div class="panel target-filter"><label for="person-job-filter">${esc(text('jobFilter'))}</label><select id="person-job-filter" data-person-job-filter><option value="" ${job === '' ? 'selected' : ''}>${esc(text('allJobs'))}</option>${naturalOrder(
+      draft.jobs,
+      language,
+    )
+      .map(
+        (value) =>
+          `<option value="${esc(value)}" ${value === job ? 'selected' : ''}>${esc(value)}</option>`,
+      )
+      .join('')}</select></div>
     <p class="form-hint">${esc(text('jobLinkHint'))}</p>
     ${panels || `<div class="calculation-note">${icon('info')}<span>${esc(text('noJobs'))}</span></div>`}
     <p class="form-hint">${esc(text('defaultSnapshotHint'))}</p>`;
@@ -917,11 +963,14 @@ export function lineStaffingMarkup({
   choices = {},
 }) {
   const text = labels(language);
-  const units = productionUnits(draft);
+  const units = byProduction(productionUnits(draft), language);
   const lines = [...new Set(units.map((unit) => unit.line))];
   const line =
     selectedLine === '' || lines.includes(selectedLine) ? selectedLine : lines[0] || '';
-  const models = [...new Set(units.filter((unit) => !line || unit.line === line).map(modelOf))];
+  const models = naturalOrder(
+    [...new Set(units.filter((unit) => !line || unit.line === line).map(modelOf))],
+    language,
+  );
   const model = models.includes(selectedModel) ? selectedModel : '';
   const people = new Map((draft.personnel || []).map((person) => [person.id, person]));
   const fields = { day: 'dayStaff', night: 'nightStaff', owners: 'lineOwners' };
@@ -935,9 +984,13 @@ export function lineStaffingMarkup({
           const choice = choices[JSON.stringify([key, field])] || {};
           // Use the master list directly: a new/empty job must remain selectable
           // so managers can see why no names are available and open its roster.
-          const jobs = draft.jobs;
+          const jobs = naturalOrder(draft.jobs, language);
           const job = jobs.includes(choice.job) ? choice.job : '';
-          const candidates = staffCandidates(draft, unit, field, job);
+          const candidates = naturalOrder(
+            staffCandidates(draft, unit, field, job),
+            language,
+            (person) => person.name,
+          );
           const allAssigned =
             job &&
             !candidates.length &&
@@ -1103,7 +1156,7 @@ function automaticStaffMarkup(draft, row, text, esc, requireJob = false) {
 /** Resolve only a line/model pair already enabled in master data. Native
  * dropdowns select one configured unit; no secondary model edits live in rows. */
 export function mappingSelection(draft, line = null, model = null) {
-  const units = productionUnits(draft);
+  const units = byProduction(productionUnits(draft));
   const lines = [...new Set(units.map((unit) => unit.line))];
   const selectedLine = lines.includes(line) ? line : lines[0] || '';
   const models = units.filter((unit) => unit.line === selectedLine).map(modelOf);
@@ -1124,7 +1177,7 @@ export function staffSettingsMarkup({
 }) {
   const text = labels(language);
   const unit = mappingSelection(draft, selectedLine, selectedModel);
-  const units = productionUnits(draft);
+  const units = byProduction(productionUnits(draft), language);
   const lines = [...new Set(units.map((item) => item.line))];
   const models = units.filter((item) => item.line === unit?.line).map(modelOf);
   const pair = batchPairs[0] || {};
@@ -1243,7 +1296,7 @@ export function staffSettingsMarkup({
           '" aria-label="' +
           esc(text('mappingJob')) +
           '">' +
-          selectOptions(draft.jobs, row.job, text, esc) +
+          selectOptions(draft.jobs, row.job, text, esc, language) +
           '</select></td><td data-label="' +
           esc(text('mappingStation')) +
           '"><select data-row-field="station" data-index="' +
@@ -1251,7 +1304,7 @@ export function staffSettingsMarkup({
           '" aria-label="' +
           esc(text('mappingStation')) +
           '">' +
-          selectOptions(draft.stations, row.station, text, esc) +
+          selectOptions(draft.stations, row.station, text, esc, language) +
           '</select></td><td data-label="' +
           esc(text('automaticStaff')) +
           '">' +
@@ -1306,13 +1359,13 @@ export function staffSettingsMarkup({
     '"><select data-batch-field="job" data-batch-index="0" aria-label="' +
     esc(text('newMappingJob')) +
     '">' +
-    selectOptions(draft.jobs, pair.job, text, esc) +
+    selectOptions(draft.jobs, pair.job, text, esc, language) +
     '</select></td><td data-label="' +
     esc(text('mappingStation')) +
     '"><select data-batch-field="station" data-batch-index="0" aria-label="' +
     esc(text('newMappingStation')) +
     '">' +
-    selectOptions(draft.stations, pair.station, text, esc) +
+    selectOptions(draft.stations, pair.station, text, esc, language) +
     '</select></td><td data-label="' +
     esc(text('automaticStaff')) +
     '">' +
@@ -1343,12 +1396,22 @@ export function targetsSettingsMarkup({ draft, esc, language, selectedLine = nul
   const line =
     selectedLine === '' || draft.lines.includes(selectedLine)
       ? selectedLine
-      : productionUnits(draft)[0]?.line || draft.lines[0] || '';
+      : byProduction(productionUnits(draft), language)[0]?.line || draft.lines[0] || '';
   const lines = draft.lines.filter((value) => !line || value === line);
   return `<div class="settings-section-heading"><div><h2>${esc(text('targetTitle'))}</h2><p>${esc(text('targetDescription'))}</p></div></div>
-    <div class="panel target-filter"><label for="target-line">${esc(text('line'))}</label><select id="target-line" data-target-line><option value="">${esc(text('allLines'))}</option>${draft.lines.map((value) => `<option value="${esc(value)}" ${line === value ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select><span role="status">${esc(text('targetCount', { count: lines.length, total: draft.lines.length }))}</span></div>
+    <div class="panel target-filter"><label for="target-line">${esc(text('line'))}</label><select id="target-line" data-target-line><option value="">${esc(text('allLines'))}</option>${naturalOrder(
+      draft.lines,
+      language,
+    )
+      .map(
+        (value) =>
+          `<option value="${esc(value)}" ${line === value ? 'selected' : ''}>${esc(value)}</option>`,
+      )
+      .join(
+        '',
+      )}</select><span role="status">${esc(text('targetCount', { count: lines.length, total: draft.lines.length }))}</span></div>
     <section class="panel targets-panel"><div class="table-scroll"><table class="targets-table"><thead><tr>${['line', ...(draft.models ? ['model'] : []), 'targetLabel', 'dayTarget', 'nightTarget', 'plannedUPH'].map((key) => `<th>${esc(text(key))}</th>`).join('')}</tr></thead><tbody>${
-      productionUnits(draft)
+      byProduction(productionUnits(draft), language)
         .filter((unit) => lines.includes(unit.line))
         .map(
           (unit) =>

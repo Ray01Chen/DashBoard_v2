@@ -1,3 +1,4 @@
+import { byProduction } from './list-order.js';
 import { allocateDailyTarget } from './production-targets.js';
 import { productionUnits, productionLabel, productionKey } from './production-models.js';
 const minute = (time) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
@@ -50,7 +51,9 @@ export function schedulePreview(config, schedules, line, { t, esc, previewKey })
   }));
   const extent = Math.max(1, ...ranges.map((slot) => slot.offset + slot.duration));
   const issues = scheduleIssues(schedules);
-  const units = productionUnits(config).filter((unit) => !line || unit.line === line);
+  const units = byProduction(productionUnits(config)).filter(
+    (unit) => !line || unit.line === line,
+  );
   // A template does not own a numeric target. Preview the first applicable
   // model using its real daily preset, and show that identity explicitly.
   const unit = units.find((unit) => productionKey(unit) === previewKey) || units[0];

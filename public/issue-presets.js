@@ -1,3 +1,4 @@
+import { naturalOrder } from './list-order.js';
 /** English quick text shared by station and interval issue editors. */
 export const defaultIssuePresets = [
   { id: 'equipment', label: 'Equipment downtime', active: true },
@@ -22,7 +23,8 @@ export function validateIssuePresets(items) {
     Array.isArray(items) &&
     items.length <= 50 &&
     new Set(items.map((item) => item?.id)).size === items.length &&
-    new Set(items.map((item) => item?.label?.trim().toLocaleLowerCase())).size === items.length &&
+    new Set(items.map((item) => item?.label?.trim().toLocaleLowerCase())).size ===
+      items.length &&
     items.every(
       (item) =>
         item &&
@@ -66,11 +68,13 @@ const copy = {
 
 export function issueSettingsMarkup({ draft, language, esc }) {
   const text = copy[language] || copy.en;
-  return `<section class="panel issue-preset-settings"><div class="panel-heading"><div><h3>${esc(text.title)}</h3><p>${esc(text.description)}</p></div><button type="button" class="button" data-issue-action="add">${esc(text.add)}</button></div><div class="issue-preset-list">${issuePresets(
-    draft,
+  return `<section class="panel issue-preset-settings"><div class="panel-heading"><div><h3>${esc(text.title)}</h3><p>${esc(text.description)}</p></div><button type="button" class="button" data-issue-action="add">${esc(text.add)}</button></div><div class="issue-preset-list">${naturalOrder(
+    issuePresets(draft).map((item, index) => ({ item, index })),
+    language,
+    ({ item }) => item.label,
   )
     .map(
-      (item, index) =>
+      ({ item, index }) =>
         `<div class="issue-preset-row" data-issue-preset-index="${index}"><label class="issue-preset-label">${esc(text.label)}<input maxlength="120" value="${esc(item.label)}" data-issue-label data-issue-index="${index}"></label><div class="issue-preset-actions"><label><input type="checkbox" data-issue-enabled="${index}" ${item.active ? 'checked' : ''}>${esc(text.active)}</label><button type="button" class="button" data-issue-action="remove" data-issue-index="${index}">${esc(text.remove)}</button></div></div>`,
     )
     .join('')}</div></section>`;

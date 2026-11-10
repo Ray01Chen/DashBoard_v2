@@ -1,3 +1,4 @@
+import { auditLayoutStress } from './layout-stress.mjs';
 /** A reproducible, isolated reference scene plus cross-page design checks.
  * Uses the smoke test's temporary server/session; no second setup or real data. */
 import assert from 'node:assert/strict';
@@ -184,53 +185,141 @@ export async function auditDesign({
 
   for (const language of ['zh', 'en', 'th']) {
     await page.locator('#language-select').selectOption(language);
-    for (const [width, height] of [
-      [1920, 1080],
-      [1672, 941],
-      [1536, 864],
-      [1440, 900],
-      [1366, 768],
-      [1280, 720],
-    ]) {
-      await page.setViewportSize({ width, height });
-      const geometry = await page.locator('#line-cards').evaluate((list) =>
-        [...list.children].map((card) => ({
-          rect: card.getBoundingClientRect().toJSON(),
-          bad: [
-            ...card.querySelectorAll(
-              '.line-card-top,.line-health,.line-slot,.line-card-values,.line-card-status,.line-trend,.production-model,.line-card-values b',
+    for (const fullscreen of [false, true]) {
+      if (fullscreen) await page.locator('#enter-fullscreen').click();
+      for (const metricScope of ['interval', 'day']) {
+        const controls = fullscreen ? '.board-actions' : '.line-dashboard-heading';
+        await page.locator(`${controls} [data-metric-scope="${metricScope}"]`).click();
+        for (const [width, height] of [
+          [1920, 1080],
+          [1672, 941],
+          [1536, 864],
+          [1440, 900],
+          [1366, 768],
+          [1280, 720],
+        ]) {
+          await page.setViewportSize({ width, height });
+          const geometry = await page.locator('#line-cards').evaluate((list) =>
+            [...list.children].map((card) => ({
+              rect: card.getBoundingClientRect().toJSON(),
+              bad: [
+                ...card.querySelectorAll(
+                  '.line-card-top,.line-health,.line-slot,.line-card-values,.line-card-status,.line-trend,.production-model,.line-card-values b',
+                ),
+              ]
+                .filter((node) => {
+                  const rect = node.getBoundingClientRect(),
+                    box = card.getBoundingClientRect();
+                  if (!rect.width && !rect.height) return false;
+                  return (
+                    rect.left < box.left - 1 ||
+                    rect.right > box.right + 1 ||
+                    rect.top < box.top - 1 ||
+                    rect.bottom > box.bottom + 1
+                  );
+                })
+                .map((node) => node.className),
+            })),
+          );
+          assert.equal(geometry.length, 7);
+          assert.ok(
+            geometry.every(
+              (item) =>
+                !item.bad.length &&
+                item.rect.top >= (fullscreen ? 0 : 64) &&
+                item.rect.bottom <= height,
             ),
-          ]
-            .filter((node) => {
-              const rect = node.getBoundingClientRect(),
-                box = card.getBoundingClientRect();
-              return (
-                rect.left < box.left - 1 ||
-                rect.right > box.right + 1 ||
-                rect.top < box.top - 1 ||
-                rect.bottom > box.bottom + 1
-              );
-            })
-            .map((node) => node.className),
-        })),
-      );
-      assert.equal(geometry.length, 7);
-      assert.ok(
-        geometry.every(
-          (item) => !item.bad.length && item.rect.top >= 64 && item.rect.bottom <= height,
-        ),
-        JSON.stringify({ language, width, height, geometry }),
-      );
+            JSON.stringify({ language, metricScope, fullscreen, width, height, geometry }),
+          );
+          const hierarchy = await page.evaluate(() => {
+            const order = [
+              '#group-tabs',
+              '#group-summary',
+              '.monitor-summary',
+              '#line-cards',
+              '.dashboard-top-charts',
+            ]
+              .map((selector) => document.querySelector(selector))
+              .filter((node) => node.checkVisibility())
+              .map((node) => node.getBoundingClientRect());
+            return order.every(
+              (box, index) => !index || box.top >= order[index - 1].bottom - 1,
+            );
+          });
+          assert.ok(hierarchy, `Information order: ${fullscreen}/${language}/${width}`);
+          const sizes = await page
+            .locator('#line-cards .line-card')
+            .first()
+            .evaluate((node) =>
+              [
+                '.production-model',
+                '.severity-badge',
+                '.production-state',
+                '.health-period',
+                '.line-card-values small',
+                '[data-achievement]',
+                '[data-card-reason]',
+              ].map((selector) =>
+                Number.parseFloat(getComputedStyle(node.querySelector(selector)).fontSize),
+              ),
+            );
+          assert.ok(
+            sizes.every((size) => size >= 11),
+            JSON.stringify({ language, width, sizes }),
+          );
+        }
+      }
+      if (fullscreen) await page.locator('#exit-fullscreen').click();
     }
   }
+  await page.locator('.line-dashboard-heading [data-metric-scope="interval"]').click();
   record(
-    'Seven reference-style horizontal rows and all information bands fit ordinary desktop views from 1280×720 to 1920×1080 in every language',
+    'Seven readable rows retain Group Overview → alerts → cards → charts order across ordinary/fullscreen, Interval/Daily, three languages and six desktop sizes; primary labels stay at least 11px',
+  );
+
+  // Desktop zoom changes the available CSS viewport. Exercise the equivalent
+  // layouts at 80/100/125/150%, allowing a readable stacked layout when narrower.
+  const zoomSession = await design.newCDPSession(page);
+  for (const zoom of [0.8, 1, 1.25, 1.5]) {
+    await page.setViewportSize({
+      width: Math.round(1440 / zoom),
+      height: Math.round(900 / zoom),
+    });
+    await zoomSession.send('Emulation.setDeviceMetricsOverride', {
+      width: Math.round(1440 / zoom),
+      height: Math.round(900 / zoom),
+      deviceScaleFactor: zoom,
+      mobile: false,
+    });
+    assert.ok(Math.abs((await page.evaluate(() => devicePixelRatio)) - zoom) < 0.000001);
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+      `Zoom ${zoom}`,
+    );
+    await page.locator('#line-cards .line-card').first().locator('[data-line-expand]').click();
+    assert.equal(
+      await page
+        .locator('#line-cards .line-card')
+        .first()
+        .locator('[data-card-alert-list]')
+        .isVisible(),
+      true,
+    );
+    await page.locator('#line-cards .line-card').first().locator('[data-line-expand]').click();
+  }
+  await zoomSession.send('Emulation.clearDeviceMetricsOverride');
+  await zoomSession.detach();
+  record(
+    'Equivalent 80/100/125/150% desktop zoom viewports and pixel densities reflow without document overflow and retain accessible complete alert explanations',
   );
 
   if (screenshots) {
     await page.setViewportSize({ width: 1672, height: 941 });
     await page.locator('#language-select').selectOption('en');
     await page.evaluate(() => scrollTo(0, 0));
+    await page.mouse.move(0, 0);
+    await page.locator('#trend-tooltip').waitFor({ state: 'hidden' });
     const last = await page.locator('#line-cards .line-card').last().boundingBox();
     await page.screenshot({
       path: path.join(root, 'docs/images/production-overview.png'),
@@ -241,6 +330,8 @@ export async function auditDesign({
     await page.locator('#board-show-trend').uncheck();
     await page.locator('#board-show-share').uncheck();
     await page.locator('.board-display-options summary').click();
+    await page.mouse.move(0, 0);
+    await page.locator('#trend-tooltip').waitFor({ state: 'hidden' });
     await page.screenshot({ path: path.join(root, 'docs/images/seven-line-board.png') });
     await page.locator('#exit-fullscreen').click();
   }
@@ -268,12 +359,12 @@ export async function auditDesign({
             `${theme}/${language}/${route}/${width}`,
           );
           const navigationFits = await page.locator('.sidebar nav').evaluate((nav) => {
-            const links = [...nav.querySelectorAll('a')].filter(
-              (node) => node.getClientRects().length,
-            );
+            const links = [
+              ...nav.querySelectorAll(':scope > a, :scope > details > summary'),
+            ].filter((node) => node.checkVisibility());
             return links.every((node, index) => {
               const box = node.getBoundingClientRect();
-              const label = node.querySelector('.nav-label');
+              const label = node.querySelector('.nav-label, [data-i18n="moreNavigation"]');
               return (
                 (!index || box.left >= links[index - 1].getBoundingClientRect().right) &&
                 (getComputedStyle(label).display === 'none' ||
@@ -282,6 +373,22 @@ export async function auditDesign({
             });
           });
           assert.ok(navigationFits, `Navigation labels overlap: ${theme}/${language}/${width}`);
+          if (route === '/overview') {
+            const totalsFit = await page.locator('#group-summary').evaluate((panel) => {
+              const box = panel.getBoundingClientRect();
+              return [...panel.querySelectorAll('.production-metric b')].every((node) => {
+                const rect = node.getBoundingClientRect();
+                return (
+                  rect.width > 0 &&
+                  rect.left >= box.left &&
+                  rect.right <= box.right &&
+                  rect.bottom <= box.bottom &&
+                  node.scrollWidth <= node.clientWidth + 1
+                );
+              });
+            });
+            assert.ok(totalsFit, `Group totals clipped: ${theme}/${language}/${width}`);
+          }
           const colors = await page.evaluate(() => {
             const canvas = document.createElement('canvas');
             canvas.width = canvas.height = 1;
@@ -328,5 +435,6 @@ export async function auditDesign({
   record(
     'All five themes and three languages retain shared readable surfaces across overview, entry, schedules, targets, alerts and guide at desktop and phone widths; primary and secondary text contrast meets 4.5:1',
   );
+  await auditLayoutStress({ page, context, baseURL, readConfig, record });
   await design.close();
 }

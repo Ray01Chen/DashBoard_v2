@@ -4,8 +4,8 @@
  *
  * This sheet follows the feature styles. ID-scoped card rules prevent retired
  * fullscreen positioning from leaking into the same component at other sizes.
- * Tablet/phone cards reflow; shorter desktop fullscreen views compact optional
- * charts and secondary labels so seven rows remain readable together. */
+ * Tablet/phone cards reflow; narrower desktops move secondary metadata into
+ * the expansion. Optional fullscreen charts follow rows instead of shrinking text. */
 :root,
 [data-theme] {
   --surface: #fff;
@@ -95,6 +95,7 @@ body .board-display-options summary {
 }
 body .button {
   min-height: var(--ui-control-height);
+  line-height: 1.2;
   padding: 7px 12px;
   border: 1px solid var(--ui-border);
   font-size: 12px;
@@ -352,16 +353,16 @@ body main {
   padding: 20px 24px;
 }
 
-/* The primary line scan precedes the preserved aggregate charts. */
+/* Shared reading order: scope, group totals, alerts, rows, detailed charts. */
 body[data-page='overview'] main {
-  padding: 10px 16px 20px;
+  padding: 6px 16px 20px;
 }
 body[data-page='overview'] .page-heading {
   display: none;
 }
 body[data-page='overview'] .filter-bar {
-  padding: 4px 12px;
-  margin-bottom: 8px;
+  padding: 0 12px;
+  margin-bottom: 4px;
   min-height: 38px;
   background: transparent;
   box-shadow: none;
@@ -386,14 +387,20 @@ body[data-page='overview'] .line-dashboard-heading {
 body[data-page='overview'] .line-dashboard-heading > div:first-child {
   display: none;
 }
-body[data-page='overview'] .group-tabs {
+#line-dashboard > .group-tabs {
   order: 0;
   min-height: 34px;
   padding-right: 260px;
   margin: 0 0 5px;
   gap: 6px;
 }
+#line-dashboard > .group-tabs {
+  min-height: 32px;
+  padding-bottom: 0;
+  margin-bottom: 4px;
+}
 body .group-tabs button {
+  line-height: 1.2;
   border: 1px solid var(--ui-border);
   border-radius: 8px;
   background: var(--surface);
@@ -405,22 +412,18 @@ body .group-tabs button.selected {
   color: var(--primary-dark);
 }
 body[data-page='overview'] .monitor-summary {
-  order: 1;
+  order: 2;
   min-height: 30px;
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   gap: 10px;
 }
 body[data-page='overview'] .line-cards {
-  order: 2;
-}
-body[data-page='overview'] .board-pagination {
   order: 3;
 }
-body[data-page='overview'] .group-summary {
+body[data-page='overview'] .board-pagination {
   order: 4;
-  margin: 14px 0 10px;
-  padding: 12px 18px;
 }
+
 body[data-page='overview'] .dashboard-top-charts {
   order: 5;
   margin: 0;
@@ -481,22 +484,95 @@ body[data-page='overview'] #alert-summary {
 #line-cards {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
-/* Fixed information bands keep long reasons out of neighbouring columns. */
+/* Group totals use the same compact component in both viewing modes. */
+#line-dashboard #group-summary {
+  order: 1;
+  margin: 0 0 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 4px 12px;
+  min-height: 40px;
+}
+#line-dashboard #group-summary .group-heading {
+  min-width: 130px;
+}
+#line-dashboard #group-summary .group-heading > div {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#line-dashboard #group-summary .group-heading small {
+  display: inline;
+  font-size: 11px;
+  line-height: 1.2;
+}
+#line-dashboard #group-summary .group-heading h2 {
+  font-size: 14px;
+  margin: 0;
+}
+#line-dashboard #group-summary .group-summary-values {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1;
+  width: auto;
+  gap: 16px;
+}
+#line-dashboard #group-summary .production-metric {
+  flex: 0 0 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+#line-dashboard #group-summary .production-metric small {
+  font-size: 11px;
+}
+#line-dashboard #group-summary .production-metric b {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+#line-dashboard #group-summary .current-interval {
+  font-size: 11px;
+}
+#line-cards .line-card.has-wide-metrics,
+body.fullscreen-board #line-cards .line-card.has-wide-metrics {
+  min-height: 82px;
+  height: auto;
+}
+.expanded-slot-info {
+  display: grid;
+  gap: 4px;
+  min-width: 150px;
+  font-size: 12px;
+}
+.expanded-slot-info p {
+  margin: 0;
+}
+
+/* Fluid information bands reserve readable data space; secondary slot/source
+ * metadata moves to the expansion before primary text needs to shrink. */
 #line-cards .line-card {
   --card-tone: var(--neutral);
   --card-tint: var(--surface);
   display: grid;
-  grid-template-columns: 120px 116px 218px minmax(260px, 1fr) 142px minmax(170px, 0.9fr) 20px;
+  grid-template-columns:
+    minmax(130px, 150px) minmax(110px, 124px) minmax(250px, 280px) minmax(160px, 1.8fr)
+    minmax(180px, 1.1fr) 24px;
   grid-template-rows: auto;
-  column-gap: 8px;
+  column-gap: 10px;
   align-items: center;
   min-width: 0;
   min-height: 66px;
-  height: clamp(66px, calc((100dvh - 280px) / 7), 104px);
-  padding: 5px 12px;
+  height: clamp(66px, calc((100dvh - 330px) / 7), 104px);
+  padding: 4px 12px;
   margin: 0;
   text-align: left;
   border: 1px solid color-mix(in srgb, var(--card-tone) 95%, white);
@@ -553,10 +629,13 @@ body[data-page='overview'] #alert-summary {
   color: var(--ink);
 }
 #line-cards .production-model {
-  display: block;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.1;
+  font-size: 11px;
+  line-height: 1.15;
   overflow-wrap: anywhere;
   white-space: normal;
 }
@@ -567,11 +646,11 @@ body[data-page='overview'] #alert-summary {
 #line-cards .line-source {
   width: 100%;
   align-self: stretch;
-  display: block;
+  display: none;
   grid-column: auto;
   grid-row: auto;
-  font-size: 9px;
-  line-height: 1.1;
+  font-size: 11px;
+  line-height: 1.15;
   color: var(--muted);
   margin: 0;
   overflow: hidden;
@@ -583,7 +662,7 @@ body[data-page='overview'] #alert-summary {
   display: grid;
   justify-items: start;
   align-content: center;
-  gap: 3px;
+  gap: 2px;
 }
 .line-severity {
   display: flex;
@@ -619,8 +698,8 @@ body[data-page='overview'] #alert-summary {
   border-radius: 20px;
   padding: 2px 7px;
   font-weight: 700;
-  font-size: 10px;
-  line-height: 1.4;
+  font-size: 11px;
+  line-height: 1.2;
   white-space: nowrap;
 }
 .severity-red {
@@ -647,8 +726,8 @@ body[data-page='overview'] #alert-summary {
   border-radius: 18px;
   padding: 2px 7px;
   font-weight: 650;
-  font-size: 10px;
-  line-height: 1.3;
+  font-size: 11px;
+  line-height: 1.25;
   color: #44566b;
   background: #eaf0f6;
   white-space: nowrap;
@@ -687,7 +766,7 @@ body[data-page='overview'] #alert-summary {
   content: '⚑';
 }
 .health-period {
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1;
   color: var(--muted);
   padding-left: 3px;
@@ -700,7 +779,7 @@ body[data-page='overview'] #alert-summary {
   padding-left: 12px;
 }
 #line-cards .line-card-values .production-metric,
-.achievement-metric {
+#line-cards .line-card-values .achievement-metric {
   padding: 0;
   margin: 0;
   border: 0;
@@ -710,7 +789,7 @@ body[data-page='overview'] #alert-summary {
 }
 #line-cards .line-card-values small {
   color: var(--ink);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0;
   line-height: 1.15;
   white-space: normal;
@@ -718,7 +797,7 @@ body[data-page='overview'] #alert-summary {
   text-overflow: clip;
 }
 #line-cards .line-card-values b {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1.1;
   margin: 0;
@@ -737,7 +816,7 @@ body[data-page='overview'] #alert-summary {
   color: var(--neutral);
 }
 #line-cards .line-trend {
-  height: clamp(34px, 5vh, 62px);
+  height: clamp(38px, 5vh, 62px);
   overflow: hidden;
   border-left: 0;
   padding-left: 0;
@@ -762,15 +841,15 @@ body[data-page='overview'] #alert-summary {
   stroke-width: 1;
 }
 .line-slot {
+  display: none;
   min-width: 0;
   border-left: 1px solid var(--ui-border);
   padding-left: 12px;
-  display: grid;
   justify-items: start;
   gap: 4px;
 }
 .line-slot > small {
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.2;
   color: var(--muted);
 }
@@ -798,16 +877,16 @@ body[data-page='overview'] #alert-summary {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 3px;
-  font-size: 11px;
-  line-height: 1.4;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1.3;
   position: relative;
 }
 #line-cards .line-card-status > [data-card-reason] {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  max-height: 2.8em;
+  max-height: 2.6em;
   overflow: hidden;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -901,51 +980,97 @@ body.fullscreen-board .app-shell {
   margin: 0;
 }
 body.fullscreen-board main {
-  padding: 12px 16px;
+  padding: 8px 16px;
+  max-width: none;
+}
+body.fullscreen-board .filter-bar {
+  display: flex;
 }
 body.fullscreen-board #line-dashboard {
-  height: calc(100dvh - 24px);
+  height: auto;
+  min-height: calc(100dvh - 64px);
 }
 body.fullscreen-board .line-dashboard-heading {
   display: none;
 }
-body.fullscreen-board .group-tabs {
+body.fullscreen-board #line-dashboard > .group-tabs {
   padding-right: 0;
   flex: none;
 }
 body.fullscreen-board .board-header {
   order: -1;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
+  min-height: 32px;
 }
-body.fullscreen-board .group-summary {
-  order: 0;
-  margin: 0 0 5px;
-  flex: none;
-  min-height: 34px;
+body.fullscreen-board .board-header > div:first-child {
+  display: none;
 }
-body.fullscreen-board .dashboard-top-charts {
-  order: 1;
-  flex: none;
-  margin-bottom: 5px;
+body.fullscreen-board .board-actions {
+  margin-left: auto;
 }
 body.fullscreen-board .monitor-summary {
-  order: 2;
   flex: none;
 }
 body.fullscreen-board #line-cards {
-  order: 3;
-  flex: 1;
+  flex: none;
   min-height: 0;
-  overflow-y: auto;
-}
-body.fullscreen-board .board-pagination {
-  order: 4;
+  overflow: visible;
 }
 body.fullscreen-board #line-cards .line-card {
-  flex: 1;
-  height: auto;
-  min-height: 62px;
+  flex: none;
+  height: clamp(66px, calc((100dvh - 250px) / 7), 104px);
+  min-height: 66px;
 }
+body.fullscreen-board #line-dashboard .dashboard-top-charts {
+  flex: none;
+  height: auto;
+  max-height: none;
+  margin-top: 10px;
+}
+body.fullscreen-board #line-dashboard .dashboard-top-charts .panel {
+  height: auto;
+  max-height: none;
+}
+body.fullscreen-board #line-dashboard .dashboard-top-charts .panel-heading {
+  padding: 12px 16px;
+}
+body.fullscreen-board #line-dashboard .dashboard-top-charts h2 {
+  font-size: 16px;
+}
+body.fullscreen-board #group-trend {
+  --trend-height: 220px;
+  height: 220px;
+  max-height: none;
+}
+body.fullscreen-board #output-share {
+  max-height: none;
+}
+body.fullscreen-board #output-share .share-layout {
+  height: auto;
+  min-height: 220px;
+  grid-template-columns: 100px minmax(0, 1fr);
+  padding: 12px;
+}
+body.fullscreen-board #output-share .share-layout > svg {
+  height: 100px;
+}
+body.fullscreen-board #output-share .share-legend {
+  max-height: 205px;
+  overflow: auto;
+  gap: 8px 12px;
+}
+body.fullscreen-board #output-share .share-legend > div {
+  grid-template-columns: 8px minmax(0, 1fr) auto auto;
+  font-size: 12px;
+  line-height: 1.3;
+}
+body.fullscreen-board #output-share .share-legend .production-line {
+  font-size: 12px;
+}
+body.fullscreen-board #output-share .share-legend .production-model {
+  font-size: 11px;
+}
+
 body.fullscreen-board #line-cards .line-card.is-expanded {
   flex: none;
   min-height: 150px;
@@ -968,15 +1093,22 @@ body .negative {
   width: auto;
   max-width: none;
 }
+/* Intrinsic value widths determine wrapping; large counts/percentages must
+ * grow the row before a number is squeezed into an arbitrary half-column. */
 #line-cards .has-wide-metrics .line-card-values {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2px 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+#line-cards .has-wide-metrics .line-card-values > span {
+  flex: 1 1 auto;
+  min-width: max-content;
 }
 #line-cards .has-wide-metrics .line-card-values b {
-  font-size: 13px;
+  font-size: 18px;
 }
 #line-cards .has-wide-metrics .line-card-values small {
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1;
 }
 #line-cards .line-card.blinking-frame {
@@ -1053,18 +1185,182 @@ body textarea:focus-visible {
   outline-offset: 2px;
 }
 
+/* Secondary navigation keeps infrequent destinations grouped and labelled. */
+.nav-more {
+  position: relative;
+  flex: 0 0 auto;
+}
+.nav-more > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  cursor: pointer;
+  min-height: 36px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.nav-more > summary::-webkit-details-marker {
+  display: none;
+}
+.nav-more[open] > summary,
+.nav-more.active > summary {
+  background: var(--soft);
+  color: var(--primary-dark);
+}
+.nav-more .nav-menu {
+  position: absolute;
+  z-index: 50;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  padding: 8px;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  background: var(--surface);
+  box-shadow: 0 12px 40px #19365326;
+}
+.nav-menu > p {
+  margin: 6px 8px;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--muted);
+}
+body .sidebar .nav-menu .nav-item {
+  width: 100%;
+  height: auto;
+  min-height: 38px;
+  font-size: 12px;
+  white-space: normal;
+}
+body .sidebar .nav-menu .nav-label {
+  display: inline;
+}
+.line-multiselect {
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-sm);
+  margin-bottom: 12px;
+}
+.line-multiselect > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px;
+  cursor: pointer;
+  color: var(--primary-dark);
+  background: var(--tint);
+  border-radius: inherit;
+}
+.line-multiselect > summary b {
+  font-size: 12px;
+}
+.line-picker-panel {
+  padding: 12px;
+}
+.line-picker-search {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.line-picker-search input {
+  width: 100%;
+  min-height: var(--ui-control-height);
+  padding: 8px 10px;
+  border: 1px solid var(--ui-border);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+.line-picker-actions,
+.schedule-apply-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.line-picker-actions > span {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+.line-picker-groups {
+  max-height: 300px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 12px 0;
+  padding-right: 4px;
+}
+.line-picker-groups section {
+  margin-bottom: 10px;
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+}
+.line-picker-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: var(--tint);
+  font-size: 12px;
+}
+.line-picker-group small {
+  margin-left: auto;
+}
+.line-picker-groups section > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+  gap: 4px;
+  padding: 6px;
+}
+.line-picker-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  min-width: 0;
+  border-radius: 6px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.line-picker-option:hover {
+  background: var(--soft);
+}
+.schedule-save-state {
+  font-size: 12px;
+  color: var(--success);
+}
+.schedule-save-state[data-unsaved='true'] {
+  color: var(--warning);
+}
+
 @keyframes reference-frame-pulse {
   50% {
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--card-tone) 22%, transparent);
   }
 }
 
-@media (min-width: 1500px) {
-  /* Fixed information bands keep long reasons out of neighbouring columns. */
+@media (min-width: 1600px) {
+  /* Wide screens expose source and next-slot information beside the data. */
   #line-cards .line-card {
-    grid-template-columns: 150px 140px 260px minmax(260px, 1fr) 185px minmax(220px, 1fr) 24px;
-    column-gap: 14px;
-    padding: 8px 16px;
+    grid-template-columns:
+      minmax(140px, 160px) minmax(124px, 140px) minmax(255px, 290px)
+      minmax(200px, 1.8fr) minmax(165px, 180px) minmax(225px, 1.1fr) 24px;
+    column-gap: 12px;
+    padding: 6px 14px;
+  }
+  #line-cards .line-source {
+    display: block;
+  }
+  #line-cards .line-slot {
+    display: grid;
   }
   #line-cards .production-line {
     font-size: 22px;
@@ -1105,9 +1401,7 @@ body textarea:focus-visible {
     padding-right: 410px;
     gap: 14px;
   }
-  body .sidebar .nav-label {
-    display: none;
-  }
+
   body .sidebar .nav-item {
     padding: 7px 9px;
   }
@@ -1120,7 +1414,20 @@ body textarea:focus-visible {
 }
 
 @media (max-width: 1199px) {
-  /* Fixed information bands keep long reasons out of neighbouring columns. */
+  body .product-title {
+    display: none;
+  }
+  /* Reflow the trend, timing and reason instead of reducing primary type. */
+  #line-cards .line-source {
+    display: block;
+  }
+  #line-cards .line-slot {
+    display: grid;
+  }
+  body.fullscreen-board #line-cards {
+    max-height: calc(100dvh - 280px);
+    overflow-y: auto;
+  }
   #line-cards .line-card {
     grid-template-columns: 150px 125px minmax(220px, 1fr) 24px;
     grid-template-rows: auto auto;
@@ -1167,11 +1474,31 @@ body textarea:focus-visible {
   }
   body.fullscreen-board #line-cards .line-card {
     flex: none;
-    min-height: 130px;
+    min-height: 160px;
+    height: auto;
   }
 }
 
 @media (max-width: 780px) {
+  #line-dashboard #group-summary .group-summary-values {
+    flex-basis: 100%;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #line-dashboard #group-summary .production-metric {
+    flex: 1 1 110px;
+    min-width: max-content;
+    display: grid;
+    gap: 3px;
+  }
+  #line-dashboard #group-summary .current-interval {
+    flex-basis: 100%;
+    width: 100%;
+    text-align: left;
+  }
+
   /* Reuse existing navigation and collapse handlers in a horizontal app bar. */
   body .sidebar,
   body.sidebar-collapsed .sidebar {
@@ -1182,14 +1509,26 @@ body textarea:focus-visible {
     position: absolute;
     inset: auto 8px 5px;
     height: 34px;
-    overflow-x: auto;
+    overflow: visible;
   }
   body .sidebar .nav-label {
     display: inline;
     font-size: 11px;
   }
+  body .sidebar nav > .nav-item {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  body .sidebar nav > .nav-item .nav-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   body .sidebar .nav-item {
     flex-shrink: 0;
+  }
+  .nav-more > summary {
+    font-size: 11px;
+    padding-inline: 7px;
   }
   body .topbar,
   body.sidebar-collapsed .topbar {
@@ -1226,7 +1565,7 @@ body textarea:focus-visible {
     padding: 14px 16px;
   }
 
-  /* The primary line scan precedes the preserved aggregate charts. */
+  /* Shared reading order: scope, group totals, alerts, rows, detailed charts. */
   body[data-page='overview'] main {
     padding: 8px;
   }
@@ -1249,16 +1588,19 @@ body textarea:focus-visible {
     justify-content: flex-end;
     margin-bottom: 6px;
   }
-  body[data-page='overview'] .group-tabs {
+  #line-dashboard > .group-tabs {
     order: 1;
     padding-right: 0;
   }
-  body[data-page='overview'] .monitor-summary {
+  body[data-page='overview'] .group-summary {
     order: 2;
+  }
+  body[data-page='overview'] .monitor-summary {
+    order: 3;
     flex-wrap: wrap;
   }
   body[data-page='overview'] .line-cards {
-    order: 3;
+    order: 4;
   }
   .status-filter {
     font-size: 11px;
@@ -1269,7 +1611,8 @@ body textarea:focus-visible {
     width: 100%;
   }
 
-  /* Fixed information bands keep long reasons out of neighbouring columns. */
+  /* Fluid information bands reserve readable data space; secondary slot/source
+ * metadata moves to the expansion before primary text needs to shrink. */
   #line-cards .line-card {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 24px;
     padding: 12px;
@@ -1365,125 +1708,5 @@ body textarea:focus-visible {
   }
   body .header-select select {
     width: 78px;
-  }
-}
-
-@media (max-height: 900px) and (min-width: 1200px) {
-  body.fullscreen-board .dashboard-top-charts {
-    max-height: 84px;
-    height: 84px;
-    margin-bottom: 3px;
-  }
-  body.fullscreen-board .group-trend,
-  body.fullscreen-board #output-share {
-    max-height: 66px;
-  }
-  body.fullscreen-board .dashboard-top-charts .panel-heading {
-    padding: 4px 8px;
-  }
-  body.fullscreen-board #line-cards .line-card {
-    padding-top: 3px;
-    padding-bottom: 3px;
-    min-height: 56px;
-  }
-  body.fullscreen-board .monitor-summary {
-    margin-bottom: 5px;
-    min-height: 24px;
-    margin: 0 0 3px;
-  }
-  body.fullscreen-board .status-filter {
-    font-size: 10px;
-    padding: 4px 6px;
-  }
-  body.fullscreen-board .button {
-    min-height: 24px;
-    padding: 4px 8px;
-    font-size: 10px;
-  }
-  body.fullscreen-board .board-header {
-    min-height: 28px;
-    margin-bottom: 3px;
-  }
-  body.fullscreen-board .metric-scope-buttons button {
-    padding: 4px 8px;
-    font-size: 10px;
-  }
-  body.fullscreen-board .group-tabs {
-    min-height: 24px;
-    margin-bottom: 3px;
-  }
-  body.fullscreen-board .group-tabs button {
-    padding: 3px 8px;
-    font-size: 10px;
-  }
-  body.fullscreen-board #group-summary {
-    padding: 4px 10px;
-    min-height: 32px;
-    margin: 0 0 3px;
-  }
-  body.fullscreen-board #group-summary .group-heading h2 {
-    font-size: 12px;
-  }
-  body.fullscreen-board #group-summary .production-metric small {
-    font-size: 8px;
-  }
-  body.fullscreen-board #group-summary .production-metric b {
-    font-size: 16px;
-  }
-  body.fullscreen-board .group-trend {
-    --trend-height: 62px;
-    height: 62px;
-    max-height: 62px;
-  }
-  body.fullscreen-board .dashboard-top-charts .panel-heading h2 {
-    font-size: 11px;
-  }
-  body.fullscreen-board .board-pagination {
-    min-height: 22px;
-    padding-top: 2px;
-  }
-  body.fullscreen-board .board-pagination .icon-button {
-    width: 22px;
-    height: 22px;
-    padding: 2px;
-  }
-  body.fullscreen-board #line-cards .production-line {
-    font-size: 16px;
-  }
-  body.fullscreen-board #line-cards .production-model,
-  body.fullscreen-board #line-cards .line-source {
-    font-size: 9px;
-    line-height: 1.05;
-  }
-  body.fullscreen-board .health-period {
-    font-size: 9px;
-  }
-  body.fullscreen-board .share-layout {
-    height: 58px;
-    grid-template-columns: 54px minmax(0, 1fr);
-    padding: 2px 10px;
-  }
-  body.fullscreen-board .share-layout > svg {
-    height: 54px;
-  }
-  body.fullscreen-board .share-legend .production-identity {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 4px;
-    min-width: 0;
-  }
-  body.fullscreen-board .share-legend .production-line {
-    font-size: 10px;
-  }
-  body.fullscreen-board .share-legend .production-model {
-    font-size: 9px;
-  }
-  body.fullscreen-board .share-legend > div {
-    line-height: 11.5px;
-    grid-template-columns: 8px minmax(0, 1fr) 30px 30px;
-  }
-  body.fullscreen-board .share-empty {
-    display: none;
   }
 }

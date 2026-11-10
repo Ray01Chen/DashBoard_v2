@@ -18,7 +18,7 @@
     <a class="skip-link" href="#main" data-i18n="skip">跳至主要內容</a>
     <aside class="sidebar" id="sidebar">
       <div class="brand-row">
-        <strong class="product-title" data-i18n="productionMonitoring"></strong>
+        <strong class="product-title" data-i18n="overview"></strong>
         <a href="/" class="brand" aria-label="DELTA · BP PULSE"
           ><span class="brand-mark"><img src="/delta-logo.svg#symbol" alt="" /></span
           ><span class="brand-word"
@@ -55,26 +55,35 @@
           <span data-icon="grid"></span
           ><span class="nav-label" data-i18n="overview">生產總覽</span>
         </a>
-        <a href="/details" class="nav-item" data-view="details" data-i18n-title="details">
-          <span data-icon="clipboard"></span><span class="nav-label" data-i18n="details"></span>
-        </a>
-        <a href="/entry" class="nav-item" data-view="entry" data-i18n-title="entry">
-          <span data-icon="edit"></span><span class="nav-label" data-i18n="entry"></span>
-        </a>
-        <a href="/guide" class="nav-item" data-view="help" data-i18n-title="help">
-          <span data-icon="info"></span><span class="nav-label" data-i18n="help"></span>
-        </a>
-        <div class="nav-divider" data-admin-only></div>
-        <a
-          href="/settings/master-data"
-          class="nav-item"
-          data-view="settings"
-          data-admin-only
-          data-i18n-title="settings"
-        >
-          <span data-icon="settings"></span
-          ><span class="nav-label" data-i18n="settings">系統設定</span>
-        </a>
+        <a href="/entry" class="nav-item" data-view="entry" data-i18n-title="entry"
+          ><span data-icon="edit"></span><span class="nav-label" data-i18n="entry"></span
+        ></a>
+        <details id="nav-more" class="nav-more">
+          <summary>
+            <span data-icon="layers"></span><span data-i18n="moreNavigation"></span
+            ><span data-icon="down"></span>
+          </summary>
+          <div class="nav-menu">
+            <p data-i18n="reviewNavigation"></p>
+            <a href="/details" class="nav-item" data-view="details" data-i18n-title="details"
+              ><span data-icon="clipboard"></span
+              ><span class="nav-label" data-i18n="details"></span
+            ></a>
+            <p data-i18n="supportNavigation"></p>
+            <a
+              href="/settings/master-data"
+              class="nav-item"
+              data-view="settings"
+              data-admin-only
+              data-i18n-title="settings"
+              ><span data-icon="settings"></span
+              ><span class="nav-label" data-i18n="settings"></span
+            ></a>
+            <a href="/guide" class="nav-item" data-view="help" data-i18n-title="help"
+              ><span data-icon="info"></span><span class="nav-label" data-i18n="help"></span
+            ></a>
+          </div>
+        </details>
       </nav>
       <div class="sidebar-bottom">
         <div class="template-note" data-admin-only>
@@ -216,22 +225,12 @@
               </div>
             </div>
             <div class="group-tabs" id="group-tabs" role="tablist" data-i18n-aria="group"></div>
-            <div id="group-summary" class="group-summary"></div>
-            <div class="dashboard-top-charts">
-              <section class="panel group-trend-panel">
-                <div class="panel-heading">
-                  <div>
-                    <h2 data-i18n="groupTrend"></h2>
-                    <p data-i18n="groupTrendDesc"></p>
-                  </div>
-                </div>
-                <div id="group-trend" class="group-trend"></div>
-              </section>
-              <section class="panel share-panel">
-                <div class="panel-heading"><h2 data-i18n="outputShare"></h2></div>
-                <div id="output-share"></div>
-              </section>
-            </div>
+            <div
+              id="group-summary"
+              class="group-summary"
+              role="region"
+              data-i18n-aria="groupTotals"
+            ></div>
             <div class="monitor-summary">
               <div
                 id="monitor-status-filters"
@@ -248,6 +247,21 @@
             </div>
             <div class="line-cards" id="line-cards"></div>
             <div class="board-pagination" id="board-pagination"></div>
+            <div class="dashboard-top-charts">
+              <section class="panel group-trend-panel">
+                <div class="panel-heading">
+                  <div>
+                    <h2 data-i18n="groupTrend"></h2>
+                    <p data-i18n="groupTrendDesc"></p>
+                  </div>
+                </div>
+                <div id="group-trend" class="group-trend"></div>
+              </section>
+              <section class="panel share-panel">
+                <div class="panel-heading"><h2 data-i18n="outputShare"></h2></div>
+                <div id="output-share"></div>
+              </section>
+            </div>
             <p class="monitor-hint" data-i18n="monitorHint"></p>
           </section>
           <section class="detail-filters panel" id="detail-filters" hidden>

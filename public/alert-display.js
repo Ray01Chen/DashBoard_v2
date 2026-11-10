@@ -52,7 +52,7 @@ export function updateAlertDisplay(element, line, t, now) {
     alertReasonText(rotatedReason(line.unified, now, line.key, line.date), t);
   element.title = line.unified.results.map((reason) => alertReasonText(reason, t)).join('\n');
 }
-export function alertReasonText(reason, t) {
+export function alertReasonText(reason, t, { compact = false } = {}) {
   if (!reason) return t('alertDisabled');
   const params = { ...reason.params };
   // Keep raw precision in evaluation, but avoid long floating-point tails in
@@ -82,7 +82,19 @@ export function alertReasonText(reason, t) {
     }).format(new Date(value));
   if (params.cutoff) params.cutoff = time(params.cutoff);
   if (params.deadline) params.deadline = time(params.deadline);
-  return (params.stale ? t('alertStale') + ' · ' : '') + t(reason.key, params);
+  const summaries = {
+    alertNoData: 'alertSummaryNoData',
+    alertPerformanceReason: 'alertSummaryPerformance',
+    alertCompletionReason: 'alertSummaryCompletion',
+    alertReportingReason: 'alertSummaryReporting',
+    alertIdleReason: 'alertSummaryIdle',
+    alertGapReason: 'alertSummaryGap',
+    alertReportingOK: 'alertSummaryReportingOK',
+    alertLegacyOK: 'alertSummaryLegacyOK',
+  };
+  if (compact && params.cutoff) params.shortCutoff = params.cutoff.split(' ').at(-1);
+  const key = compact ? summaries[reason.key] || reason.key : reason.key;
+  return (params.stale ? t('alertStale') + ' · ' : '') + t(key, params);
 }
 
 export function updateAlertList(element, alert, t) {

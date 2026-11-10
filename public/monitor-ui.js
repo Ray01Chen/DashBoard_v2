@@ -47,7 +47,8 @@ const range = (slot) => (slot ? slot.start + '–' + slot.end : '—');
 function reasonView(line, ctx) {
   const reason = rotatedReason(line.unified, ctx.now, line.key, ctx.date);
   return {
-    text: alertReasonText(reason, ctx.t),
+    text: alertReasonText(reason, ctx.t, { compact: true }),
+    full: alertReasonText(reason, ctx.t),
     index: reason ? line.unified.reasons.indexOf(reason) + 1 : 0,
     count: line.unified.reasons.length,
   };
@@ -97,9 +98,9 @@ export function monitorCard(line, ctx, metrics) {
     <span class="line-card-values">${metrics}<span class="achievement-metric"><small>${esc(t('achievementRate'))}</small><b class="${rate.tone}" data-achievement>${esc(rate.text)}</b></span></span>
     <span class="line-trend"></span>
     <span class="line-slot"><small data-slot-label>${esc(t(period.label))}</small><span class="time-pill state-${period.state}" data-slot-range>${esc(range(period.slot))}</span><small class="next-slot" data-next-slot title="${esc(period.next ? t('nextSlot') + ': ' + range(period.next) : t('noNextSlot'))}">${esc(period.next ? t('nextSlot') + ': ' + range(period.next) : t('noNextSlot'))}</small></span>
-    <div class="line-card-status"><span class="${['red', 'yellow'].includes(line.unified.severity) ? 'alert-text' : ''}" data-card-reason title="${esc(reason.text)}">${esc(reason.text)}</span><small class="card-period-summary">${esc(productionStatusText(line, t, ctx.now))}</small><div class="reason-controls" ${reason.count > 1 ? '' : 'hidden'}><button type="button" class="reason-step" data-reason-step="-1" aria-label="${esc(t('previous'))}">${icon('left')}</button><output data-reason-count aria-label="${esc(t('alertReasons'))}">${reason.index} / ${reason.count}</output><button type="button" class="reason-step" data-reason-step="1" aria-label="${esc(t('next'))}">${icon('right')}</button></div></div>
+    <div class="line-card-status"><span class="${['red', 'yellow'].includes(line.unified.severity) ? 'alert-text' : ''}" data-card-reason title="${esc(reason.full)}">${esc(reason.text)}</span><small class="card-period-summary">${esc(productionStatusText(line, t, ctx.now))}</small><div class="reason-controls" ${reason.count > 1 ? '' : 'hidden'}><button type="button" class="reason-step" data-reason-step="-1" aria-label="${esc(t('previous'))}">${icon('left')}</button><output data-reason-count aria-label="${esc(t('alertReasons'))}">${reason.index} / ${reason.count}</output><button type="button" class="reason-step" data-reason-step="1" aria-label="${esc(t('next'))}">${icon('right')}</button></div></div>
     <button type="button" class="card-reason-toggle icon-button" data-line-expand aria-expanded="${open}" aria-label="${esc(t('alertDetails'))}" title="${esc(t('alertDetails'))}">${icon('down')}</button>
-    <section class="card-expanded-details" ${open ? '' : 'hidden'}><div><strong>${esc(t('alertDetails'))}</strong><ul data-card-alert-list></ul></div><button type="button" class="button card-open-detail">${esc(t('openProductionDetails'))}${icon('right')}</button></section>
+    <section class="card-expanded-details" ${open ? '' : 'hidden'}><div class="expanded-slot-info"><strong>${esc(productionLabel(line))}</strong><p data-expanded-source></p><p data-expanded-period></p><p data-expanded-next></p></div><div><strong>${esc(t('alertDetails'))}</strong><ul data-card-alert-list></ul></div><button type="button" class="button card-open-detail">${esc(t('openProductionDetails'))}${icon('right')}</button></section>
   </article>`;
 }
 export function updateMonitorCard(card, line, ctx) {
@@ -141,7 +142,7 @@ export function updateMonitorCard(card, line, ctx) {
   next.title = next.textContent;
   const label = card.querySelector('[data-card-reason]');
   label.textContent = reason.text;
-  label.title = reason.text;
+  label.title = reason.full;
   label.className = ['red', 'yellow'].includes(line.unified.severity) ? 'alert-text' : '';
   card.querySelector('.card-period-summary').textContent = productionStatusText(
     line,
@@ -150,6 +151,13 @@ export function updateMonitorCard(card, line, ctx) {
   );
   card.querySelector('.reason-controls').hidden = reason.count < 2;
   card.querySelector('[data-reason-count]').textContent = reason.index + ' / ' + reason.count;
+  if (open) {
+    card.querySelector('[data-expanded-source]').textContent =
+      card.querySelector('.line-source').textContent;
+    card.querySelector('[data-expanded-period]').textContent =
+      t(period.label) + ': ' + range(period.slot);
+    card.querySelector('[data-expanded-next]').textContent = next.textContent;
+  }
   if (open) updateAlertList(card.querySelector('[data-card-alert-list]'), line.unified, t);
 }
 export function handleMonitorAction(event, ctx) {

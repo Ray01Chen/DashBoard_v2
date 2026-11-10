@@ -1,3 +1,4 @@
+import { auditNavigation } from './navigation-audit.mjs';
 import { auditDesign } from './design-audit.mjs';
 /**
  * Real Chromium workflow checks against a fresh, temporary SQLite database.
@@ -90,6 +91,11 @@ try {
   await page.locator('#login-submit').click();
   await page.locator('#login-dialog').waitFor({ state: 'hidden' });
   await mkdir(path.join(root, 'docs/images'), { recursive: true });
+  const navigate = async (view, target = page) => {
+    const link = target.locator(`[data-view="${view}"]`);
+    if (!(await link.isVisible())) await target.locator('#nav-more > summary').click();
+    await link.click();
+  };
   const readConfig = async () => (await context.request.get(baseURL + '/api/config')).json();
   const readReport = async (date, shift = 'day') =>
     (await context.request.get(baseURL + `/api/records?date=${date}&shift=${shift}`)).json();
@@ -262,7 +268,7 @@ try {
   await page.locator('[data-report-scope="day"]').click();
   await page.locator('#report-date').fill(reportDate);
   await page.locator('#report-date').dispatchEvent('change');
-  await page.locator('[data-view="entry"]').click();
+  await navigate('entry');
   assert.equal(await page.locator('[data-entry-line] option').count(), 3);
   assert.equal(await page.locator('[data-entry-model-filter] option').count(), 3);
   assert.equal(await page.locator('[data-entry-station]').count(), 0);
@@ -370,12 +376,12 @@ try {
     [test.id, pack.id],
   );
   await page.reload();
-  await page.locator('[data-view="settings"]').click();
+  await navigate('settings');
   await page.locator('[data-settings-tab="workforce"]').click();
   await page.locator('[data-mapping-line-filter]').selectOption('DEMO-A');
   await page.locator('[data-mapping-model]').selectOption(model);
   assert.deepEqual(await mappingOrder(), [test.id, pack.id]);
-  await page.locator('[data-view="entry"]').click();
+  await navigate('entry');
   await page.locator('[data-entry-line]').selectOption('DEMO-A');
   await page.locator('[data-entry-model-filter]').selectOption(model);
   assert.deepEqual(
@@ -384,7 +390,7 @@ try {
       .evaluateAll((rows) => rows.map((row) => Number(row.dataset.entryStationRow))),
     [test.id, pack.id],
   );
-  await page.locator('[data-view="overview"]').click();
+  await navigate('overview');
   for (const theme of ['green', 'indigo', 'amber', 'rose', 'delta']) {
     await page.locator('#theme-select').selectOption(theme);
     assert.equal(await page.locator('html').getAttribute('data-theme'), theme);
@@ -454,7 +460,7 @@ try {
     ],
     ['Test', 'Pack'],
   );
-  await page.locator('[data-view="settings"]').click();
+  await navigate('settings');
   await page.locator('[data-settings-tab="workforce"]').click();
   await page.locator('[data-mapping-line-filter]').selectOption('DEMO-A');
   await page.locator('[data-mapping-model]').selectOption(model);
@@ -473,11 +479,11 @@ try {
   assert.equal(await page.locator('[data-action="add-batch-mappings"]').isDisabled(), true);
   assert.match(await page.locator('.mapping-new-row').innerText(), /already exists above/);
   await saveSettings();
-  await page.locator('[data-view="entry"]').click();
+  await navigate('entry');
   await page.locator('[data-entry-line]').selectOption('DEMO-A');
   await page.locator('[data-entry-model-filter]').selectOption(model);
   assert.equal(await page.locator('[data-entry-station-row]').count(), 1);
-  await page.locator('[data-view="settings"]').click();
+  await navigate('settings');
   await page.locator('[data-settings-tab="workforce"]').click();
   await page.locator('[data-mapping-line-filter]').selectOption('DEMO-A');
   await page.locator('[data-mapping-model]').selectOption(model);
@@ -566,7 +572,7 @@ try {
     otherStation.id,
   );
   await page.reload();
-  await page.locator('[data-view="settings"]').click();
+  await navigate('settings');
   await page.locator('[data-settings-tab="workforce"]').click();
   await page.locator('[data-mapping-line-filter]').selectOption('DEMO-A');
   await page.locator('[data-mapping-model]').selectOption(otherModel);
@@ -614,7 +620,7 @@ try {
   assert.equal(await page.locator('.mapping-empty').isVisible(), true);
   await saveSettings();
   await page.reload();
-  await page.locator('[data-view="settings"]').click();
+  await navigate('settings');
   await page.locator('[data-settings-tab="workforce"]').click();
   await page.locator('[data-mapping-line-filter]').selectOption('DEMO-B');
   assert.equal(await page.locator('[data-configured-mapping]').count(), 0);
@@ -651,7 +657,7 @@ try {
   await screenshot('.issue-preset-settings', 'issue-quick-text');
   await page.locator('[data-issue-action="add"]').click();
   assert.equal(await page.locator('[data-save-settings]').first().isDisabled(), true);
-  await page.locator('[data-issue-label]').last().fill('Safety stop');
+  await page.locator('[data-issue-label][value=""]').fill('Safety stop');
   assert.equal(await page.locator('[data-save-settings]').first().isDisabled(), false);
   await saveSettings();
   await page.locator('[data-settings-tab="alerts"]').click();
@@ -698,11 +704,11 @@ try {
   record(
     'People-by-job linkage, same-job teams and the English issue list in Master data remain available',
   );
-  await page.locator('[data-view="overview"]').click();
+  await navigate('overview');
   await page.locator('[data-report-scope="day"]').click();
   await page.locator('#report-date').fill(reportDate);
   await page.locator('#report-date').dispatchEvent('change');
-  await page.locator('[data-view="entry"]').click();
+  await navigate('entry');
   await page.locator('[data-entry-line]').selectOption('DEMO-A');
   await page.locator('[data-entry-model-filter]').selectOption(model);
   const station = (id) => page.locator(`[data-entry-station-row="${id}"]`);
@@ -1101,7 +1107,7 @@ try {
     data.serverTime = monitorClock;
     await route.fulfill({ response, json: data });
   });
-  await page.locator('[data-view="overview"]').click();
+  await navigate('overview');
   await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
   const card = page
     .locator('[data-monitor-line]')
@@ -1120,13 +1126,13 @@ try {
     (await card.locator('[data-metric="currentActual"] b').innerText()).replaceAll(',', ''),
     '32',
   );
-  await page.locator('[data-view="settings"]').click();
+  await navigate('settings');
   await page.locator('[data-settings-tab="workforce"]').click();
   await page.locator('[data-mapping-line-filter]').selectOption('DEMO-A');
   await page.locator('[data-mapping-model]').selectOption(model);
   await page.locator('[data-unit-output-source]').selectOption(String(pack.id));
   await saveSettings();
-  await page.locator('[data-view="overview"]').click();
+  await navigate('overview');
   await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
   assert.match(await card.locator('.line-source').innerText(), /Pack/);
   assert.equal(
@@ -1205,7 +1211,7 @@ try {
     document.querySelector('#board-context').textContent.includes('Whole day'),
   );
 
-  await page.locator('[data-view="details"]').click();
+  await navigate('details');
   assert.equal(
     await page.locator('[data-report-scope="all"]').getAttribute('aria-pressed'),
     'true',
@@ -1217,7 +1223,7 @@ try {
     await page.locator('#records-body .team-cell').first().innerText(),
     /Blake Night/,
   );
-  await page.locator('[data-view="overview"]').click();
+  await navigate('overview');
   await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
   await screenshot('#line-dashboard', 'production-overview');
   await page.locator('#enter-fullscreen').click();
@@ -1313,7 +1319,7 @@ try {
     'Whole-day overview and production details are selectable; fullscreen details follow the active theme, label day/night personnel and use a full-width larger chart on desktop, tablet and phone',
   );
   await page.unroute('**/api/records?**');
-  await page.locator('[data-view="settings"]').click();
+  await navigate('settings');
   for (const width of [1440, 1024, 768, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     for (const step of ['structure', 'targets', 'staffing', 'workforce', 'groups']) {
@@ -1347,7 +1353,7 @@ try {
       );
     }
   }
-  await page.locator('[data-view="entry"]').click();
+  await navigate('entry');
   for (const language of ['en', 'zh', 'th']) {
     await page.locator('#language-select').selectOption(language);
     assert.deepEqual(await page.locator('#language-select option').allTextContents(), [
@@ -1725,7 +1731,7 @@ try {
   const retainedTest = (await readReport(batchDate)).records.find(
     (row) => row.rowId === test.id,
   );
-  await page.locator('[data-view="settings"]').click();
+  await navigate('settings');
   await page.locator('[data-settings-tab="workforce"]').click();
   await page.locator('[data-mapping-line-filter]').selectOption('DEMO-A');
   await page.locator('[data-mapping-model]').selectOption(model);
@@ -1747,7 +1753,7 @@ try {
   );
   await saveSettings();
 
-  await page.locator('[data-view="entry"]').click();
+  await navigate('entry');
   const noOutputRow = page.locator(`[data-entry-station-row="${test.id}"]`);
   assert.equal(await noOutputRow.locator('[data-entry-field], [data-issue-cell]').count(), 0);
   assert.equal(await noOutputRow.getAttribute('data-entry-no-output'), '');
@@ -1876,7 +1882,7 @@ try {
   // Real page URLs work after refresh and with Back/Forward; cancelling a dirty
   // draft navigation restores both the original address and the draft.
   assert.equal(new URL(page.url()).pathname, '/entry');
-  await page.locator('[data-view="help"]').click();
+  await navigate('help');
   assert.equal(new URL(page.url()).pathname, '/guide');
   await page.goBack();
   await page.locator('#entry-content').waitFor({ state: 'visible' });
@@ -1893,24 +1899,24 @@ try {
   await page.goBack();
   // Settings steps share their draft, so moving back within settings is allowed.
   await page.locator('[data-settings-tab="workforce"].selected').waitFor();
-  await page.locator('[data-view="entry"]').click();
+  await navigate('entry');
   await page.locator('#confirm-no').click();
   assert.equal(new URL(page.url()).pathname, '/settings/line-configuration');
   await page.locator('[data-settings-tab="structure"]').click();
   assert.match(await page.locator('#settings-body').innerText(), /UNSAVED-LINE/);
-  await page.locator('[data-view="entry"]').click();
+  await navigate('entry');
   await page.locator('#confirm-yes').click();
   await page.locator('#entry-content').waitFor({ state: 'visible' });
   await page.goto(baseURL + '/entry');
   await page.locator('[data-bulk-global]').waitFor();
-  await page.locator('[data-view="settings"]').click();
+  await navigate('settings');
   await page.locator('#new-lines').fill('BACK-DRAFT');
   await page.locator('[data-action="add-catalog"][data-catalog="lines"]').click();
   await page.goBack();
   await page.locator('#confirm-no').click();
   await page.waitForURL(baseURL + '/settings/master-data');
   assert.match(await page.locator('#settings-body').innerText(), /BACK-DRAFT/);
-  await page.locator('[data-view="entry"]').click();
+  await navigate('entry');
   await page.locator('#confirm-yes').click();
   await page.locator('#entry-content').waitFor({ state: 'visible' });
   record(
@@ -2260,8 +2266,11 @@ try {
       await page.locator('[data-time-field="start"][data-shift-key="day"]').count(),
       1,
     );
+    await page.locator('#schedule-line-picker > summary').click();
     await page.locator('[data-schedule-apply-line="DEMO-A"]').check();
     assert.equal(await page.locator('[data-schedule-apply-line="DEMO-B"]').isChecked(), false);
+    await screenshot('.schedule-apply', 'line-selection');
+    await page.locator('#schedule-line-picker > summary').click();
     await screenshot('#structure-schedule', 'line-schedules');
     await page.locator('[data-action="apply-schedule-template"]').click();
     await page.locator('#confirm-no').click();
@@ -2745,7 +2754,7 @@ try {
   record(
     'Dense 72-interval group trends keep every label readable and separated, scroll locally, support keyboard access and preserve refresh position in three languages and four widths, including fullscreen',
   );
-  await page.locator('[data-view="help"]').click();
+  await navigate('help');
   assert.match(await page.locator('#help-content').innerText(), /station/i);
   assert.equal(await page.locator('#help-content .help-topic').count(), 8);
   for (const path of await page
@@ -2788,7 +2797,7 @@ try {
   await member.locator('[data-view="overview"].active').waitFor();
   await member.waitForURL(baseURL + '/overview');
   assert.equal(new URL(member.url()).pathname, '/overview');
-  await member.locator('[data-view="help"]').click();
+  await navigate('help', member);
   assert.equal(await member.locator('#help-content .help-topic').count(), 5);
   assert.equal(
     await member.locator('#help-content img[src="/guide-images/setup-order.png"]').count(),
@@ -2804,7 +2813,7 @@ try {
     ).status(),
     403,
   );
-  await member.locator('[data-view="entry"]').click();
+  await navigate('entry', member);
   await member.locator('[data-entry-line]').selectOption('DEMO-B');
   assert.equal(await member.locator('[data-entry-action="configure-unit"]').count(), 0);
   assert.match(await member.locator('[data-entry-setup-unit]').innerText(), /Ask a manager/);
@@ -3101,6 +3110,7 @@ try {
     );
   }
 
+  await auditNavigation({ browser, context, baseURL, readConfig, record, errors });
   await auditDesign({
     browser,
     context,

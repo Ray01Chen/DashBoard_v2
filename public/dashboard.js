@@ -1,3 +1,4 @@
+import { naturalOrder, byProduction } from './list-order.js';
 import {
   monitorCard,
   updateMonitorCard,
@@ -91,7 +92,7 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
   const dailyTotals = new Map(daily.map((line) => [line.key || line.line, line]));
   const cardMetricKeys = ctx.metricScope === 'day' ? dailyMetricKeys : intervalMetricKeys;
   const group = config.monitoring.groups.find((g) => g.id === groupId);
-  const grouped = all
+  const grouped = byProduction(all, ctx.language)
     .filter((line) => !group || group.lines.includes(line.line))
     .map((line) => {
       const daily = dailyTotals.get(line.key || line.line);
@@ -254,7 +255,7 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
   });
   document.querySelector('#group-tabs').innerHTML =
     `<button role="tab" data-group="" class="${!group ? 'selected' : ''}" aria-selected="${!group}">${esc(t('allGroups'))}<small>${all.length}</small></button>` +
-    config.monitoring.groups
+    naturalOrder(config.monitoring.groups, ctx.language, (group) => group.name)
       .map(
         (g) =>
           `<button role="tab" data-group="${esc(g.id)}" class="${group?.id === g.id ? 'selected' : ''}" aria-selected="${group?.id === g.id}">${esc(g.name)}<small>${g.lines.length}</small></button>`,
@@ -359,7 +360,24 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
 export function groupSettings(ctx) {
   const { draft, t, esc, icon } = ctx,
     m = draft.monitoring;
-  return `<section class="panel monitor-settings-card"><div class="panel-heading"><div><h2>${esc(t('groupsTitle'))}</h2><p>${esc(t('groupsDesc'))}</p></div><button class="button" data-action="add-group">${icon('plus')}${esc(t('addGroup'))}</button></div><div class="group-settings-grid">${m.groups.map((g, i) => `<div class="group-settings"><div><input data-group-name="${i}" value="${esc(g.name)}" maxlength="60" aria-label="${esc(t('groupName'))}"><button class="icon-button" data-action="remove-group" data-index="${i}" aria-label="${esc(t('remove'))} ${esc(g.name)}">${icon('trash')}</button></div><details class="group-line-picker"><summary><span data-group-count="${i}">${esc(t('selectedLineCount', { count: g.lines.length }))}</span>${icon('down')}</summary><div class="group-line-options">${draft.lines.map((line) => `<label><input type="checkbox" data-group-member="${i}" value="${esc(line)}" ${g.lines.includes(line) ? 'checked' : ''}>${esc(line)}</label>`).join('')}</div></details></div>`).join('')}</div></section>`;
+  return `<section class="panel monitor-settings-card"><div class="panel-heading"><div><h2>${esc(t('groupsTitle'))}</h2><p>${esc(t('groupsDesc'))}</p></div><button class="button" data-action="add-group">${icon('plus')}${esc(t('addGroup'))}</button></div><div class="group-settings-grid">${naturalOrder(
+    m.groups,
+    ctx.language,
+    (group) => group.name,
+  )
+    .map((g) => {
+      const i = m.groups.indexOf(g);
+      return `<div class="group-settings"><div><input data-group-name="${i}" value="${esc(g.name)}" maxlength="60" aria-label="${esc(t('groupName'))}"><button class="icon-button" data-action="remove-group" data-index="${i}" aria-label="${esc(t('remove'))} ${esc(g.name)}">${icon('trash')}</button></div><details class="group-line-picker"><summary><span data-group-count="${i}">${esc(t('selectedLineCount', { count: g.lines.length }))}</span>${icon('down')}</summary><div class="group-line-options">${naturalOrder(
+        draft.lines,
+        ctx.language,
+      )
+        .map(
+          (line) =>
+            `<label><input type="checkbox" data-group-member="${i}" value="${esc(line)}" ${g.lines.includes(line) ? 'checked' : ''}>${esc(line)}</label>`,
+        )
+        .join('')}</div></details></div>`;
+    })
+    .join('')}</div></section>`;
 }
 
 export function alertSettings(ctx) {

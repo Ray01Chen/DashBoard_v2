@@ -1,3 +1,4 @@
+import { naturalOrder, byProduction } from './list-order.js';
 import {
   scheduleFor,
   schedulesForLine,
@@ -807,7 +808,7 @@ export function entryProductionUnits(config, rows = []) {
   for (const row of rows)
     if (!units.has(productionKey(row)))
       units.set(productionKey(row), { line: row.line, model: modelOf(row) });
-  return [...units.values()];
+  return byProduction([...units.values()]);
 }
 
 /** Explain an incomplete setup with a read-only interval preview. These fields
@@ -1144,8 +1145,10 @@ export function createEntryController({
     issueEditor = { key, slotId: slot.id, returnField };
     issueDialog.innerHTML = `<div class="entry-issue-heading"><h2 id="entry-issue-title">${esc(text('issue'))}</h2><button type="button" class="icon-button" data-entry-action="close-issue" aria-label="${esc(text('close'))}"><span aria-hidden="true">×</span></button></div>
       <p class="entry-issue-context">${productionIdentityMarkup(row, esc)}<span>${esc(row.job || '—')} / ${esc(row.station || '—')}</span><span>${esc(entry.latest.date)} · ${esc(text(entry.latest.shift))} · ${esc(slot.start)}–${esc(slot.end)}</span></p>
-      <div class="entry-issue-presets" aria-label="${esc(text('quickReasons'))}">${issuePresets(
-        getContext().config,
+      <div class="entry-issue-presets" aria-label="${esc(text('quickReasons'))}">${naturalOrder(
+        issuePresets(getContext().config),
+        undefined,
+        (item) => item.label,
       )
         .filter((item) => item.active)
         .map(
@@ -1272,7 +1275,7 @@ export function createEntryController({
 
   function bulkScopeControls() {
     const editor = bulkEditor;
-    const units = productionUnits(getContext().config);
+    const units = byProduction(productionUnits(getContext().config));
     bulkDialog.querySelector('[data-bulk-date]').value = editor.date;
     bulkDialog.querySelector('[data-bulk-line]').value = editor.unit.line;
     bulkDialog.querySelector('[data-bulk-model]').innerHTML = units
@@ -1579,7 +1582,7 @@ export function createEntryController({
     if (!editor || editor.busy || editor.loading || editor.changing) return;
     const date = bulkDialog.querySelector('[data-bulk-date]').value;
     const nextLine = bulkDialog.querySelector('[data-bulk-line]').value;
-    const models = productionUnits(getContext().config)
+    const models = byProduction(productionUnits(getContext().config))
       .filter((unit) => unit.line === nextLine)
       .map(modelOf);
     const chosen = bulkDialog.querySelector('[data-bulk-model]').value;
@@ -1637,13 +1640,17 @@ export function createEntryController({
       needsRefresh: false,
       rows: [],
     };
-    const units = productionUnits(context.config);
+    const units = byProduction(productionUnits(context.config));
     const lines = [...new Set(units.map((unit) => unit.line))];
     bulkDialog.innerHTML = `<div class="entry-issue-heading"><h2 id="entry-bulk-title">${esc(text('bulkTitle'))}</h2><button type="button" class="icon-button" data-entry-action="bulk-close" aria-label="${esc(text('close'))}">×</button></div>
       <div class="entry-bulk-selectors"><label>${esc(text('productionDate'))}<input type="date" data-bulk-date value="${esc(context.date)}"></label><label>${esc(text('line'))}<select data-bulk-line>${lines.map((value) => `<option value="${esc(value)}">${esc(value)}</option>`).join('')}</select></label><label>${esc(text('bulkProduct'))}<select data-bulk-model></select></label><label>${esc(text('interval'))}<select data-bulk-slot></select></label></div>
       <div class="entry-bulk-values">${bulkFields.map((field) => `<div><label>${esc(text(field))}<input type="text" ${field === 'issue' ? '' : 'inputmode="numeric"'} maxlength="${field === 'issue' ? 2000 : 12}" autocomplete="off" data-bulk-field="${field}" aria-label="${esc(text(field))}"></label><div class="entry-bulk-field-actions"><button type="button" class="button" data-entry-action="bulk-apply" data-bulk-apply-field="${field}">${esc(text(field === 'target' ? 'bulkApplyTarget' : field === 'actual' ? 'bulkApplyActual' : 'bulkApplyIssue'))}</button></div></div>`).join('')}</div>
       <div class="entry-bulk-secondary-actions"><button type="button" class="button" data-entry-action="bulk-default-target"><span aria-hidden="true">↻</span>${esc(text('bulkUseDefaultTargets'))}</button></div>
-      <div class="entry-bulk-quick-text">${issuePresets(context.config)
+      <div class="entry-bulk-quick-text">${naturalOrder(
+        issuePresets(context.config),
+        undefined,
+        (item) => item.label,
+      )
         .filter((item) => item.active)
         .map(
           (item) =>
@@ -1930,7 +1937,9 @@ export function createEntryController({
             .map((slot) => ({ shift, slot }))
         : [],
     );
-    const units = [...new Map(visible.map((row) => [productionKey(row), row])).values()];
+    const units = byProduction([
+      ...new Map(visible.map((row) => [productionKey(row), row])).values(),
+    ]);
     const current = currentEntrySlot(context, new Date(), line);
     const body = units
       .map((unit) => {
@@ -2215,9 +2224,9 @@ export function createEntryController({
         units.find((unit) => rows.some((row) => sameProduction(row, unit)))?.line ||
         lines[0] ||
         '';
-    const models = [
+    const models = naturalOrder([
       ...new Set(units.filter((unit) => !line || unit.line === line).map(modelOf)),
-    ];
+    ]);
     if (model === null || (model && !models.includes(model)))
       model =
         models.find((value) =>

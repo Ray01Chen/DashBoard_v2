@@ -1,3 +1,5 @@
+import { naturalOrder, byProduction } from './list-order.js';
+import { linePickerMarkup, linePickerGroups, updateLinePicker } from './line-picker.js';
 import { handleMonitorAction } from './monitor-ui.js';
 import { schedulePreview } from './schedule-preview.js';
 import { alertConfig, validAlertConfig } from './alerts.js';
@@ -376,7 +378,7 @@ function applyLanguage(language, persist = false) {
       (el.textContent = t(el.dataset.errorCode, JSON.parse(el.dataset.errorParams || '{}'))),
   );
   $('#toast').hidden = true;
-  $('#theme-select').innerHTML = themes
+  $('#theme-select').innerHTML = naturalOrder(themes, state.language, (theme) => t(theme))
     .map((v) => `<option value="${v}">${esc(t(v))}</option>`)
     .join('');
   $('#theme-select').value = state.theme;
@@ -425,6 +427,8 @@ function updateHeadings() {
     b.classList.toggle('active', b.dataset.view === view);
     b.setAttribute('aria-current', b.dataset.view === view ? 'page' : 'false');
   });
+  const more = $('#nav-more');
+  more.classList.toggle('active', ['details', 'settings', 'help'].includes(view));
   updateSettingsNavigation();
 }
 function updateSettingsNavigation() {
@@ -471,20 +475,23 @@ function detailUnits() {
     state.detailGroupId,
     allRows().map((row) => row.line),
   );
-  return [
-    ...new Map(
-      [...productionUnits(state.config), ...allRows()]
-        .filter((row) => allowed.includes(row.line))
-        .map((row) => [productionKey(row), row]),
-    ).values(),
-  ];
+  return byProduction(
+    [
+      ...new Map(
+        [...productionUnits(state.config), ...allRows()]
+          .filter((row) => allowed.includes(row.line))
+          .map((row) => [productionKey(row), row]),
+      ).values(),
+    ],
+    state.language,
+  );
 }
 function detailLines() {
   return detailUnits().map(productionKey);
 }
 function getRows() {
   const lines = detailLines();
-  return allRows().filter(
+  return byProduction(allRows(), state.language).filter(
     (row) =>
       (state.view !== 'details' || lines.includes(productionKey(row))) &&
       (!state.line || productionKey(row) === state.line),
@@ -538,7 +545,7 @@ function populateLineFilters() {
     '<option value="">' +
     esc(t('allGroupOptions')) +
     '</option>' +
-    state.config.monitoring.groups
+    naturalOrder(state.config.monitoring.groups, state.language, (group) => group.name)
       .map((g) => '<option value="' + esc(g.id) + '">' + esc(g.name) + '</option>')
       .join('');
   $('#detail-group').value = state.detailGroupId;
@@ -930,6 +937,11 @@ function updateSettingsSaveState() {
             ? 'settingsUnsaved'
             : 'settingsUpToDate';
   $('#settings-save-status').textContent = t(status);
+  const scheduleStatus = $('[data-schedule-save-state]');
+  if (scheduleStatus) {
+    scheduleStatus.textContent = t(status);
+    scheduleStatus.dataset.unsaved = String(settingsDirty());
+  }
   for (const button of $$('[data-save-settings]')) {
     button.disabled = settingsSaving || !issueListValid || !policiesValid;
     button.innerHTML = icon('check') + esc(t(settingsSaving ? 'saving' : 'saveSettings'));
@@ -1173,7 +1185,14 @@ function renderSettings() {
   };
   $('#settings-body').innerHTML = markup[state.settingsTab]();
   $('#settings-body').setAttribute('aria-label', settingsStepName(state.settingsTab));
+  syncSchedulePicker();
   updateSettingsSaveState();
+}
+function syncSchedulePicker() {
+  updateLinePicker($('#schedule-line-picker'), state.draft, state.scheduleApplyLines, {
+    t,
+    language: state.language,
+  });
 }
 function structureMarkup() {
   const draft = state.draft;
@@ -1182,9 +1201,13 @@ function structureMarkup() {
       .map(
         (name) => `<section class="panel catalog-card">
       <div class="panel-heading"><h3>${esc(t(name))}</h3><span class="count-badge">${draft[name].length}</span></div>
-      <div class="catalog-items">${draft[name]
+      <div class="catalog-items">${naturalOrder(
+        draft[name].map((value, index) => ({ value, index })),
+        state.language,
+        (item) => item.value,
+      )
         .map(
-          (value, index) => `<div class="catalog-item">
+          ({ value, index }) => `<div class="catalog-item">
         <input maxlength="60" data-catalog-name="${name}" data-index="${index}" value="${esc(value)}" aria-label="${esc(t('rename'))} ${esc(value)}">
         <button class="icon-button" data-action="remove-catalog" data-catalog="${name}" data-index="${index}" aria-label="${esc(t('remove'))} ${esc(value)}">${icon('close')}</button>
       </div>`,
@@ -1228,12 +1251,24 @@ function scheduleDraft(edit = false) {
 // Schedules are part of the master-data step; existing time IDs are sent unchanged.
 function scheduleMarkup() {
   const schedules = scheduleDraft();
+  state.scheduleApplyLines = state.scheduleApplyLines.filter((line) =>
+    state.draft.lines.includes(line),
+  );
   const custom = Object.hasOwn(state.draft.lineSchedules || {}, state.scheduleLine);
   return `<section id="structure-schedule" class="schedule-settings"><div class="settings-section-heading"><div><h2>${esc(t('scheduleTitle'))}</h2><p>${esc(t('scheduleDesc'))}</p></div></div>
     <section class="panel schedule-template-tools">
       <label>${esc(t('savedScheduleTemplates'))}<select id="schedule-template-select">
         <option value="default">${esc(t('scheduleTemplate'))}</option>
-        ${(state.draft.scheduleTemplates || []).map((template) => `<option value="${esc(template.id)}" ${template.id === state.scheduleTemplateId ? 'selected' : ''}>${esc(template.name)}</option>`).join('')}
+        ${naturalOrder(
+          state.draft.scheduleTemplates || [],
+          state.language,
+          (template) => template.name,
+        )
+          .map(
+            (template) =>
+              `<option value="${esc(template.id)}" ${template.id === state.scheduleTemplateId ? 'selected' : ''}>${esc(template.name)}</option>`,
+          )
+          .join('')}
       </select></label>
       <label>${esc(t('templateName'))}<input id="schedule-template-name" maxlength="60" value="${state.scheduleTemplateId === 'default' ? '' : esc(scheduleTemplate(state.draft, state.scheduleTemplateId)?.name || '')}" placeholder="${esc(t('templateName'))}"></label>
       <button class="button" data-action="add-schedule-template">${esc(t('newScheduleTemplate'))}</button>
@@ -1243,7 +1278,12 @@ function scheduleMarkup() {
     <section class="panel schedule-scope">
       <label>${esc(t('scheduleScope'))}<select id="schedule-line-select">
         <option value="">${esc(t('editSelectedTemplate'))}</option>
-        ${state.draft.lines.map((line) => `<option value="${esc(line)}" ${state.scheduleLine === line ? 'selected' : ''}>${esc(line)}</option>`).join('')}
+        ${naturalOrder(state.draft.lines, state.language)
+          .map(
+            (line) =>
+              `<option value="${esc(line)}" ${state.scheduleLine === line ? 'selected' : ''}>${esc(line)}</option>`,
+          )
+          .join('')}
       </select></label>
       <span class="muted">${esc(t(state.scheduleLine ? (custom ? 'scheduleCustom' : 'scheduleInherited') : 'scheduleTemplateHint'))}</span>
       ${state.scheduleLine ? `<div><button class="button" data-action="copy-schedule-template">${esc(t('copyScheduleTemplate'))}</button><button class="button" data-action="inherit-schedule" ${custom ? '' : 'disabled'}>${esc(t('inheritSchedule'))}</button></div>` : ''}
@@ -1293,8 +1333,8 @@ function scheduleMarkup() {
     ${
       !state.scheduleLine
         ? `<fieldset class="panel schedule-apply"><legend>${esc(t('applyTemplateLines'))}</legend>
-      <div class="schedule-line-checks">${state.draft.lines.map((line) => `<label><input type="checkbox" data-schedule-apply-line="${esc(line)}" ${state.scheduleApplyLines.includes(line) ? 'checked' : ''}>${esc(line)}</label>`).join('')}</div>
-      <div><button class="button" data-action="schedule-select-all">${esc(t('selectAll'))}</button><button class="button" data-action="apply-schedule-template" ${state.scheduleApplyLines.length ? '' : 'disabled'}>${esc(t('applySelectedTemplate', { count: state.scheduleApplyLines.length }))}</button><button class="button primary" data-save-settings data-action="save-schedule-settings">${esc(t('saveSettings'))}</button></div>
+      ${linePickerMarkup(state.draft, state.scheduleApplyLines, { t, esc, language: state.language })}
+      <div class="schedule-apply-actions"><button class="button" data-action="apply-schedule-template" ${state.scheduleApplyLines.length ? '' : 'disabled'}>${esc(t('applySelectedTemplate', { count: state.scheduleApplyLines.length }))}</button><button class="button primary" data-save-settings data-action="save-schedule-settings">${esc(t('saveSettings'))}</button><span class="schedule-save-state" data-schedule-save-state role="status"></span></div>
       <p class="form-hint">${esc(t('templateApplyHint'))}</p>
     </fieldset>`
         : ''
@@ -1302,7 +1342,18 @@ function scheduleMarkup() {
     <div class="calculation-note">${icon('info')}<span>${esc(t('scheduleProtect'))}</span></div></section>`;
 }
 function appearanceMarkup() {
-  return `<div class="settings-section-heading"><div><h2>${esc(t('appearanceTitle'))}</h2><p>${esc(t('appearanceDesc'))}</p></div></div><section class="panel appearance-card"><h3>${esc(t('defaultTheme'))}</h3><div class="theme-options">${themes.map((theme) => `<button class="theme-option ${state.draft.theme === theme ? 'selected' : ''}" data-action="default-theme" data-theme-name="${theme}" aria-pressed="${state.draft.theme === theme}"><span class="swatch swatch-${theme}">${state.draft.theme === theme ? icon('check') : ''}</span><strong>${esc(t(theme))}</strong></button>`).join('')}</div><div class="appearance-fields"><label>${esc(t('defaultLanguage'))}<select id="default-language"><option value="zh" ${state.draft.language === 'zh' ? 'selected' : ''}>Chinese</option><option value="en" ${state.draft.language === 'en' ? 'selected' : ''}>English</option><option value="th" ${state.draft.language === 'th' ? 'selected' : ''}>Thai</option></select></label><div><span>${esc(t('browserPrefs'))}</span><button class="button" data-action="use-defaults">${icon('refresh')}${esc(t('useDefaults'))}</button></div></div><div class="theme-preview" data-theme="${state.draft.theme}"><span class="preview-icon">BP</span><div><strong>BP PULSE · ${esc(t('preview'))}</strong><p>${esc(t('previewDesc'))}</p></div><span class="preview-check">${icon('check')}</span></div></section>`;
+  return `<div class="settings-section-heading"><div><h2>${esc(t('appearanceTitle'))}</h2><p>${esc(t('appearanceDesc'))}</p></div></div><section class="panel appearance-card"><h3>${esc(t('defaultTheme'))}</h3><div class="theme-options">${naturalOrder(
+    themes,
+    state.language,
+    (theme) => t(theme),
+  )
+    .map(
+      (theme) =>
+        `<button class="theme-option ${state.draft.theme === theme ? 'selected' : ''}" data-action="default-theme" data-theme-name="${theme}" aria-pressed="${state.draft.theme === theme}"><span class="swatch swatch-${theme}">${state.draft.theme === theme ? icon('check') : ''}</span><strong>${esc(t(theme))}</strong></button>`,
+    )
+    .join(
+      '',
+    )}</div><div class="appearance-fields"><label>${esc(t('defaultLanguage'))}<select id="default-language"><option value="zh" ${state.draft.language === 'zh' ? 'selected' : ''}>Chinese</option><option value="en" ${state.draft.language === 'en' ? 'selected' : ''}>English</option><option value="th" ${state.draft.language === 'th' ? 'selected' : ''}>Thai</option></select></label><div><span>${esc(t('browserPrefs'))}</span><button class="button" data-action="use-defaults">${icon('refresh')}${esc(t('useDefaults'))}</button></div></div><div class="theme-preview" data-theme="${state.draft.theme}"><span class="preview-icon">BP</span><div><strong>BP PULSE · ${esc(t('preview'))}</strong><p>${esc(t('previewDesc'))}</p></div><span class="preview-check">${icon('check')}</span></div></section>`;
 }
 function renameCatalog(catalog, index, value) {
   const old = state.draft[catalog][index],
@@ -1338,9 +1389,21 @@ function renameCatalog(catalog, index, value) {
       }),
     );
   }
+  if (state.unitAdd[field] === old) state.unitAdd[field] = name;
+  if (state.schedulePreviewKey && ['lines', 'models'].includes(catalog)) {
+    const [line, model] = JSON.parse(state.schedulePreviewKey);
+    state.schedulePreviewKey = productionKey({
+      line: catalog === 'lines' && line === old ? name : line,
+      model: catalog === 'models' && model === old ? name : model,
+    });
+  }
   if (catalog === 'models' && state.mappingModel === old) state.mappingModel = name;
   if (catalog === 'models' && state.staffingModel === old) state.staffingModel = name;
   if (catalog === 'lines') {
+    state.scheduleApplyLines = state.scheduleApplyLines.map((line) =>
+      line === old ? name : line,
+    );
+    if (state.scheduleLine === old) state.scheduleLine = name;
     if (state.mappingLine === old) state.mappingLine = name;
     if (state.targetLine === old) state.targetLine = name;
     if (state.unitFilterLine === old) state.unitFilterLine = name;
@@ -1350,6 +1413,10 @@ function renameCatalog(catalog, index, value) {
 }
 
 $('#settings-body').addEventListener('input', (event) => {
+  if (event.target.matches('[data-line-picker-search]')) {
+    syncSchedulePicker();
+    return;
+  }
   if (settingsSaving || !canManage() || !state.draft) return;
   // Capture text/target edits immediately so leaving or saving while focused is safe.
   const data = event.target.dataset;
@@ -1527,11 +1594,21 @@ $('#settings-body').addEventListener('change', async (e) => {
     state.scheduleLine = '';
     renderSettings();
     return;
+  } else if (d.scheduleApplyGroup !== undefined) {
+    const group = linePickerGroups(state.draft, state.language).find(
+      (group) => group.id === d.scheduleApplyGroup,
+    );
+    if (group)
+      state.scheduleApplyLines = el.checked
+        ? [...new Set([...state.scheduleApplyLines, ...group.lines])]
+        : state.scheduleApplyLines.filter((line) => !group.lines.includes(line));
+    syncSchedulePicker();
+    return;
   } else if (d.scheduleApplyLine !== undefined) {
     state.scheduleApplyLines = el.checked
       ? [...new Set([...state.scheduleApplyLines, d.scheduleApplyLine])]
       : state.scheduleApplyLines.filter((line) => line !== d.scheduleApplyLine);
-    renderSettings();
+    syncSchedulePicker();
     return;
   } else if (el.id === 'schedule-line-select') {
     state.scheduleLine = el.value;
@@ -1691,14 +1768,21 @@ $('#settings-body').addEventListener('click', async (e) => {
     renderSettings();
     return;
   }
-  if (action === 'schedule-select-all') {
-    state.scheduleApplyLines =
-      state.scheduleApplyLines.length === draft.lines.length ? [] : [...draft.lines];
-    renderSettings();
+  if (action === 'close-line-picker') {
+    $('#schedule-line-picker').open = false;
+    $('#schedule-line-picker > summary').focus();
+    return;
+  }
+  if (action === 'schedule-select-all' || action === 'schedule-clear-lines') {
+    state.scheduleApplyLines = action === 'schedule-select-all' ? [...draft.lines] : [];
+    syncSchedulePicker();
     return;
   }
   if (action === 'apply-schedule-template') {
-    const lines = state.scheduleApplyLines.filter((line) => draft.lines.includes(line));
+    const lines = naturalOrder(
+      state.scheduleApplyLines.filter((line) => draft.lines.includes(line)),
+      state.language,
+    );
     if (
       lines.length &&
       (await confirmAction(
@@ -2018,15 +2102,31 @@ $$('[data-save-draft]').forEach((button) => {
 
 $$('[data-view]').forEach(
   (b) =>
-    (b.onclick = (event) => {
+    (b.onclick = async (event) => {
       if (!followPageLink(event)) return;
+      const secondary = !!b.closest('#nav-more');
       if (b.dataset.view === 'details') {
         state.line = '';
         populateLineFilters();
       }
-      setView(b.dataset.view, { tab: b.dataset.view === 'settings' ? 'structure' : undefined });
+      const moved = await setView(b.dataset.view, {
+        tab: b.dataset.view === 'settings' ? 'structure' : undefined,
+      });
+      if (moved) {
+        $('#nav-more').open = false;
+        if (secondary) $('#main').focus({ preventScroll: true });
+      }
     }),
 );
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('#nav-more')) $('#nav-more').open = false;
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && $('#nav-more').open && !$('dialog[open]')) {
+    $('#nav-more').open = false;
+    $('#nav-more > summary').focus();
+  }
+});
 $('#open-settings').onclick = (event) => {
   if (followPageLink(event)) void setView('settings');
 };
