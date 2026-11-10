@@ -199,6 +199,25 @@ export async function auditDesign({
           [1280, 720],
         ]) {
           await page.setViewportSize({ width, height });
+          await page.locator('[data-group=""]').click();
+          await page.waitForFunction(() => {
+            const node = document.querySelector('#line-cards'),
+              style = getComputedStyle(node);
+            const gap = parseFloat(style.rowGap);
+            const count = document.body.classList.contains('fullscreen-board')
+              ? Math.min(
+                  7,
+                  Math.max(
+                    1,
+                    Math.floor(
+                      (node.clientHeight + gap) /
+                        (parseFloat(style.getPropertyValue('--monitor-row-height')) + gap),
+                    ),
+                  ),
+                )
+              : 7;
+            return node.querySelectorAll('.line-card').length === count;
+          });
           const geometry = await page.locator('#line-cards').evaluate((list) =>
             [...list.children].map((card) => ({
               rect: card.getBoundingClientRect().toJSON(),
@@ -221,9 +240,27 @@ export async function auditDesign({
                 .map((node) => node.className),
             })),
           );
-          assert.equal(geometry.length, 7);
+          assert.equal(
+            geometry.length,
+            fullscreen
+              ? await page.locator('#line-cards').evaluate((node) => {
+                  const style = getComputedStyle(node),
+                    gap = parseFloat(style.rowGap);
+                  return Math.min(
+                    7,
+                    Math.max(
+                      1,
+                      Math.floor(
+                        (node.clientHeight + gap) /
+                          (parseFloat(style.getPropertyValue('--monitor-row-height')) + gap),
+                      ),
+                    ),
+                  );
+                })
+              : 7,
+          );
           assert.ok(
-            geometry.every((item) => !item.bad.length && item.rect.height >= 100),
+            geometry.every((item) => !item.bad.length && item.rect.height >= 92),
             JSON.stringify({ language, metricScope, fullscreen, width, height, geometry }),
           );
           const hierarchy = await page.evaluate(() => {
@@ -269,7 +306,7 @@ export async function auditDesign({
   }
   await page.locator('.line-dashboard-heading [data-metric-scope="interval"]').click();
   record(
-    'Readable auto-height cards retain all information and Group Overview → alerts → cards → charts order across both display/metric modes, three languages and six desktop sizes',
+    'Compact horizontal cards and adaptive fullscreen pages retain all information and Group Overview → alerts → cards → charts order across both display/metric modes, three languages and six desktop sizes',
   );
 
   // Desktop zoom changes the available CSS viewport. Exercise the equivalent
@@ -329,7 +366,7 @@ export async function auditDesign({
     await page.locator('#trend-tooltip').waitFor({ state: 'hidden' });
     await page.screenshot({
       path: path.join(root, 'docs/images/seven-line-board.png'),
-      fullPage: true,
+      fullPage: false,
     });
     await page.locator('#exit-fullscreen').click();
   }

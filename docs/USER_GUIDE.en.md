@@ -2,9 +2,12 @@
 
 Open your deployed Production Center. A manager account manages shared settings; a member account enters production, imports and reviews reports. The in-app User guide follows the logged-in role. Language choices are Chinese / English / Thai in every interface language.
 
-The main page is **Production Overview**. The collapsible left sidebar groups Production, Review & analysis, and Settings & help. Desktop collapse is remembered; hover icons for names. Small screens and fullscreen use a temporary drawer from the header menu. Escape or the backdrop closes it. Language, theme and account stay in the header. Both views use filters → Group Overview → alert filters → line cards → detailed charts. Cards retain model, source, metrics, proportional trend, schedule and next slot, wrapping and growing vertically rather than shrinking text. Expand for full alert reasons and values. [Overview screenshot](./images/production-overview.png).
+The main page is **Production Overview**. The collapsible left sidebar groups Production, Review & analysis, and Settings & help. Desktop collapse is remembered; hover icons for names. Small screens and fullscreen use a temporary drawer from the header menu. Escape or the backdrop closes it. Language, theme and account stay in the header. Both views use filters → Group Overview → alert filters → line cards → detailed charts. Desktop cards use one horizontal row for identity, signal/status, four metrics, trend, current/next slot and alert summary. Long names have ellipsis with complete text on hover and in details; large numbers use localized compact notation with exact tooltips. Ordinary mode retains inline expansion; the fullscreen arrow opens the existing detail dialog without growing a row. [Overview screenshot](./images/production-overview.png).
 
-Both views show **at most seven units per page**, with previous/next and page counts. In Settings → Alerts & refresh, set the page rotation seconds (default 20; 0 disables) and Save settings. Manual navigation restarts a full interval. Rotation pauses for dialogs, the temporary drawer, expanded cards, focus inside a card, and a hidden browser tab. Filters reset the page; entering/leaving fullscreen preserves it. Scroll when seven readable cards exceed the viewport.
+Ordinary pages contain at most seven units. Fullscreen measures the remaining viewport height after controls, group totals, filters and optional charts: up to seven complete readable rows, fewer on shorter screens, and **no page vertical scrolling**. Previous/next and page counts preserve line order. Settings → Alerts & refresh sets rotation seconds (default 20, 0 disables). **Pause pages / Resume pages** controls this browser only. Manual navigation and resume grant a full interval. Dialogs, drawers, expanded ordinary cards, focus inside cards and hidden tabs pause temporarily. Filters recalculate pages; resize/fullscreen transitions retain the current line’s page where possible. Page flips retain dashboard/chart/filter nodes.
+
+Standard layouts tested: 1920×1080 = seven rows, 1600×900 = six, 1366×768 = five; charts and wrapped controls may reduce capacity.
+[1920×1080](./images/fullscreen-1920.png) · [1600×900](./images/fullscreen-1600.png) · [1366×768](./images/fullscreen-1366.png)
 
 Catalogs and normal option lists use locale-aware natural sorting (CD2 before CD10). Explicit display order, configured station order and shift/overnight interval sequence take precedence. Sorting never rewrites saved arrays or changes selected IDs.
 
@@ -51,7 +54,7 @@ Overview defaults to the **Whole day** production scope, showing both shifts in 
 
 Use **Interval / Daily** beside the overview title or in the fullscreen header. The selected mode persists after refresh. Interval shows the active slot’s target, actual and gap. Daily shows the complete two-shift target, reported actual and gap, regardless of the Day/Night filter. A gap is actual minus target; missing values stay — and explicit zero stays 0. During breaks, outside production hours or on historical dates, switch to Daily to see totals.
 
-Per-line Target/Actual curves take the main card space and use the actual plot dimensions. Desktop fullscreen retains seven units per page; tablet and phone cards give the curve its own row. Details retain the six interval/daily/cumulative metrics and the hourly table. Output-share and shortfall rules continue using cumulative actuals through started intervals, independently of the card display mode.
+Per-line Target/Actual curves take the main card space and use the actual plot dimensions. Fullscreen fits up to seven units in the available height and reduces page size when needed; narrow card containers give the curve its own row. Details retain the six interval/daily/cumulative metrics and the hourly table. Output-share and shortfall rules continue using cumulative actuals through started intervals, independently of the card display mode.
 
 The group output trend keeps every time label readable. Dense schedules scroll horizontally inside the chart, including fullscreen, without widening the page. Hover or Tab to an interval for its Target/Actual tooltip. Refresh retains the chart's scroll position.
 
@@ -115,7 +118,7 @@ CSV uses Row ID + Time slot, or an unambiguous Line + Model + Job/Station + Time
 
 Each enabled line/model uses its selected **Output station** for dashboard target, output, gap, trends and alerts. Group totals add units, not every station traversed by the same products. Changing that source updates the active unit’s view immediately. Retired line/model combinations retain their captured historical source; saved station values remain intact.
 
-Normal line clicks open details; full-screen clicks open a station-detail dialog. Closing retains the board group/page. Trend and share charts can be toggled independently. Both views use at most seven readable cards per page. Cards wrap and grow; scroll when necessary. The full model remains visible and all alert details can be expanded. Phone daily-target cards retain field labels.
+Normal line clicks open details; full-screen clicks open a station-detail dialog. Closing retains the board group/page. Trend and share charts can be toggled independently. Both views use compact cards. Fullscreen reduces page size when needed instead of scrolling. Hover long models or open details for complete text; all alert reasons remain available. Phone daily-target cards retain field labels.
 
 ![Readable paginated fullscreen board](./images/seven-line-board.png)
 

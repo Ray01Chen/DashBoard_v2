@@ -1,5 +1,6 @@
 import { naturalOrder, byProduction } from './list-order.js';
 import {
+  monitorNumber,
   monitorCard,
   updateMonitorCard,
   rememberMonitorLines,
@@ -47,7 +48,7 @@ const isGap = (key) => ['currentGap', 'dailyGap', 'cumulativeGap'].includes(key)
 
 export function overviewMetricsMarkup(
   metrics,
-  { t, esc, number, compactMetrics = false },
+  { t, esc, number, language, compactMetrics = false },
   keys = detailMetricKeys,
 ) {
   return keys
@@ -62,23 +63,55 @@ export function overviewMetricsMarkup(
               ? 'positive'
               : ''
           : '';
-      return `<span class="production-metric" data-metric="${key}" title="${esc(t(key + 'Help'))}"><small>${esc(t(compactMetrics ? { currentTarget: 'target', dailyTarget: 'target', currentActual: 'actual', dailyActual: 'actual', currentGap: 'gap', dailyGap: 'gap' }[key] || key : key))}</small><b class="${tone}" title="${esc(number(value))}">${difference && value > 0 ? '+' : ''}${number(value)}</b></span>`;
+      return `<span class="production-metric" data-metric="${key}" title="${esc(t(key + 'Help'))}"><small>${esc(t(compactMetrics ? { currentTarget: 'target', dailyTarget: 'target', currentActual: 'actual', dailyActual: 'actual', currentGap: 'gap', dailyGap: 'gap' }[key] || key : key))}</small><b class="${tone}" title="${esc(number(value))}">${difference && value > 0 ? '+' : ''}${compactMetrics ? monitorNumber(value, { number, language }) : number(value)}</b></span>`;
     })
     .join('');
 }
 
-function updateOverviewMetrics(element, metrics, { number }) {
+function updateOverviewMetrics(element, metrics, ctx) {
   if (!element) return;
+  const { number } = ctx;
   for (const metric of element.querySelectorAll('[data-metric]')) {
     const key = metric.dataset.metric;
     const value = metrics[key];
     const output = element.querySelector(`[data-metric="${key}"] b`);
     if (!output) continue;
-    output.textContent = (isGap(key) && value > 0 ? '+' : '') + number(value);
+    output.textContent =
+      (isGap(key) && value > 0 ? '+' : '') +
+      (element.classList.contains('line-card') ? monitorNumber(value, ctx) : number(value));
     output.title = number(value);
     output.className =
       isGap(key) && value != null ? (value < 0 ? 'negative' : value > 0 ? 'positive' : '') : '';
   }
+}
+
+function updateMonitorPager(page, ctx) {
+  const pager = document.querySelector('#board-pagination');
+  pager.hidden = !ctx.board && page.pages <= 1;
+  pager.classList.toggle('single-page', page.pages <= 1);
+  if (!pager.children.length)
+    pager.innerHTML = `<span data-page-count role="status"></span>
+    <button type="button" class="button" data-board-rotation></button><div>
+    <button type="button" class="icon-button" data-page-prev>${ctx.icon('left')}</button>
+    <button type="button" class="icon-button" data-page-next>${ctx.icon('right')}</button></div>`;
+  pager.querySelector('[data-page-count]').textContent = ctx.t('boardPageCount', {
+    page: page.page + 1,
+    pages: page.pages,
+    count: page.total,
+  });
+  for (const [selector, value, key] of [
+    ['[data-page-prev]', page.page - 1, 'previous'],
+    ['[data-page-next]', page.page + 1, 'next'],
+  ]) {
+    const button = pager.querySelector(selector);
+    button.dataset.boardPage = value;
+    button.disabled = value < 0 || value >= page.pages;
+    button.setAttribute('aria-label', ctx.t(key));
+  }
+  const rotation = pager.querySelector('[data-board-rotation]');
+  rotation.hidden = !ctx.paging?.interval || page.pages <= 1;
+  rotation.textContent = ctx.t(ctx.paging?.paused ? 'resumePageRotation' : 'pausePageRotation');
+  rotation.setAttribute('aria-pressed', String(!!ctx.paging?.paused));
 }
 
 export function renderMonitoring(ctx, { chart = true } = {}) {
@@ -138,31 +171,23 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
     [date, shift, groupId, ctx.alertFilter],
     config.monitoring.pageRotateSeconds ?? 20,
     ctx.now,
+    ctx.boardSize,
   );
   const page = boardPage(lines, ctx.paging?.page ?? ctx.boardPage, ctx.boardSize),
     cardLines = page.lines;
-  if (!chart) {
-    const keys = cardLines.map((line) => line.key || line.line);
-    if (
-      JSON.stringify(
-        [...cards.children]
-          .filter((card) => card.dataset.monitorLine)
-          .map((card) => card.dataset.monitorLine),
-      ) !== JSON.stringify(keys)
-    )
-      return renderMonitoring(ctx);
-    for (const line of cardLines) {
-      const card = [...cards.children].find(
-        (card) => card.dataset.monitorLine === (line.key || line.line),
-      );
-      if (card) {
-        updateOverviewMetrics(card, line, ctx);
-        updateMonitorCard(card, line, ctx);
-      }
-    }
-  }
-  const cardMarkup = chart
-    ? cardLines
+  const viewKey = JSON.stringify([
+    cardLines.map((line) => line.key || line.line),
+    date,
+    ctx.metricScope,
+    ctx.board,
+    t('achievementRate'),
+    ctx.alertFilter,
+    grouped.length,
+  ]);
+  const changed = cardViews.get(cards) !== viewKey;
+  if (changed) {
+    cards.innerHTML =
+      cardLines
         .map((line) =>
           monitorCard(
             line,
@@ -171,8 +196,25 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
           ),
         )
         .join('') ||
-      `<div class="empty-cell">${esc(t(grouped.length ? 'noMatchingLines' : 'emptyGroup'))}</div>`
-    : '';
+      `<div class="empty-cell">${esc(t(grouped.length ? 'noMatchingLines' : 'emptyGroup'))}</div>`;
+    cardViews.set(cards, viewKey);
+  }
+  for (const [index, line] of cardLines.entries()) {
+    updateOverviewMetrics(cards.children[index], line, ctx);
+    updateMonitorCard(cards.children[index], line, ctx);
+    if (chart || changed) {
+      const plot = cards.children[index]?.querySelector('.line-trend');
+      if (plot)
+        renderTrend(
+          plot,
+          line.series.map((value) => ({ ...value, slot: value })),
+          ctx,
+          true,
+        );
+    }
+  }
+  updateMonitorPager(page, ctx);
+  updatePageAlerts(lines, chartLine, ctx);
   if (!chart) {
     updateOverviewMetrics(document.querySelector('#group-summary'), totals, ctx);
     const dialog = document.querySelector('#line-detail-dialog[open]');
@@ -185,62 +227,8 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
       const state = dialog.querySelector('[data-detail-status]');
       if (state) state.textContent = productionStatusText(detail, t, now);
     }
-    updatePageAlerts(lines, chartLine, ctx);
     return;
   }
-  const viewKey = JSON.stringify([
-    cardLines.map((line) => line.key || line.line),
-    date,
-    ctx.metricScope,
-    ctx.board,
-    t('achievementRate'),
-    ctx.alertFilter,
-    grouped.length,
-  ]);
-  if (cardViews.get(cards) !== viewKey) {
-    cards.innerHTML = cardMarkup;
-    cardViews.set(cards, viewKey);
-  }
-  for (const [index, line] of cardLines.entries())
-    updateOverviewMetrics(cards.children[index], line, ctx);
-  for (const [index, line] of cardLines.entries())
-    updateMonitorCard(cards.children[index], line, ctx);
-  updatePageAlerts(lines, chartLine, ctx);
-  for (const [index, line] of cardLines.entries()) {
-    const plot = cards.children[index]?.querySelector('.line-trend');
-    if (plot)
-      renderTrend(
-        plot,
-        line.series.map((value) => ({ ...value, slot: value })),
-        ctx,
-        true,
-      );
-  }
-  document.querySelector('#board-pagination').hidden = page.pages <= 1;
-  document.querySelector('#board-pagination').innerHTML =
-    page.pages > 1
-      ? '<span>' +
-        esc(
-          t('boardPageCount', { page: page.page + 1, pages: page.pages, count: page.total }),
-        ) +
-        '</span><div><button class="icon-button" data-board-page="' +
-        (page.page - 1) +
-        '" ' +
-        (page.page === 0 ? 'disabled' : '') +
-        ' aria-label="' +
-        esc(t('previous')) +
-        '">' +
-        ctx.icon('left') +
-        '</button><button class="icon-button" data-board-page="' +
-        (page.page + 1) +
-        '" ' +
-        (page.page === page.pages - 1 ? 'disabled' : '') +
-        ' aria-label="' +
-        esc(t('next')) +
-        '">' +
-        ctx.icon('right') +
-        '</button></div>'
-      : '';
   document.querySelector('#group-summary').innerHTML =
     '<div class="group-heading">' +
     ctx.icon('layers') +

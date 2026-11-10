@@ -86,10 +86,13 @@ export async function auditLayoutStress({ page, context, baseURL, readConfig, re
             () =>
               document
                 .querySelector('.production-metric[data-metric="currentActual"] b')
-                ?.textContent.replace(/\D/g, '') === '99999999',
+                ?.getAttribute('title')
+                .replace(/\D/g, '') === '99999999',
           );
         for (const [width, height] of [
           [1920, 1080],
+          [1600, 900],
+          [1366, 768],
           [1280, 720],
           [1024, 768],
           [390, 844],
@@ -116,12 +119,27 @@ export async function auditLayoutStress({ page, context, baseURL, readConfig, re
             false,
           );
           await card.locator('[data-line-expand]').click();
-          assert.match(
-            await card.locator('.expanded-slot-info').innerText(),
-            new RegExp(model),
-          );
-          assert.equal(await card.locator('[data-card-alert-list]').isVisible(), true);
-          await card.locator('[data-line-expand]').click();
+          if (fullscreen) {
+            const dialog = page.locator('#line-detail-dialog');
+            assert.equal(await dialog.isVisible(), true);
+            assert.match(
+              await dialog.locator('#line-modal-title').innerText(),
+              new RegExp(model),
+            );
+            assert.equal(await dialog.locator('[data-detail-alert-list]').isVisible(), true);
+            await dialog.locator('[data-close-line-dialog]').click();
+          } else {
+            assert.match(
+              await card.locator('.expanded-slot-info').innerText(),
+              new RegExp(model),
+            );
+            assert.equal(await card.locator('[data-card-alert-list]').isVisible(), true);
+            assert.match(
+              await card.locator('[data-expanded-metrics]').innerText(),
+              scope === 'day' ? /199,999,998/ : /99,999,999/,
+            );
+            await card.locator('[data-line-expand]').click();
+          }
         }
       }
       if (fullscreen) await page.locator('#exit-fullscreen').click();

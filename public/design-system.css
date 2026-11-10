@@ -385,73 +385,6 @@ body[data-page='overview'] #alert-summary {
 #line-dashboard #group-summary .current-interval {
   font-size: 11px;
 }
-body.fullscreen-board .filter-bar {
-  display: flex;
-}
-body.fullscreen-board .line-dashboard-heading {
-  display: none;
-}
-body.fullscreen-board #line-dashboard > .group-tabs {
-  padding-right: 0;
-  flex: none;
-}
-body.fullscreen-board .board-header {
-  order: -1;
-  margin-bottom: 4px;
-  min-height: 32px;
-}
-body.fullscreen-board .board-header > div:first-child {
-  display: none;
-}
-body.fullscreen-board .board-actions {
-  margin-left: auto;
-}
-body.fullscreen-board .monitor-summary {
-  flex: none;
-}
-body.fullscreen-board #line-dashboard .dashboard-top-charts {
-  flex: none;
-  height: auto;
-  max-height: none;
-  margin-top: 10px;
-}
-body.fullscreen-board #line-dashboard .dashboard-top-charts .panel {
-  height: auto;
-  max-height: none;
-}
-body.fullscreen-board #line-dashboard .dashboard-top-charts .panel-heading {
-  padding: 12px 16px;
-}
-body.fullscreen-board #line-dashboard .dashboard-top-charts h2 {
-  font-size: 16px;
-}
-body.fullscreen-board #group-trend {
-  --trend-height: 220px;
-  height: 220px;
-  max-height: none;
-}
-body.fullscreen-board #output-share {
-  max-height: none;
-}
-body.fullscreen-board #output-share .share-layout {
-  height: auto;
-  min-height: 220px;
-  grid-template-columns: 100px minmax(0, 1fr);
-  padding: 12px;
-}
-body.fullscreen-board #output-share .share-layout > svg {
-  height: 100px;
-}
-body.fullscreen-board #output-share .share-legend {
-  max-height: 205px;
-  overflow: auto;
-  gap: 8px 12px;
-}
-body.fullscreen-board #output-share .share-legend > div {
-  grid-template-columns: 8px minmax(0, 1fr) auto auto;
-  font-size: 12px;
-  line-height: 1.3;
-}
 body #setup-progress {
   padding: 10px 16px;
   margin: 0 0 10px;
@@ -1012,9 +945,9 @@ body.navigation-open #sidebar {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
-  min-height: 44px;
-  margin: 8px 0;
+  gap: 8px;
+  min-height: 30px;
+  margin: 6px 0;
   order: 4;
 }
 #line-dashboard #board-pagination > div {
@@ -1024,7 +957,8 @@ body.navigation-open #sidebar {
 #line-dashboard #line-cards {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  --monitor-row-height: 92px;
+  gap: 6px;
   height: auto;
   max-height: none;
   overflow: visible;
@@ -1037,14 +971,14 @@ body.navigation-open #sidebar {
   --card-tint: var(--surface);
   display: grid;
   grid-template-columns:
-    minmax(155px, 1fr) minmax(140px, 0.85fr) minmax(270px, 1.5fr) minmax(240px, 1.7fr)
-    32px;
-  grid-template-areas: 'identity health metrics trend expand' 'slot slot reason reason expand';
+    minmax(118px, 0.9fr) minmax(126px, 0.95fr) minmax(248px, 1.4fr)
+    minmax(130px, 1.5fr) minmax(136px, 1fr) minmax(150px, 1.4fr) 24px;
+  grid-template-areas: 'identity health metrics trend slot reason expand';
   grid-template-rows: auto;
-  align-items: start;
-  gap: 12px 16px;
-  padding: 16px;
-  height: auto;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 6px 10px;
+  height: var(--monitor-row-height);
   min-height: 0;
   max-height: none;
   flex: none;
@@ -1073,8 +1007,8 @@ body.navigation-open #sidebar {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  align-self: start;
-  gap: 5px;
+  align-self: center;
+  gap: 3px;
   margin: 0;
   padding: 0;
   min-width: 0;
@@ -1089,31 +1023,32 @@ body.navigation-open #sidebar {
 }
 #line-dashboard #line-cards .production-identity {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 #line-dashboard #line-cards .production-line {
   color: var(--ink);
-  font-size: 23px;
+  font-size: 21px;
   font-weight: 750;
-  line-height: 1.15;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 #line-dashboard #line-cards .production-model {
   display: block;
-  overflow: visible;
-  -webkit-line-clamp: unset;
-  max-height: none;
+  overflow: hidden;
+  max-height: 32px;
   color: var(--muted);
   font-size: 13px;
-  line-height: 1.35;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 #line-dashboard #line-cards .production-model-main,
 #line-dashboard #line-cards .production-model-suffix {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 #line-dashboard #line-cards .line-source {
   display: block;
@@ -1123,22 +1058,22 @@ body.navigation-open #sidebar {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
-  white-space: normal;
-  overflow: visible;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 #line-dashboard #line-cards .line-health {
   grid-area: health;
   display: grid;
-  gap: 8px;
+  gap: 4px;
   justify-items: start;
   min-width: 0;
-  align-self: start;
+  align-self: center;
 }
 .line-severity {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 #line-dashboard #line-cards .signal-lamp {
   display: inline-block;
@@ -1171,7 +1106,7 @@ body.navigation-open #sidebar {
   display: inline-flex;
   align-items: center;
   border-radius: 16px;
-  padding: 4px 9px;
+  padding: 3px 8px;
   font-size: 13px;
   font-weight: 650;
   line-height: 1.3;
@@ -1236,22 +1171,20 @@ body.navigation-open #sidebar {
 }
 #line-dashboard #line-cards .line-card-values {
   grid-area: metrics;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 0.9fr)) minmax(0, 1.3fr);
   align-self: center;
-  gap: 12px;
+  gap: 6px;
   margin: 0;
-  padding: 0 0 0 14px;
+  padding: 0 0 0 10px;
   border-left: 1px solid var(--ui-border);
   min-width: 0;
 }
 #line-dashboard #line-cards .line-card-values > span {
   display: grid;
-  flex: 1 1 auto;
-  min-width: max-content;
+  min-width: 0;
   width: auto;
-  max-width: none;
-  gap: 6px;
+  gap: 5px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -1261,14 +1194,15 @@ body.navigation-open #sidebar {
   font-size: 12px;
   line-height: 1.35;
   letter-spacing: 0;
-  white-space: normal;
-  overflow: visible;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 #line-dashboard #line-cards .line-card-values b {
   color: var(--ink);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.1;
   margin: 0;
   white-space: nowrap;
   overflow: visible;
@@ -1288,7 +1222,7 @@ body.navigation-open #sidebar {
 }
 #line-dashboard #line-cards .line-trend {
   grid-area: trend;
-  height: 80px;
+  height: 62px;
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -1313,10 +1247,10 @@ body.navigation-open #sidebar {
 }
 #line-dashboard #line-cards .line-slot {
   grid-area: slot;
-  display: flex;
+  display: grid;
+  justify-items: start;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 10px;
+  gap: 4px;
   border: 0;
   padding: 0;
   min-width: 0;
@@ -1329,8 +1263,8 @@ body.navigation-open #sidebar {
 .time-pill {
   display: inline-block;
   border-radius: 14px;
-  padding: 4px 9px;
-  font-size: 14px;
+  padding: 3px 8px;
+  font-size: 13px;
   font-weight: 650;
   line-height: 1.3;
   background: #eaf0f6;
@@ -1339,32 +1273,32 @@ body.navigation-open #sidebar {
 }
 .line-slot .next-slot {
   width: 100%;
-  white-space: normal;
-  overflow: visible;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 #line-dashboard #line-cards .line-card-status {
   grid-area: reason;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 0 0 0 14px;
+  gap: 4px;
+  padding: 0 0 0 10px;
   border: 0;
   border-left: 1px solid var(--ui-border);
   margin: 0;
   min-width: 0;
   align-self: center;
   position: relative;
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: 13px;
+  line-height: 1.35;
 }
 #line-dashboard #line-cards [data-card-reason] {
-  display: block;
-  overflow: visible;
-  max-height: none;
-  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  max-height: 2.7em;
   overflow-wrap: anywhere;
-  -webkit-line-clamp: unset;
   color: var(--card-tone);
   font-weight: 550;
 }
@@ -1389,8 +1323,8 @@ body.navigation-open #sidebar {
   color: var(--muted);
 }
 .reason-step {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1405,10 +1339,10 @@ body.navigation-open #sidebar {
 }
 #line-dashboard #line-cards .card-reason-toggle {
   grid-area: expand;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 28px;
   padding: 5px;
-  align-self: start;
+  align-self: center;
 }
 #line-dashboard #line-cards .card-expanded-details {
   display: flex;
@@ -1461,41 +1395,35 @@ body.navigation-open #sidebar {
 .warning-value {
   color: var(--warning);
 }
-body.fullscreen-board #line-dashboard {
-  height: auto;
-  min-height: 0;
+[data-expanded-metrics] {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 4px 12px;
 }
-body.fullscreen-board .line-dashboard-heading {
-  display: none;
+[data-expanded-metrics] dd {
+  margin: 0;
+  font-weight: 650;
 }
-body.fullscreen-board .board-header {
-  order: -1;
-  margin: 0 0 12px;
-  min-height: 40px;
-}
-body.fullscreen-board .board-header > div:first-child {
-  display: none;
-}
-body.fullscreen-board .board-actions {
-  margin-left: auto;
-  flex-wrap: wrap;
-}
-body.fullscreen-board #line-dashboard > .group-tabs {
-  padding-right: 0;
-}
-@container monitoring (min-width: 1500px) {
-  #line-dashboard #line-cards .line-card {
+/* Unusually large values borrow width from the flexible chart/reason tracks,
+ * preserving every displayed digit and the same readable numeric font. */
+@container monitoring (min-width: 1066px) {
+  #line-dashboard #line-cards .has-wide-metrics {
     grid-template-columns:
-      minmax(145px, 170px) minmax(140px, 155px) minmax(280px, 320px)
-      minmax(250px, 1.7fr) minmax(170px, 195px) minmax(240px, 1.3fr) 32px;
-    grid-template-areas: 'identity health metrics trend slot reason expand';
-    align-items: center;
+      minmax(118px, 0.9fr) minmax(126px, 0.95fr)
+      minmax(max-content, 1.4fr) minmax(130px, 1.5fr)
+      minmax(136px, 1fr) minmax(150px, 1.4fr) 24px;
+  }
+  #line-dashboard #line-cards .has-wide-metrics .line-card-values {
+    grid-template-columns: repeat(3, minmax(max-content, 0.9fr)) minmax(max-content, 1.3fr);
   }
 }
-@container monitoring (max-width: 939px) {
+@container monitoring (max-width: 1065px) {
+  #line-dashboard #line-cards {
+    --monitor-row-height: 176px;
+  }
   #line-dashboard #line-cards .line-card {
-    grid-template-columns: minmax(0, 1fr) minmax(140px, 1fr) 32px;
-    grid-template-areas: 'identity health expand' 'metrics metrics expand' 'trend trend trend' 'slot slot slot' 'reason reason reason';
+    grid-template-columns: 130px 136px minmax(0, 1fr) 24px;
+    grid-template-areas: 'identity health metrics expand' 'slot reason trend expand';
   }
   #line-dashboard #line-cards .line-card-values {
     border: 0;
@@ -1503,33 +1431,303 @@ body.fullscreen-board #line-dashboard > .group-tabs {
   }
   #line-dashboard #line-cards .line-card-status {
     border: 0;
-    padding: 12px 0 0;
-    border-top: 1px solid var(--ui-border);
+    padding: 0;
   }
   #line-dashboard .line-dashboard-heading {
     position: static;
     height: auto;
     order: -1;
     justify-content: flex-end;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
   #line-dashboard > .group-tabs {
     padding-right: 0;
   }
 }
-@container monitoring (max-width: 520px) {
-  #line-dashboard #line-cards .line-card {
-    grid-template-areas: 'identity identity expand' 'health health expand' 'metrics metrics metrics' 'trend trend trend' 'slot slot slot' 'reason reason reason';
-    padding: 14px;
-    gap: 14px 10px;
+@container monitoring (max-width: 620px) {
+  #line-dashboard #line-cards {
+    --monitor-row-height: 350px;
   }
-  #line-dashboard #line-cards .line-health {
+  #line-dashboard #line-cards .line-card {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 24px;
+    grid-template-areas: 'identity health expand' 'metrics metrics metrics' 'trend trend trend' 'slot slot slot' 'reason reason reason';
+  }
+  #line-dashboard #line-cards .line-trend {
+    height: 44px;
+  }
+  #line-dashboard #line-cards .line-slot {
     display: flex;
-    align-items: center;
     flex-wrap: wrap;
-    gap: 10px;
   }
   #line-dashboard #line-cards .line-slot .next-slot {
-    width: auto;
+    width: 100%;
+  }
+}
+
+/* Fullscreen is a viewport-sized grid. The flexible cards track is measured by
+ * fitMonitorPage; controls, pager and optional charts have explicit budgets.
+ * Reserving the pager track even for one page prevents capacity oscillation. */
+html:fullscreen {
+  overflow: hidden;
+}
+body.fullscreen-board {
+  --board-chart-height: 152px;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+body.fullscreen-board .app-shell {
+  height: 100dvh;
+  min-height: 0;
+  padding-top: 40px;
+  display: flex;
+  flex-direction: column;
+}
+body.fullscreen-board .topbar {
+  height: 40px;
+  min-height: 40px;
+  padding: 3px 12px;
+}
+body.fullscreen-board .topbar .icon-button {
+  height: 30px;
+  width: 30px;
+}
+body.fullscreen-board .header-select {
+  min-height: 30px;
+  padding: 2px 6px;
+}
+body.fullscreen-board #main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  margin: 0;
+  padding: 6px 12px;
+  overflow: hidden;
+}
+body.fullscreen-board #report-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+body.fullscreen-board .filter-bar {
+  display: flex;
+  flex: none;
+  padding: 0;
+  margin: 0 0 4px;
+  min-height: 32px;
+  gap: 8px;
+}
+body.fullscreen-board .filter-bar button,
+body.fullscreen-board .filter-bar .date-control {
+  min-height: 30px;
+  padding: 4px 8px;
+}
+body.fullscreen-board .filter-bar input {
+  min-height: 26px;
+  height: 26px;
+}
+body.fullscreen-board #line-dashboard {
+  height: auto;
+  min-height: 0;
+  flex: 1;
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto minmax(0, 1fr) 30px auto;
+  grid-template-areas: 'groups actions' 'summary summary' 'alerts alerts' 'cards cards' 'pager pager' 'charts charts';
+  gap: 4px 8px;
+}
+body.fullscreen-board #line-dashboard > .group-tabs {
+  grid-area: groups;
+  align-self: center;
+  margin: 0;
+  min-height: 30px;
+  padding: 0;
+  flex-wrap: wrap;
+}
+body.fullscreen-board .board-header {
+  grid-area: actions;
+  margin: 0;
+  min-height: 30px;
+}
+body.fullscreen-board .board-header > div:first-child,
+body.fullscreen-board .line-dashboard-heading {
+  display: none;
+}
+body.fullscreen-board .board-actions {
+  margin: 0;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+body.fullscreen-board .board-actions .button,
+body.fullscreen-board .board-actions summary {
+  min-height: 30px;
+  padding: 4px 8px;
+}
+body.fullscreen-board #group-summary {
+  grid-area: summary;
+  min-height: 30px;
+  margin: 0;
+  padding: 4px 10px;
+}
+body.fullscreen-board .monitor-summary {
+  grid-area: alerts;
+  margin: 0;
+  min-height: 30px;
+  gap: 8px;
+}
+body.fullscreen-board .monitor-summary .button {
+  min-height: 28px;
+  padding: 3px 8px;
+}
+body.fullscreen-board #line-dashboard #line-cards {
+  grid-area: cards;
+  min-height: 0;
+  height: 100%;
+  margin: 0;
+  gap: 6px;
+  overflow: hidden;
+  align-self: stretch;
+}
+body.fullscreen-board #line-dashboard #line-cards .line-card {
+  height: var(--monitor-row-height);
+  min-height: var(--monitor-row-height);
+}
+body.fullscreen-board #line-dashboard #board-pagination {
+  grid-area: pager;
+  margin: 0;
+  min-height: 30px;
+  font-size: 12px;
+}
+body.fullscreen-board #board-pagination.single-page {
+  visibility: hidden;
+}
+body.fullscreen-board #board-pagination button {
+  min-height: 28px;
+  height: 28px;
+  padding: 3px 8px;
+}
+body.fullscreen-board #board-pagination .icon-button {
+  width: 28px;
+}
+body.fullscreen-board #line-dashboard .dashboard-top-charts {
+  grid-area: charts;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  height: var(--board-chart-height);
+  min-height: 0;
+  max-height: var(--board-chart-height);
+  margin: 0;
+  gap: 8px;
+}
+body.fullscreen-board #line-dashboard .dashboard-top-charts.single-chart {
+  grid-template-columns: minmax(0, 1fr);
+}
+body.fullscreen-board #line-dashboard .dashboard-top-charts .panel {
+  min-height: 0;
+  height: var(--board-chart-height);
+  padding: 6px 10px;
+  overflow: hidden;
+}
+body.fullscreen-board #line-dashboard .dashboard-top-charts .panel-heading {
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  margin: 0 0 4px;
+}
+body.fullscreen-board #line-dashboard .dashboard-top-charts .panel-heading h2 {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+}
+body.fullscreen-board #line-dashboard .dashboard-top-charts .panel-heading p {
+  display: none;
+}
+body.fullscreen-board #group-trend {
+  /* Keep SVG coordinates and CSS height equal; reserve space for its own
+   * horizontal scrollbar rather than cropping the time labels. */
+  --trend-height: 98px;
+  height: 114px;
+  padding: 0;
+  min-height: 0;
+}
+body.fullscreen-board #output-share .share-layout {
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 10px;
+  padding: 0;
+  align-items: start;
+  height: 104px;
+  min-height: 0;
+}
+body.fullscreen-board #output-share .share-layout > svg {
+  height: 100px;
+}
+body.fullscreen-board #output-share .share-legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px 10px;
+  align-content: start;
+  max-height: 104px;
+  overflow: auto;
+}
+body.fullscreen-board #output-share .share-legend > div {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  align-items: center;
+  min-height: 22px;
+  gap: 4px;
+  padding: 0;
+  font-size: 11px;
+}
+body.fullscreen-board #output-share .share-legend .production-identity {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  gap: 4px;
+  overflow: hidden;
+}
+body.fullscreen-board #output-share .share-legend .production-line {
+  font-size: 12px;
+  white-space: nowrap;
+}
+body.fullscreen-board #output-share .share-legend .production-model {
+  display: block;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.fullscreen-board #output-share .share-legend .production-model-main,
+body.fullscreen-board #output-share .share-legend .production-model-suffix {
+  display: inline;
+}
+
+body.fullscreen-board .monitor-hint,
+body.fullscreen-board .page-footer {
+  display: none;
+}
+@media (max-width: 700px) {
+  body.fullscreen-board #line-dashboard {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto minmax(0, 1fr) 30px auto;
+    grid-template-areas: 'actions' 'groups' 'summary' 'alerts' 'cards' 'pager' 'charts';
+  }
+  body.fullscreen-board #line-dashboard .dashboard-top-charts {
+    grid-template-columns: minmax(0, 1fr);
+    height: var(--board-chart-height);
+    overflow: auto;
+  }
+  body.fullscreen-board #output-share .share-legend {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  body.fullscreen-board .topbar {
+    padding: 3px 6px;
+  }
+  body.fullscreen-board #main {
+    padding: 4px 6px;
   }
 }

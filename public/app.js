@@ -1,4 +1,4 @@
-import { MonitorPaging, pageSize } from './monitor-paging.js';
+import { MonitorPaging, pageSize, fitMonitorPage } from './monitor-paging.js';
 import { naturalOrder, byProduction } from './list-order.js';
 import { linePickerMarkup, linePickerGroups, updateLinePicker } from './line-picker.js';
 import { handleMonitorAction } from './monitor-ui.js';
@@ -773,6 +773,9 @@ function monitorRecords(saved = state.records, defaults = state.defaults) {
 }
 function monitorContext() {
   const scope = reportScope();
+  const board = document.body.classList.contains('fullscreen-board');
+  const cards = $('#line-cards'),
+    cardStyle = board ? getComputedStyle(cards) : null;
   const config = {
     ...state.config,
     schedules: {
@@ -795,10 +798,17 @@ function monitorContext() {
     now: Date.now() + state.serverOffset,
     groupId: state.view === 'details' ? state.detailGroupId : state.groupId,
     detail: state.view === 'details',
-    board: document.body.classList.contains('fullscreen-board'),
+    board,
     boardPage: monitorPaging.page,
     paging: monitorPaging,
-    boardSize: pageSize,
+    boardSize: board
+      ? fitMonitorPage(
+          cards.clientHeight,
+          parseFloat(cardStyle.getPropertyValue('--monitor-row-height')),
+          parseFloat(cardStyle.rowGap),
+        )
+      : pageSize,
+    language: state.language,
     alertFilter: state.view === 'overview' ? state.alertFilter || 'all' : 'all',
     metricScope: stored('bp-metric-scope') === 'day' ? 'day' : 'interval',
     chartLine: state.view === 'details' ? state.line : state.chartLine,
@@ -2335,7 +2345,12 @@ $('#monitor-status-filters').onclick = (event) => {
   $(`[data-alert-filter="${state.alertFilter}"]`)?.focus({ preventScroll: true });
 };
 $('#line-cards').onclick = (e) => {
-  if (handleMonitorAction(e, monitorContext())) return;
+  // Fullscreen details use the existing dialog instead of making a fixed-height
+  // card taller. Ordinary mode retains inline expansion.
+  const fullDetail =
+    document.body.classList.contains('fullscreen-board') &&
+    e.target.closest('[data-line-expand]');
+  if (!fullDetail && handleMonitorAction(e, monitorContext())) return;
   const button = e.target.closest('[data-monitor-line]');
   if (button) {
     if (document.body.classList.contains('fullscreen-board')) {
@@ -2344,6 +2359,7 @@ $('#line-cards').onclick = (e) => {
         line: button.dataset.monitorLine,
         defaults: state.defaults,
       });
+      if (fullDetail) $('#line-detail-dialog .detail-alert-panel details').open = true;
       return;
     }
     state.detailGroupId = state.groupId;
@@ -2367,12 +2383,8 @@ setInterval(() => {
       !!$('#line-cards .is-expanded') ||
       document.body.classList.contains('navigation-open') ||
       !!document.activeElement?.closest('#line-cards');
-    if (
-      state.view === 'overview' &&
-      monitorPaging.tick(Date.now() + state.serverOffset, paused)
-    )
-      renderChart();
-    else renderMonitoring(monitorContext(), { chart: false });
+    if (state.view === 'overview') monitorPaging.tick(Date.now() + state.serverOffset, paused);
+    renderMonitoring(monitorContext(), { chart: false });
     updateCurrentInterval();
   }
 }, 1000);
@@ -2540,15 +2552,24 @@ chartObserver.observe($('#chart'));
 // containers. Geometry keys prevent the SVG redraw from triggering a loop.
 const trendGeometry = new WeakMap();
 const trendObserver = new ResizeObserver((entries) => {
-  let changed = false;
+  let chartChanged = false,
+    capacityChanged = false;
   for (const { target, contentRect } of entries) {
-    const key = `${Math.round(contentRect.width)}:${Math.round(contentRect.height)}`;
-    if (contentRect.width > 0 && trendGeometry.get(target) !== key) {
+    const width = Math.round(contentRect.width),
+      height = Math.round(contentRect.height);
+    const key = `${width}:${height}`,
+      previous = trendGeometry.get(target);
+    if (width > 0 && previous !== key) {
       trendGeometry.set(target, key);
-      changed = true;
+      if (target.id !== 'line-cards' || Number(previous?.split(':')[0]) !== width)
+        chartChanged = true;
+      else if (document.body.classList.contains('fullscreen-board')) capacityChanged = true;
     }
   }
-  if (changed && state.config && ['overview', 'details'].includes(state.view)) renderChart();
+  if (state.config && ['overview', 'details'].includes(state.view)) {
+    if (chartChanged) renderChart();
+    else if (capacityChanged) renderMonitoring(monitorContext(), { chart: false });
+  }
 });
 trendObserver.observe($('#group-trend'));
 trendObserver.observe($('#line-cards'));
@@ -2561,11 +2582,18 @@ window.addEventListener('resize', () => {
     renderChart();
 });
 $('#board-pagination').onclick = (e) => {
+  const now = Date.now() + state.serverOffset;
+  if (e.target.closest('[data-board-rotation]')) {
+    monitorPaging.togglePause(now);
+    renderMonitoring(monitorContext(), { chart: false });
+    return;
+  }
   const button = e.target.closest('[data-board-page]');
   if (button) {
-    monitorPaging.select(Number(button.dataset.boardPage), Date.now() + state.serverOffset);
-    renderChart();
-    $('#line-cards').scrollIntoView({ block: 'start' });
+    monitorPaging.select(Number(button.dataset.boardPage), now);
+    renderMonitoring(monitorContext(), { chart: false });
+    if (!document.body.classList.contains('fullscreen-board'))
+      $('#line-cards').scrollIntoView({ block: 'nearest' });
   }
 };
 

@@ -1,3 +1,4 @@
+import { auditCompactBoard } from './compact-board-audit.mjs';
 import { auditLayoutRefinement } from './layout-refinement-audit.mjs';
 import { auditNavigation } from './navigation-audit.mjs';
 import { auditDesign } from './design-audit.mjs';
@@ -2646,9 +2647,23 @@ try {
         [1024, 768],
       ]) {
         await page.setViewportSize({ width, height });
-        await page.waitForFunction(
-          () => document.querySelectorAll('#line-cards .line-card').length === 7,
-        );
+        await page.locator('[data-group=""]').click();
+        await page.waitForFunction(() => {
+          const node = document.querySelector('#line-cards'),
+            style = getComputedStyle(node);
+          const gap = parseFloat(style.rowGap);
+          const capacity = Math.min(
+            7,
+            Math.max(
+              1,
+              Math.floor(
+                (node.clientHeight + gap) /
+                  (parseFloat(style.getPropertyValue('--monitor-row-height')) + gap),
+              ),
+            ),
+          );
+          return node.querySelectorAll('.line-card').length === capacity;
+        });
         const compact = await page.locator('#line-cards').evaluate((list) => {
           const elements = [...list.children];
           const cards = elements.map((card) => card.getBoundingClientRect());
@@ -2683,16 +2698,33 @@ try {
             ? ['dailyTarget', 'dailyActual', 'dailyGap']
             : ['currentTarget', 'currentActual', 'currentGap'],
         );
-        assert.equal(compact.count, 7);
+        assert.equal(
+          compact.count,
+          await page.locator('#line-cards').evaluate((node) => {
+            const style = getComputedStyle(node),
+              gap = parseFloat(style.rowGap);
+            return Math.min(
+              7,
+              Math.max(
+                1,
+                Math.floor(
+                  (node.clientHeight + gap) /
+                    (parseFloat(style.getPropertyValue('--monitor-row-height')) + gap),
+                ),
+              ),
+            );
+          }),
+        );
         assert.equal(
           compact.contentFits,
           true,
           JSON.stringify({ language, metricScope, width, height, ...compact }),
         );
-        // Readability is the constraint; seven cards may extend below the
-        // viewport. Every card remains reachable through ordinary scrolling.
-        await page.locator('#line-cards .line-card').last().scrollIntoViewIfNeeded();
-        await page.evaluate(() => scrollTo(0, 0));
+        assert.equal(compact.visible, true, 'Every fullscreen row fits the cards track');
+        assert.equal(
+          await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight),
+          true,
+        );
         const plots = await page.locator('#line-cards .line-trend').evaluateAll((nodes) =>
           nodes.map((plot) => {
             const box = plot.getBoundingClientRect(),
@@ -2716,7 +2748,7 @@ try {
         });
         assert.equal(legendFits, true, `Share legend clipped at ${width}x${height}`);
         assert.ok(
-          plots.every((plot) => plot.width >= 220 && plot.height >= 30 && plot.fills),
+          plots.every((plot) => plot.width >= 130 && plot.height >= 30 && plot.fills),
           JSON.stringify({ width, height, plots }),
         );
       }
@@ -2732,7 +2764,7 @@ try {
     await page.screenshot({ path: path.join(root, 'docs/images/seven-line-board.png') });
   }
   record(
-    'A page contains seven readable, naturally sized cards; normal document scrolling retains all data and proportional trends in both metric modes',
+    'Fullscreen uses compact readable cards and measured page capacity, retains both charts and metric modes, and never requires page scrolling',
   );
   await page.locator('#exit-fullscreen').click();
   const latestDenseConfig = await readConfig();
@@ -3113,6 +3145,16 @@ try {
     root,
     screenshots,
     errors,
+  });
+  await auditCompactBoard({
+    browser,
+    context,
+    baseURL,
+    readConfig,
+    record,
+    errors,
+    root,
+    screenshots,
   });
   assert.deepEqual(errors, []);
   record('No uncaught browser errors');

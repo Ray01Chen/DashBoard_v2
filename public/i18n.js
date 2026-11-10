@@ -3,6 +3,8 @@ export const locales = ['zh', 'en', 'th'];
 export const localeTags = { zh: 'zh-TW', en: 'en-GB', th: 'th-TH-u-ca-gregory' };
 export const messages = {
   zh: {
+    pausePageRotation: '暫停換頁',
+    resumePageRotation: '恢復換頁',
     alertHelp_reporting:
       '兩個門檻都從生產時段結束起算，紅燈不得早於黃燈寬限。空白是未回報；已填 0 是有效回報。',
     reportingLegacyHint:
@@ -544,6 +546,8 @@ export const messages = {
     selectedPeopleCount: '選擇人員 · 已選 {count} 位',
   },
   en: {
+    pausePageRotation: 'Pause pages',
+    resumePageRotation: 'Resume pages',
     reportingLegacyHint:
       'The old rule waited {extra} min after {grace} min grace, giving an effective red limit of {red} min. This field now shows that total. Save after adjusting.',
     reportingTimeline:
@@ -1132,6 +1136,8 @@ export const messages = {
     selectedPeopleCount: 'Select people · {count} selected',
   },
   th: {
+    pausePageRotation: 'หยุดเปลี่ยนหน้า',
+    resumePageRotation: 'เปลี่ยนหน้าต่อ',
     reportingLegacyHint:
       'กฎเดิมรอเพิ่ม {extra} นาทีหลังผ่อนผัน {grace} นาที จึงเป็นแดงที่ {red} นาที ช่องนี้แสดงเวลารวมแล้ว ปรับแล้วบันทึก',
     reportingTimeline:

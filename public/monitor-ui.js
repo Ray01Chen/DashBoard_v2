@@ -1,5 +1,6 @@
 /** Monitoring presentation only. Alert evaluation and report values stay in
  * their existing modules; temporary expansion/filter state never enters CONFIG. */
+import { localeTags } from './i18n.js';
 import { alertConfig } from './alerts.js';
 import { productionIdentityMarkup, productionLabel } from './production-models.js';
 import { schedulesForLine } from './production-schedules.js';
@@ -17,6 +18,23 @@ const filterLabels = new WeakMap();
 let rendered = new Map();
 export const severityFilters = ['all', 'red', 'yellow', 'green', 'noData', 'disabled'];
 
+/** Compact only unusually large values; exact values remain in the native
+ * title and details. This keeps one row readable without clipping digits. */
+export function monitorNumber(value, ctx) {
+  const exact = ctx.number(value);
+  if (!Number.isFinite(value) || exact.length <= 5) return exact;
+  const locale = localeTags[ctx.language] || localeTags.en;
+  const compact = new Intl.NumberFormat(locale, {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value);
+  return compact.length <= 6
+    ? compact
+    : new Intl.NumberFormat(locale, {
+        notation: 'scientific',
+        maximumFractionDigits: 1,
+      }).format(value);
+}
 export function achievement(actual, target) {
   return actual == null || !(target > 0) ? null : (actual / target) * 100;
 }
@@ -61,7 +79,8 @@ function achievementView(line, ctx) {
   );
   const policy = alertConfig(ctx.config.monitoring).performance;
   return {
-    text: value == null ? '—' : ctx.number(Number(value.toFixed(1))) + '%',
+    text: value == null ? '—' : monitorNumber(Number(value.toFixed(1)), ctx) + '%',
+    full: value == null ? '—' : ctx.number(Number(value.toFixed(1))) + '%',
     tone:
       value == null
         ? 'unknown'
@@ -91,16 +110,16 @@ export function monitorCard(line, ctx, metrics) {
   const period = slotPresentation(line, ctx),
     reason = reasonView(line, ctx),
     rate = achievementView(line, ctx);
-  const open = expanded.has(ctx.date + key);
+  const open = !ctx.board && expanded.has(ctx.date + key);
   return `<article class="line-card alarm-${line.status}${line.blink ? ' blinking-frame' : ''}${open ? ' is-expanded' : ''}${wideMetrics(line, ctx) ? ' has-wide-metrics' : ''}" data-monitor-line="${esc(key)}" role="group" aria-label="${esc(productionLabel(line))}">
     <span class="line-card-top"><button type="button" class="line-identity-open" title="${esc(t('details'))}">${productionIdentityMarkup(line, esc)}</button><span class="line-source">${esc(t('sourceLabel', { name: line.sourceLabel === 'all' ? t('allStations') : line.sourceLabel || t('noSource') }))}</span></span>
     <span class="line-health"><span class="line-severity"><span class="signal-lamp lamp-${line.status}" role="img" aria-label="${esc(t('alertState_' + line.unified.severity))}"></span><span class="severity-badge severity-${line.unified.severity}">${esc(t('alertState_' + line.unified.severity))}</span></span><span class="production-state state-${period.state}">${esc(t(period.state === 'completed' ? 'slotCompleted' : period.state))}</span><small class="health-period">${esc(range(period.slot))}</small></span>
-    <span class="line-card-values">${metrics}<span class="achievement-metric"><small>${esc(t('achievementRate'))}</small><b class="${rate.tone}" data-achievement>${esc(rate.text)}</b></span></span>
+    <span class="line-card-values">${metrics}<span class="achievement-metric"><small title="${esc(t('achievementRate'))}">${esc(t('achievementRate'))}</small><b class="${rate.tone}" data-achievement title="${esc(rate.full)}">${esc(rate.text)}</b></span></span>
     <span class="line-trend"></span>
     <span class="line-slot"><small data-slot-label>${esc(t(period.label))}</small><span class="time-pill state-${period.state}" data-slot-range>${esc(range(period.slot))}</span><small class="next-slot" data-next-slot title="${esc(period.next ? t('nextSlot') + ': ' + range(period.next) : t('noNextSlot'))}">${esc(period.next ? t('nextSlot') + ': ' + range(period.next) : t('noNextSlot'))}</small></span>
     <div class="line-card-status"><span class="${['red', 'yellow'].includes(line.unified.severity) ? 'alert-text' : ''}" data-card-reason title="${esc(reason.full)}">${esc(reason.text)}</span><small class="card-period-summary">${esc(productionStatusText(line, t, ctx.now))}</small><div class="reason-controls" ${reason.count > 1 ? '' : 'hidden'}><button type="button" class="reason-step" data-reason-step="-1" aria-label="${esc(t('previous'))}">${icon('left')}</button><output data-reason-count aria-label="${esc(t('alertReasons'))}">${reason.index} / ${reason.count}</output><button type="button" class="reason-step" data-reason-step="1" aria-label="${esc(t('next'))}">${icon('right')}</button></div></div>
     <button type="button" class="card-reason-toggle icon-button" data-line-expand aria-expanded="${open}" aria-label="${esc(t('alertDetails'))}" title="${esc(t('alertDetails'))}">${icon('down')}</button>
-    <section class="card-expanded-details" ${open ? '' : 'hidden'}><div class="expanded-slot-info"><strong>${esc(productionLabel(line))}</strong><p data-expanded-source></p><p data-expanded-period></p><p data-expanded-next></p></div><div><strong>${esc(t('alertDetails'))}</strong><ul data-card-alert-list></ul></div><button type="button" class="button card-open-detail">${esc(t('openProductionDetails'))}${icon('right')}</button></section>
+    <section class="card-expanded-details" ${open ? '' : 'hidden'}><div class="expanded-slot-info"><strong>${esc(productionLabel(line))}</strong><p data-expanded-source></p><p data-expanded-period></p><p data-expanded-next></p><dl data-expanded-metrics></dl></div><div><strong>${esc(t('alertDetails'))}</strong><ul data-card-alert-list></ul></div><button type="button" class="button card-open-detail">${esc(t('openProductionDetails'))}${icon('right')}</button></section>
   </article>`;
 }
 export function updateMonitorCard(card, line, ctx) {
@@ -108,7 +127,7 @@ export function updateMonitorCard(card, line, ctx) {
   const period = slotPresentation(line, ctx),
     reason = reasonView(line, ctx),
     rate = achievementView(line, ctx);
-  const open = expanded.has(ctx.date + (line.key || line.line));
+  const open = !ctx.board && expanded.has(ctx.date + (line.key || line.line));
   const classes =
     'line-card alarm-' +
     line.status +
@@ -132,6 +151,7 @@ export function updateMonitorCard(card, line, ctx) {
   state.textContent = t(period.state === 'completed' ? 'slotCompleted' : period.state);
   card.querySelector('.health-period').textContent = range(period.slot);
   card.querySelector('[data-achievement]').textContent = rate.text;
+  card.querySelector('[data-achievement]').title = rate.full;
   card.querySelector('[data-achievement]').className = rate.tone;
   card.querySelector('[data-slot-label]').textContent = t(period.label);
   const time = card.querySelector('[data-slot-range]');
@@ -157,6 +177,16 @@ export function updateMonitorCard(card, line, ctx) {
     card.querySelector('[data-expanded-period]').textContent =
       t(period.label) + ': ' + range(period.slot);
     card.querySelector('[data-expanded-next]').textContent = next.textContent;
+    const fields =
+      ctx.metricScope === 'day'
+        ? ['dailyTarget', 'dailyActual', 'dailyGap']
+        : ['currentTarget', 'currentActual', 'currentGap'];
+    card.querySelector('[data-expanded-metrics]').innerHTML =
+      fields
+        .map(
+          (key) => `<dt>${ctx.esc(ctx.t(key))}</dt><dd>${ctx.esc(ctx.number(line[key]))}</dd>`,
+        )
+        .join('') + `<dt>${ctx.esc(t('achievementRate'))}</dt><dd>${ctx.esc(rate.full)}</dd>`;
   }
   if (open) updateAlertList(card.querySelector('[data-card-alert-list]'), line.unified, t);
 }
