@@ -508,6 +508,10 @@ function validateConfig(data) {
     !Number.isSafeInteger(monitoring.refreshSeconds) ||
     monitoring.refreshSeconds < 1 ||
     monitoring.refreshSeconds > 3600 ||
+    (monitoring.pageRotateSeconds !== undefined &&
+      (!Number.isSafeInteger(monitoring.pageRotateSeconds) ||
+        monitoring.pageRotateSeconds < 0 ||
+        monitoring.pageRotateSeconds > 3600)) ||
     !['all', 'gap', 'idle'].includes(monitoring.alertMode)
   )
     fail(400, 'errMonitoring');
@@ -584,6 +588,7 @@ function validateConfig(data) {
   Object.assign(next.monitoring, {
     uiVersion: 2,
     refreshSeconds: monitoring.refreshSeconds,
+    pageRotateSeconds: monitoring.pageRotateSeconds ?? 20,
     alertMode: monitoring.alertMode,
   });
   migrateRuleControls(next.monitoring);
@@ -869,6 +874,7 @@ const files = {
   '/monitor.js': ['monitor.js', 'text/javascript'],
   '/list-order.js': ['list-order.js', 'text/javascript'],
   '/line-picker.js': ['line-picker.js', 'text/javascript'],
+  '/monitor-paging.js': ['monitor-paging.js', 'text/javascript'],
   '/monitor-ui.js': ['monitor-ui.js', 'text/javascript'],
   '/design-system.css': ['design-system.css', 'text/css'],
   '/dashboard.js': ['dashboard.js', 'text/javascript'],

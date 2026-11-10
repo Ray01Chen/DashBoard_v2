@@ -205,24 +205,34 @@ export async function auditNavigation({
   await page.locator('[data-view="overview"]').click();
   await page.waitForFunction(() => location.pathname === '/overview');
   assert.equal(await page.title(), 'BP9 · Production Overview');
-  const more = page.locator('#nav-more');
-  assert.equal(await more.getAttribute('open'), null);
-  await more.locator('summary').click();
-  await page.keyboard.press('Escape');
-  assert.equal(await more.getAttribute('open'), null);
-  await more.locator('summary').click();
-  await page.locator('#main').click({ position: { x: 4, y: 4 } });
-  assert.equal(await more.getAttribute('open'), null);
-  await more.locator('summary').click();
-  await more.locator('[data-view="details"]').click();
-  await page.waitForFunction(
-    () => location.pathname === '/details' && !document.querySelector('#nav-more').open,
+  await page.locator('#collapse-sidebar').click();
+  assert.equal(await page.locator('#collapse-sidebar').getAttribute('aria-expanded'), 'false');
+  await page.reload();
+  assert.equal(
+    await page.locator('body').evaluate((node) => node.classList.contains('sidebar-collapsed')),
+    true,
   );
-  assert.equal(await more.getAttribute('open'), null);
+  await page.locator('#toggle-navigation').click();
+  assert.equal(await page.locator('#collapse-sidebar').getAttribute('aria-expanded'), 'true');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForFunction(() => document.querySelector('#sidebar').inert);
+  assert.equal(await page.locator('#sidebar').getAttribute('aria-hidden'), 'true');
+  await page.locator('#toggle-navigation').click();
+  assert.equal(await page.locator('#sidebar').getAttribute('aria-hidden'), 'false');
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#sidebar').getAttribute('aria-hidden'), 'true');
+  await page.locator('#toggle-navigation').click();
+  await page.locator('#navigation-scrim').click({ position: { x: 380, y: 300 } });
+  assert.equal(await page.locator('#sidebar').getAttribute('aria-hidden'), 'true');
+  await page.locator('#toggle-navigation').click();
+  await page.locator('[data-view="details"]').click();
+  await page.waitForFunction(
+    () => location.pathname === '/details' && document.querySelector('#sidebar').inert,
+  );
   await page.goBack();
   await page.waitForFunction(() => location.pathname === '/overview');
   record(
-    'Primary Overview/Entry navigation and grouped secondary routes preserve title, permissions, browser history, outside-click dismissal and Escape focus behaviour',
+    'Grouped sidebar navigation preserves direct routes, permissions, saved collapse state and browser history; the mobile drawer closes on Escape, backdrop and navigation',
   );
   await session.close();
 }

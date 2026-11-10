@@ -2,30 +2,46 @@
  * at the last contiguous confirmed interval, not at the wall clock. This avoids
  * pretending that production awaiting a report was zero. */
 // New policies are opt-in so an upgrade preserves existing alert choices.
+// Historical payloads omitted this field expecting a 30-minute EXTRA delay.
+const legacyReportingExtraMinutes = 30;
 export const alertDefaults = {
   performance: { enabled: false, green: 95, red: 85 },
   completion: { enabled: false, green: 100, red: 110 },
-  reporting: { enabled: false, graceMinutes: 10, redMinutes: 30 },
+  reporting: { enabled: false, graceMinutes: 10, redAfterMinutes: 40 },
 };
 export function alertConfig(monitoring = {}) {
   return Object.fromEntries(
-    Object.entries(alertDefaults).map(([key, value]) => [
-      key,
-      { ...value, ...monitoring.unified?.[key] },
-    ]),
+    Object.entries(alertDefaults).map(([key, value]) => {
+      const saved = monitoring.unified?.[key] || {};
+      const rule = { ...value, ...saved };
+      if (key === 'reporting') {
+        // Legacy redMinutes was ADDITIONAL time after grace. Convert once to
+        // an explicit end-of-slot threshold; never add grace to the new field.
+        if (!Object.hasOwn(saved, 'redAfterMinutes'))
+          rule.redAfterMinutes =
+            rule.graceMinutes + (saved.redMinutes ?? legacyReportingExtraMinutes);
+        delete rule.redMinutes;
+      }
+      return [key, rule];
+    }),
   );
 }
 /** One validation contract for settings UI and the API. */
 export function validAlertConfig(monitoring) {
   return Object.entries(alertConfig(monitoring)).every(([type, rule]) => {
-    const fields = type === 'reporting' ? ['graceMinutes', 'redMinutes'] : ['green', 'red'];
+    const fields =
+      type === 'reporting' ? ['graceMinutes', 'redAfterMinutes'] : ['green', 'red'];
     return (
       typeof rule.enabled === 'boolean' &&
       fields.every(
-        (field) => Number.isFinite(rule[field]) && rule[field] >= 0 && rule[field] <= 99999,
+        (field) =>
+          Number.isFinite(rule[field]) &&
+          rule[field] >= 0 &&
+          rule[field] <= (field === 'redAfterMinutes' ? 199998 : 99999),
       ) &&
       (type !== 'performance' || (rule.green > rule.red && rule.green <= 100)) &&
-      (type !== 'completion' || rule.red >= rule.green)
+      (type !== 'completion' || rule.red >= rule.green) &&
+      (type !== 'reporting' || rule.redAfterMinutes >= rule.graceMinutes)
     );
   });
 }
@@ -51,7 +67,7 @@ export function evaluateAlerts({
   const completed = ended
     .filter((slot) => configured.has(slot.id))
     .map((slot) => (slot.reported === false ? { ...slot, actual: null } : slot));
-  const reporting = settings.reporting;
+  const reporting = alertConfig({ unified: { reporting: settings.reporting } }).reporting;
   const missing = completed.filter((slot) => slot.actual == null);
   const overdue = missing.filter((slot) => now > slot.endAt + reporting.graceMinutes * 60000);
   if (settings.performance.enabled) {
@@ -103,16 +119,14 @@ export function evaluateAlerts({
         minutes = Math.floor((now - first.endAt) / 60000);
       add(
         'reporting',
-        now > first.endAt + (reporting.graceMinutes + reporting.redMinutes) * 60000
-          ? 'red'
-          : 'yellow',
+        now > first.endAt + reporting.redAfterMinutes * 60000 ? 'red' : 'yellow',
         'alertReportingReason',
         {
           start: first.start,
           end: first.end,
           minutes,
           grace: reporting.graceMinutes,
-          red: reporting.graceMinutes + reporting.redMinutes,
+          red: reporting.redAfterMinutes,
           count: overdue.length,
         },
       );

@@ -3,8 +3,20 @@ export const locales = ['zh', 'en', 'th'];
 export const localeTags = { zh: 'zh-TW', en: 'en-GB', th: 'th-TH-u-ca-gregory' };
 export const messages = {
   zh: {
+    alertHelp_reporting:
+      '兩個門檻都從生產時段結束起算，紅燈不得早於黃燈寬限。空白是未回報；已填 0 是有效回報。',
+    reportingLegacyHint:
+      '舊規則為寬限 {grace} 分鐘後再等 {extra} 分鐘，原有效紅燈門檻為 {red} 分鐘。此處已換算成總時間；修改後請儲存。',
+    reportingTimeline:
+      '皆從時段結束起算：超過 {grace} 分鐘黃燈，超過 {red} 分鐘紅燈；不再相加。',
+    alertField_reporting_redAfterMinutes: '紅燈：時段結束後超過（分鐘）',
+    pageRotateHelp:
+      '每頁最多七張；0 關閉自動切換。手動切頁後等待完整間隔，展開或查看明細時暫停。',
+    pageRotateSeconds: '產線分頁自動切換（秒）',
+    closeNavigation: '關閉導覽',
+    toggleNavigation: '開啟導覽',
+    productionNavigation: '生產作業',
     alertSummaryNoData: '{name} · 資料不足',
-    moreNavigation: '更多功能',
     reviewNavigation: '查詢與分析',
     supportNavigation: '設定與說明',
     chooseApplyLines: '選擇產線',
@@ -70,13 +82,11 @@ export const messages = {
     alertNoData: '{name}：{detail}。',
     unifiedLightHelp:
       '總燈號：紅優先於黃；全部可判斷且正常才亮綠。資料不足或未啟用為灰色。黃燈慢閃、紅燈快閃；多個原因每 5 秒輪播，燈號不隨文字改變。既有藍／紫規則以黃燈整合。',
-    alertField_reporting_redMinutes: '寬限後升紅燈（分鐘）',
     alertField_reporting_graceMinutes: '回報寬限（分鐘）',
     alertField_completion_red: '紅燈界線：超過 (%)',
     alertField_completion_green: '綠燈上限 (%)',
     alertField_performance_red: '紅燈界線：低於 (%)',
     alertField_performance_green: '綠燈下限 (%)',
-    alertHelp_reporting: '生產時段結束後才計算逾期；空白是未回報，已填 0 是有效回報。',
     alertHelp_completion:
       '以最後連續完整回報為基準，比較需求速度與自動計算的計畫 UPH；截止採最後生產時段結束時間，排除休息。',
     alertHelp_performance: '只計算已結束且已填實績的生產時段。達成率＝累計實績 ÷ 對應目標。',
@@ -534,8 +544,18 @@ export const messages = {
     selectedPeopleCount: '選擇人員 · 已選 {count} 位',
   },
   en: {
+    reportingLegacyHint:
+      'The old rule waited {extra} min after {grace} min grace, giving an effective red limit of {red} min. This field now shows that total. Save after adjusting.',
+    reportingTimeline:
+      'Same slot-end baseline: yellow after {grace} min, red after {red} min. These values are not added.',
+    alertField_reporting_redAfterMinutes: 'Red: minutes after slot end',
+    pageRotateHelp:
+      'Up to seven cards per page. Zero disables rotation. Manual paging starts a full dwell; expanded cards and detail dialogs pause rotation.',
+    pageRotateSeconds: 'Line page rotation (seconds)',
+    closeNavigation: 'Close navigation',
+    toggleNavigation: 'Open navigation',
+    productionNavigation: 'Production',
     alertSummaryNoData: '{name} · NO DATA',
-    moreNavigation: 'More',
     reviewNavigation: 'Review & analysis',
     supportNavigation: 'Settings & help',
     chooseApplyLines: 'Choose lines',
@@ -604,14 +624,13 @@ export const messages = {
     alertNoData: '{name}: {detail}.',
     unifiedLightHelp:
       'Overall: red before yellow; green only when all enabled checks are evaluable and normal. Missing data / disabled is gray. Yellow flashes slowly, red quickly. Reasons rotate every 5 seconds independently of the light. Legacy blue/purple rules contribute yellow.',
-    alertField_reporting_redMinutes: 'Escalate after grace (minutes)',
     alertField_reporting_graceMinutes: 'Reporting grace (minutes)',
     alertField_completion_red: 'Red above (%)',
     alertField_completion_green: 'Green maximum (%)',
     alertField_performance_red: 'Red below (%)',
     alertField_performance_green: 'Green minimum (%)',
     alertHelp_reporting:
-      'A blank Actual is missing; submitted zero is valid. Only ended production intervals can be overdue.',
+      'Both limits start at slot end; red must not precede grace. Blank means unreported; a submitted zero is valid.',
     alertHelp_completion:
       'Compare required pace with Planned UPH derived from the preset and productive hours, starting at the last contiguous completed report. Deadline is the last production end; breaks excluded.',
     alertHelp_performance:
@@ -1113,8 +1132,18 @@ export const messages = {
     selectedPeopleCount: 'Select people · {count} selected',
   },
   th: {
+    reportingLegacyHint:
+      'กฎเดิมรอเพิ่ม {extra} นาทีหลังผ่อนผัน {grace} นาที จึงเป็นแดงที่ {red} นาที ช่องนี้แสดงเวลารวมแล้ว ปรับแล้วบันทึก',
+    reportingTimeline:
+      'นับจากจบช่วงเดียวกัน: เหลืองหลัง {grace} นาที แดงหลัง {red} นาที ไม่บวกสองค่าเข้าด้วยกัน',
+    alertField_reporting_redAfterMinutes: 'แดง: นาทีหลังจบช่วงเวลา',
+    pageRotateHelp:
+      'สูงสุดเจ็ดการ์ดต่อหน้า 0 ปิดการสลับ เมื่อเปลี่ยนเองจะรอเต็มช่วงเวลา หยุดขณะขยายหรือดูรายละเอียด',
+    pageRotateSeconds: 'สลับหน้าสายอัตโนมัติ (วินาที)',
+    closeNavigation: 'ปิดเมนูนำทาง',
+    toggleNavigation: 'เปิดเมนูนำทาง',
+    productionNavigation: 'งานการผลิต',
     alertSummaryNoData: '{name} · ข้อมูลไม่พอ',
-    moreNavigation: 'เพิ่มเติม',
     reviewNavigation: 'ตรวจสอบและวิเคราะห์',
     supportNavigation: 'ตั้งค่าและช่วยเหลือ',
     chooseApplyLines: 'เลือกสายการผลิต',
@@ -1183,14 +1212,13 @@ export const messages = {
     alertNoData: '{name}: {detail}',
     unifiedLightHelp:
       'ไฟรวมให้แดงสำคัญกว่าเหลือง เขียวเมื่อทุกกฎประเมินได้และปกติ ข้อมูลไม่พอหรือปิดใช้แสดงเทา เหลืองกะพริบช้า แดงเร็ว เหตุผลเปลี่ยนทุก 5 วินาทีโดยไม่เปลี่ยนไฟ กฎเดิมสีน้ำเงิน/ม่วงรวมเป็นเหลือง',
-    alertField_reporting_redMinutes: 'เปลี่ยนเป็นแดงหลังผ่อนผัน (นาที)',
     alertField_reporting_graceMinutes: 'เวลาผ่อนผันรายงาน (นาที)',
     alertField_completion_red: 'สีแดงเมื่อเกิน (%)',
     alertField_completion_green: 'สูงสุดสีเขียว (%)',
     alertField_performance_red: 'สีแดงเมื่อต่ำกว่า (%)',
     alertField_performance_green: 'ขั้นต่ำสีเขียว (%)',
     alertHelp_reporting:
-      'ผลผลิตว่างคือยังไม่รายงาน ค่า 0 ที่บันทึกแล้วเป็นรายงานที่ถูกต้อง ตรวจเฉพาะช่วงผลิตที่จบแล้ว',
+      'ทั้งสองเกณฑ์นับจากจบช่วง แดงต้องไม่ก่อนระยะผ่อนผัน ว่างคือไม่รายงาน ศูนย์ที่ส่งแล้วใช้ได้',
     alertHelp_completion:
       'เทียบความเร็วที่ต้องการกับ UPH ตามแผนจากเป้าหมายและชั่วโมงผลิต เริ่มจากรายงานที่ครบต่อเนื่อง กำหนดเสร็จคือจบช่วงผลิตสุดท้าย ไม่นับพัก',
     alertHelp_performance:

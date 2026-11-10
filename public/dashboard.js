@@ -133,8 +133,14 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
   document.querySelector('#alert-summary').textContent = t('alertCount', {
     count: lines.filter((l) => ['red', 'yellow'].includes(l.unified.severity)).length,
   });
-  const page = boardPage(lines, ctx.boardPage, ctx.boardSize),
-    cardLines = ctx.board ? page.lines : lines;
+  ctx.paging?.update(
+    lines.map((line) => line.key || line.line),
+    [date, shift, groupId, ctx.alertFilter],
+    config.monitoring.pageRotateSeconds ?? 20,
+    ctx.now,
+  );
+  const page = boardPage(lines, ctx.paging?.page ?? ctx.boardPage, ctx.boardSize),
+    cardLines = page.lines;
   if (!chart) {
     const keys = cardLines.map((line) => line.key || line.line);
     if (
@@ -210,27 +216,31 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
         true,
       );
   }
-  document.querySelector('#board-pagination').innerHTML = ctx.board
-    ? '<span>' +
-      esc(t('boardPageCount', { page: page.page + 1, pages: page.pages, count: page.total })) +
-      '</span><div><button class="icon-button" data-board-page="' +
-      (page.page - 1) +
-      '" ' +
-      (page.page === 0 ? 'disabled' : '') +
-      ' aria-label="' +
-      esc(t('previous')) +
-      '">' +
-      ctx.icon('left') +
-      '</button><button class="icon-button" data-board-page="' +
-      (page.page + 1) +
-      '" ' +
-      (page.page === page.pages - 1 ? 'disabled' : '') +
-      ' aria-label="' +
-      esc(t('next')) +
-      '">' +
-      ctx.icon('right') +
-      '</button></div>'
-    : '';
+  document.querySelector('#board-pagination').hidden = page.pages <= 1;
+  document.querySelector('#board-pagination').innerHTML =
+    page.pages > 1
+      ? '<span>' +
+        esc(
+          t('boardPageCount', { page: page.page + 1, pages: page.pages, count: page.total }),
+        ) +
+        '</span><div><button class="icon-button" data-board-page="' +
+        (page.page - 1) +
+        '" ' +
+        (page.page === 0 ? 'disabled' : '') +
+        ' aria-label="' +
+        esc(t('previous')) +
+        '">' +
+        ctx.icon('left') +
+        '</button><button class="icon-button" data-board-page="' +
+        (page.page + 1) +
+        '" ' +
+        (page.page === page.pages - 1 ? 'disabled' : '') +
+        ' aria-label="' +
+        esc(t('next')) +
+        '">' +
+        ctx.icon('right') +
+        '</button></div>'
+      : '';
   document.querySelector('#group-summary').innerHTML =
     '<div class="group-heading">' +
     ctx.icon('layers') +
@@ -407,6 +417,12 @@ function alertControls({ draft, t, esc }) {
     m.refreshSeconds +
     '"></label><p>' +
     esc(t('refreshDesc')) +
+    '</p><label>' +
+    esc(t('pageRotateSeconds')) +
+    '<input id="page-rotate-seconds" type="number" min="0" max="3600" step="1" value="' +
+    (m.pageRotateSeconds ?? 20) +
+    '"></label><p>' +
+    esc(t('pageRotateHelp')) +
     '</p><p>' +
     esc(t('ruleEnabledHint')) +
     '</p></section>'
@@ -683,8 +699,40 @@ function unifiedSettings({ draft, t, esc }) {
   const policies = alertConfig(draft.monitoring);
   const policyMarkup = Object.entries(policies)
     .map(([type, rule]) => {
-      const fields = type === 'reporting' ? ['graceMinutes', 'redMinutes'] : ['green', 'red'];
-      return `<section class="panel monitor-settings-card unified-policy"><h2><label><input type="checkbox" data-policy="${type}" data-policy-field="enabled" ${rule.enabled ? 'checked' : ''}>${esc(t('alertName_' + type))}</label></h2><p>${esc(t('alertHelp_' + type))}</p><div class="policy-fields">${fields.map((field) => `<label>${esc(t('alertField_' + type + '_' + field))}<input type="number" min="0" max="${type === 'performance' ? 100 : 99999}" step="any" data-policy="${type}" data-policy-field="${field}" value="${rule[field]}" required></label>`).join('')}</div></section>`;
+      const fields =
+        type === 'reporting' ? ['graceMinutes', 'redAfterMinutes'] : ['green', 'red'];
+      const inputs = fields
+        .map((field) => {
+          const max =
+            type === 'performance' ? 100 : field === 'redAfterMinutes' ? 199998 : 99999;
+          return `<label>${esc(t('alertField_' + type + '_' + field))}
+          <input type="number" min="0" max="${max}" step="any" data-policy="${type}"
+            data-policy-field="${field}" value="${rule[field]}" required></label>`;
+        })
+        .join('');
+      let reportingHint = '';
+      if (type === 'reporting') {
+        reportingHint = `<p data-reporting-timeline>${esc(
+          t('reportingTimeline', {
+            grace: rule.graceMinutes,
+            red: rule.redAfterMinutes,
+          }),
+        )}</p>`;
+        const saved = draft.monitoring.unified?.reporting;
+        if (saved?.redMinutes != null && saved.redAfterMinutes == null)
+          reportingHint += `<p class="form-hint">${esc(
+            t('reportingLegacyHint', {
+              grace: rule.graceMinutes,
+              extra: saved.redMinutes,
+              red: rule.redAfterMinutes,
+            }),
+          )}</p>`;
+      }
+      return `<section class="panel monitor-settings-card unified-policy">
+        <h2><label><input type="checkbox" data-policy="${type}" data-policy-field="enabled"
+          ${rule.enabled ? 'checked' : ''}>${esc(t('alertName_' + type))}</label></h2>
+        <p>${esc(t('alertHelp_' + type))}</p><div class="policy-fields">${inputs}</div>
+        ${reportingHint}</section>`;
     })
     .join('');
   return `<div class="unified-policies">${policyMarkup}</div><p class="form-hint">${esc(t('unifiedLightHelp'))}</p>`;

@@ -1,3 +1,4 @@
+import { MonitorPaging, pageSize } from './monitor-paging.js';
 import { naturalOrder, byProduction } from './list-order.js';
 import { linePickerMarkup, linePickerGroups, updateLinePicker } from './line-picker.js';
 import { handleMonitorAction } from './monitor-ui.js';
@@ -131,7 +132,6 @@ const state = {
   defaults: {},
   dailyReport: null,
   detailGroupId: '',
-  boardPage: 0,
   scheduleLine: '',
   scheduleTemplateId: 'default',
   scheduleApplyLines: [],
@@ -168,6 +168,7 @@ const state = {
   connection: 'syncing',
   lastTime: null,
 };
+const monitorPaging = new MonitorPaging();
 const canManage = () => state.user?.role === 'admin';
 const t = (key, params) => translate(state.language, key, params);
 const number = (v) =>
@@ -343,12 +344,50 @@ function applyTheme(theme, persist = false) {
   if (persist) stored('bp-theme', theme);
   if (state.config) renderChart();
 }
+function overlayNavigation() {
+  return (
+    document.body.classList.contains('fullscreen-board') ||
+    matchMedia('(max-width: 1100px)').matches
+  );
+}
+function closeNavigation() {
+  document.body.classList.remove('navigation-open');
+  applyCollapse();
+}
+function toggleNavigation() {
+  if (overlayNavigation()) document.body.classList.toggle('navigation-open');
+  else {
+    state.collapsed = !state.collapsed;
+    stored('bp-collapsed', String(state.collapsed));
+  }
+  applyCollapse();
+  if (overlayNavigation() && document.body.classList.contains('navigation-open'))
+    $('#sidebar [data-view]').focus();
+}
 function applyCollapse() {
   document.body.classList.toggle('sidebar-collapsed', state.collapsed);
-  const b = $('#collapse-sidebar');
-  b.setAttribute('aria-expanded', String(!state.collapsed));
-  b.title = t(state.collapsed ? 'expand' : 'collapse');
-  b.setAttribute('aria-label', b.title);
+  const overlay = overlayNavigation();
+  const open = document.body.classList.contains('navigation-open');
+  const expanded = overlay ? open : !state.collapsed;
+  for (const id of ['#collapse-sidebar', '#toggle-navigation']) {
+    const button = $(id);
+    button.setAttribute('aria-expanded', String(expanded));
+    button.title = t(
+      overlay
+        ? open
+          ? 'closeNavigation'
+          : 'toggleNavigation'
+        : state.collapsed
+          ? 'expand'
+          : 'collapse',
+    );
+    button.setAttribute('aria-label', button.title);
+  }
+  $('#navigation-scrim').hidden = !overlay || !open;
+  $('#sidebar').inert = overlay && !open;
+  $('#sidebar').setAttribute('aria-hidden', String(overlay && !open));
+  $('#sidebar').setAttribute('role', overlay ? 'dialog' : 'complementary');
+  $('#sidebar').setAttribute('aria-modal', String(overlay && open));
 }
 function translateStatic(root = document) {
   for (const [attribute, target] of [
@@ -427,8 +466,6 @@ function updateHeadings() {
     b.classList.toggle('active', b.dataset.view === view);
     b.setAttribute('aria-current', b.dataset.view === view ? 'page' : 'false');
   });
-  const more = $('#nav-more');
-  more.classList.toggle('active', ['details', 'settings', 'help'].includes(view));
   updateSettingsNavigation();
 }
 function updateSettingsNavigation() {
@@ -759,8 +796,9 @@ function monitorContext() {
     groupId: state.view === 'details' ? state.detailGroupId : state.groupId,
     detail: state.view === 'details',
     board: document.body.classList.contains('fullscreen-board'),
-    boardPage: state.boardPage,
-    boardSize: 7,
+    boardPage: monitorPaging.page,
+    paging: monitorPaging,
+    boardSize: pageSize,
     alertFilter: state.view === 'overview' ? state.alertFilter || 'all' : 'all',
     metricScope: stored('bp-metric-scope') === 'day' ? 'day' : 'interval',
     chartLine: state.view === 'details' ? state.line : state.chartLine,
@@ -1562,12 +1600,21 @@ $('#settings-body').addEventListener('change', async (e) => {
     state.draft.monitoring.unitOutputSources ||= {};
     state.draft.monitoring.unitOutputSources[d.unitOutputSource] =
       el.value === 'all' || el.value.startsWith('new-') ? el.value : Number(el.value);
+  } else if (el.id === 'page-rotate-seconds') {
+    state.draft.monitoring.pageRotateSeconds = Number(el.value);
   } else if (el.id === 'refresh-seconds') {
     state.draft.monitoring.refreshSeconds = Number(el.value);
   } else if (d.policy) {
     state.draft.monitoring.unified = alertConfig(state.draft.monitoring);
     state.draft.monitoring.unified[d.policy][d.policyField] =
       d.policyField === 'enabled' ? el.checked : Number(el.value);
+    const reporting = state.draft.monitoring.unified.reporting;
+    const timeline = $('[data-reporting-timeline]');
+    if (timeline)
+      timeline.textContent = t('reportingTimeline', {
+        grace: reporting.graceMinutes,
+        red: reporting.redAfterMinutes,
+      });
   } else if (d.alertField) {
     state.draft.monitoring.rules[Number(d.index)][d.alertField] = ['enabled', 'blink'].includes(
       d.alertField,
@@ -2104,7 +2151,7 @@ $$('[data-view]').forEach(
   (b) =>
     (b.onclick = async (event) => {
       if (!followPageLink(event)) return;
-      const secondary = !!b.closest('#nav-more');
+      const drawer = overlayNavigation();
       if (b.dataset.view === 'details') {
         state.line = '';
         populateLineFilters();
@@ -2113,18 +2160,44 @@ $$('[data-view]').forEach(
         tab: b.dataset.view === 'settings' ? 'structure' : undefined,
       });
       if (moved) {
-        $('#nav-more').open = false;
-        if (secondary) $('#main').focus({ preventScroll: true });
+        closeNavigation();
+        if (drawer) $('#main').focus({ preventScroll: true });
       }
     }),
 );
-document.addEventListener('click', (event) => {
-  if (!event.target.closest('#nav-more')) $('#nav-more').open = false;
-});
+$('#toggle-navigation').onclick = toggleNavigation;
+$('#navigation-scrim').onclick = () => {
+  closeNavigation();
+  $('#toggle-navigation').focus();
+};
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && $('#nav-more').open && !$('dialog[open]')) {
-    $('#nav-more').open = false;
-    $('#nav-more > summary').focus();
+  if (
+    event.key === 'Escape' &&
+    document.body.classList.contains('navigation-open') &&
+    !$('dialog[open]')
+  ) {
+    closeNavigation();
+    $('#toggle-navigation').focus();
+    event.stopImmediatePropagation();
+  }
+  // Keep keyboard focus in the temporary drawer, like a modal navigation panel.
+  if (
+    event.key === 'Tab' &&
+    overlayNavigation() &&
+    document.body.classList.contains('navigation-open')
+  ) {
+    const controls = [...$('#sidebar').querySelectorAll('a,button')].filter(
+      (node) => node.checkVisibility() && !node.disabled,
+    );
+    const first = controls[0],
+      last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 });
 $('#open-settings').onclick = (event) => {
@@ -2137,11 +2210,7 @@ $$('[data-open-settings]').forEach(
       setView('settings', { tab: b.dataset.openSettings });
     }),
 );
-$('#collapse-sidebar').onclick = () => {
-  state.collapsed = !state.collapsed;
-  stored('bp-collapsed', String(state.collapsed));
-  applyCollapse();
-};
+$('#collapse-sidebar').onclick = toggleNavigation;
 $('#language-select').onchange = () => applyLanguage($('#language-select').value, true);
 $('#theme-select').onchange = () => applyTheme($('#theme-select').value, true);
 $('#records-body').onclick = async (e) => {
@@ -2252,7 +2321,7 @@ $('#group-tabs').onclick = (e) => {
   const button = e.target.closest('[data-group]');
   if (button) {
     state.groupId = button.dataset.group;
-    state.boardPage = 0;
+    monitorPaging.signature = '';
     state.chartLine = '';
     renderChart();
   }
@@ -2261,7 +2330,7 @@ $('#monitor-status-filters').onclick = (event) => {
   const button = event.target.closest('[data-alert-filter]');
   if (!button) return;
   state.alertFilter = button.dataset.alertFilter;
-  state.boardPage = 0;
+  monitorPaging.signature = '';
   renderChart();
   $(`[data-alert-filter="${state.alertFilter}"]`)?.focus({ preventScroll: true });
 };
@@ -2292,7 +2361,18 @@ setInterval(() => {
     ['overview', 'details'].includes(state.view) &&
     !$('#login-dialog').open
   ) {
-    renderMonitoring(monitorContext(), { chart: false });
+    const paused =
+      document.hidden ||
+      !!$('dialog[open]') ||
+      !!$('#line-cards .is-expanded') ||
+      document.body.classList.contains('navigation-open') ||
+      !!document.activeElement?.closest('#line-cards');
+    if (
+      state.view === 'overview' &&
+      monitorPaging.tick(Date.now() + state.serverOffset, paused)
+    )
+      renderChart();
+    else renderMonitoring(monitorContext(), { chart: false });
     updateCurrentInterval();
   }
 }, 1000);
@@ -2473,6 +2553,7 @@ const trendObserver = new ResizeObserver((entries) => {
 trendObserver.observe($('#group-trend'));
 trendObserver.observe($('#line-cards'));
 window.addEventListener('resize', () => {
+  closeNavigation();
   if (
     state.config &&
     (state.view === 'details' || document.body.classList.contains('fullscreen-board'))
@@ -2482,13 +2563,15 @@ window.addEventListener('resize', () => {
 $('#board-pagination').onclick = (e) => {
   const button = e.target.closest('[data-board-page]');
   if (button) {
-    state.boardPage = Number(button.dataset.boardPage);
+    monitorPaging.select(Number(button.dataset.boardPage), Date.now() + state.serverOffset);
     renderChart();
+    $('#line-cards').scrollIntoView({ block: 'start' });
   }
 };
 
 async function leaveFullscreen() {
   document.body.classList.remove('fullscreen-board');
+  closeNavigation();
   hideTrendTooltip();
   if (state.config) renderChart();
   if (document.fullscreenElement) {
@@ -2499,7 +2582,7 @@ async function leaveFullscreen() {
 }
 $('#enter-fullscreen').onclick = () => {
   document.body.classList.add('fullscreen-board');
-  state.boardPage = 0;
+  closeNavigation();
   renderChart();
   window.scrollTo({ top: 0 });
   try {
@@ -2511,6 +2594,7 @@ $('#back-overview').onclick = () => setView('overview');
 document.addEventListener('fullscreenchange', () => {
   if (!document.fullscreenElement) {
     document.body.classList.remove('fullscreen-board');
+    closeNavigation();
     if (state.config) renderChart();
   }
 });

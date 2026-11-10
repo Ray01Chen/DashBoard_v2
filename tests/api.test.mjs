@@ -284,7 +284,38 @@ test('production API and SQLite persistence', async (t) => {
         assert.equal(response.status, 200);
         const saved = await response.json();
         assert.equal(saved.monitoring.unified.reporting.graceMinutes, 12);
+        assert.equal(saved.monitoring.unified.reporting.redAfterMinutes, 37);
+        assert.equal(Object.hasOwn(saved.monitoring.unified.reporting, 'redMinutes'), false);
         assert.equal(Object.hasOwn(saved.monitoring, 'capacity'), false);
+      },
+    );
+    await t.test(
+      'absolute reporting thresholds and page rotation validate and persist',
+      async () => {
+        const config = await (await client(base + '/api/config')).json();
+        config.monitoring.unified.reporting = {
+          enabled: true,
+          graceMinutes: 30,
+          redAfterMinutes: 45,
+        };
+        for (const seconds of [-1, 0.5, 3601]) {
+          const invalid = structuredClone(config);
+          invalid.monitoring.pageRotateSeconds = seconds;
+          assert.equal((await request('PUT', '/api/config', invalid)).status, 400);
+        }
+        const invalid = structuredClone(config);
+        invalid.monitoring.unified.reporting.redAfterMinutes = 29;
+        assert.equal((await request('PUT', '/api/config', invalid)).status, 400);
+        assert.equal(
+          (await (await client(base + '/api/config')).json()).version,
+          config.version,
+        );
+        config.monitoring.pageRotateSeconds = 0;
+        const response = await request('PUT', '/api/config', config);
+        assert.equal(response.status, 200);
+        const saved = await response.json();
+        assert.equal(saved.monitoring.unified.reporting.redAfterMinutes, 45);
+        assert.equal(saved.monitoring.pageRotateSeconds, 0);
       },
     );
     await t.test(
@@ -307,6 +338,8 @@ test('production API and SQLite persistence', async (t) => {
         assert.equal(saved.dayTeam, '陳小明');
         const config = await (await client(base + '/api/config')).json();
         assert.equal(config.monitoring.unified.performance.green, 96);
+        assert.equal(config.monitoring.unified.reporting.redAfterMinutes, 45);
+        assert.equal(config.monitoring.pageRotateSeconds, 0);
         assert.equal(Object.hasOwn(config.monitoring, 'capacity'), false);
       },
     );

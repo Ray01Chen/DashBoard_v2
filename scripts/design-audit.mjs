@@ -223,12 +223,7 @@ export async function auditDesign({
           );
           assert.equal(geometry.length, 7);
           assert.ok(
-            geometry.every(
-              (item) =>
-                !item.bad.length &&
-                item.rect.top >= (fullscreen ? 0 : 64) &&
-                item.rect.bottom <= height,
-            ),
+            geometry.every((item) => !item.bad.length && item.rect.height >= 100),
             JSON.stringify({ language, metricScope, fullscreen, width, height, geometry }),
           );
           const hierarchy = await page.evaluate(() => {
@@ -274,7 +269,7 @@ export async function auditDesign({
   }
   await page.locator('.line-dashboard-heading [data-metric-scope="interval"]').click();
   record(
-    'Seven readable rows retain Group Overview → alerts → cards → charts order across ordinary/fullscreen, Interval/Daily, three languages and six desktop sizes; primary labels stay at least 11px',
+    'Readable auto-height cards retain all information and Group Overview → alerts → cards → charts order across both display/metric modes, three languages and six desktop sizes',
   );
 
   // Desktop zoom changes the available CSS viewport. Exercise the equivalent
@@ -320,7 +315,7 @@ export async function auditDesign({
     await page.evaluate(() => scrollTo(0, 0));
     await page.mouse.move(0, 0);
     await page.locator('#trend-tooltip').waitFor({ state: 'hidden' });
-    const last = await page.locator('#line-cards .line-card').last().boundingBox();
+    const last = await page.locator('#line-cards .line-card').nth(2).boundingBox();
     await page.screenshot({
       path: path.join(root, 'docs/images/production-overview.png'),
       clip: { x: 0, y: 0, width: 1672, height: Math.ceil(last.y + last.height + 12) },
@@ -332,7 +327,10 @@ export async function auditDesign({
     await page.locator('.board-display-options summary').click();
     await page.mouse.move(0, 0);
     await page.locator('#trend-tooltip').waitFor({ state: 'hidden' });
-    await page.screenshot({ path: path.join(root, 'docs/images/seven-line-board.png') });
+    await page.screenshot({
+      path: path.join(root, 'docs/images/seven-line-board.png'),
+      fullPage: true,
+    });
     await page.locator('#exit-fullscreen').click();
   }
   const pages = [
@@ -358,21 +356,17 @@ export async function auditDesign({
             false,
             `${theme}/${language}/${route}/${width}`,
           );
-          const navigationFits = await page.locator('.sidebar nav').evaluate((nav) => {
-            const links = [
-              ...nav.querySelectorAll(':scope > a, :scope > details > summary'),
-            ].filter((node) => node.checkVisibility());
-            return links.every((node, index) => {
-              const box = node.getBoundingClientRect();
-              const label = node.querySelector('.nav-label, [data-i18n="moreNavigation"]');
-              return (
-                (!index || box.left >= links[index - 1].getBoundingClientRect().right) &&
-                (getComputedStyle(label).display === 'none' ||
-                  label.getBoundingClientRect().right <= box.right + 1)
-              );
-            });
+          const navigationFits = await page.locator('#sidebar').evaluate((nav) => {
+            if (nav.inert) return true;
+            const box = nav.getBoundingClientRect();
+            return [...nav.querySelectorAll('nav > a')]
+              .filter((node) => node.checkVisibility())
+              .every((node) => {
+                const rect = node.getBoundingClientRect();
+                return rect.left >= box.left && rect.right <= box.right;
+              });
           });
-          assert.ok(navigationFits, `Navigation labels overlap: ${theme}/${language}/${width}`);
+          assert.ok(navigationFits, `Sidebar overflow: ${theme}/${language}/${width}`);
           if (route === '/overview') {
             const totalsFit = await page.locator('#group-summary').evaluate((panel) => {
               const box = panel.getBoundingClientRect();

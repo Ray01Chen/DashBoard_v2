@@ -18,7 +18,7 @@
     <a class="skip-link" href="#main" data-i18n="skip">跳至主要內容</a>
     <aside class="sidebar" id="sidebar">
       <div class="brand-row">
-        <strong class="product-title" data-i18n="overview"></strong>
+        <strong class="product-title" data-i18n="appTitle"></strong>
         <a href="/" class="brand" aria-label="DELTA · BP PULSE"
           ><span class="brand-mark"><img src="/delta-logo.svg#symbol" alt="" /></span
           ><span class="brand-word"
@@ -44,7 +44,7 @@
           ><small data-i18n="plantOperations">廠區營運</small></span
         ><span class="online-dot"></span>
       </div>
-      <p class="nav-caption" data-i18n="workspace">工作空間</p>
+      <p class="nav-caption" data-i18n="productionNavigation"></p>
       <nav data-i18n-aria="workspace">
         <a
           href="/overview"
@@ -58,32 +58,22 @@
         <a href="/entry" class="nav-item" data-view="entry" data-i18n-title="entry"
           ><span data-icon="edit"></span><span class="nav-label" data-i18n="entry"></span
         ></a>
-        <details id="nav-more" class="nav-more">
-          <summary>
-            <span data-icon="layers"></span><span data-i18n="moreNavigation"></span
-            ><span data-icon="down"></span>
-          </summary>
-          <div class="nav-menu">
-            <p data-i18n="reviewNavigation"></p>
-            <a href="/details" class="nav-item" data-view="details" data-i18n-title="details"
-              ><span data-icon="clipboard"></span
-              ><span class="nav-label" data-i18n="details"></span
-            ></a>
-            <p data-i18n="supportNavigation"></p>
-            <a
-              href="/settings/master-data"
-              class="nav-item"
-              data-view="settings"
-              data-admin-only
-              data-i18n-title="settings"
-              ><span data-icon="settings"></span
-              ><span class="nav-label" data-i18n="settings"></span
-            ></a>
-            <a href="/guide" class="nav-item" data-view="help" data-i18n-title="help"
-              ><span data-icon="info"></span><span class="nav-label" data-i18n="help"></span
-            ></a>
-          </div>
-        </details>
+        <p class="nav-caption" data-i18n="reviewNavigation"></p>
+        <a href="/details" class="nav-item" data-view="details" data-i18n-title="details"
+          ><span data-icon="clipboard"></span><span class="nav-label" data-i18n="details"></span
+        ></a>
+        <p class="nav-caption" data-i18n="supportNavigation"></p>
+        <a
+          href="/settings/master-data"
+          class="nav-item"
+          data-view="settings"
+          data-admin-only
+          data-i18n-title="settings"
+          ><span data-icon="settings"></span><span class="nav-label" data-i18n="settings"></span
+        ></a>
+        <a href="/guide" class="nav-item" data-view="help" data-i18n-title="help"
+          ><span data-icon="info"></span><span class="nav-label" data-i18n="help"></span
+        ></a>
       </nav>
       <div class="sidebar-bottom">
         <div class="template-note" data-admin-only>
@@ -99,8 +89,25 @@
         </div>
       </div>
     </aside>
+    <button
+      type="button"
+      class="navigation-scrim"
+      id="navigation-scrim"
+      data-i18n-aria="closeNavigation"
+      hidden
+    ></button>
     <div class="app-shell">
       <header class="topbar">
+        <button
+          type="button"
+          class="icon-button"
+          id="toggle-navigation"
+          aria-controls="sidebar"
+          aria-expanded="true"
+          data-i18n-aria="toggleNavigation"
+        >
+          <span data-icon="panel"></span>
+        </button>
         <div class="breadcrumb">
           <span>DELTA THAILAND</span><span>›</span><strong id="breadcrumb"></strong>
         </div>

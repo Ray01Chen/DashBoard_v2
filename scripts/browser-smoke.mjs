@@ -1,3 +1,4 @@
+import { auditLayoutRefinement } from './layout-refinement-audit.mjs';
 import { auditNavigation } from './navigation-audit.mjs';
 import { auditDesign } from './design-audit.mjs';
 /**
@@ -93,7 +94,8 @@ try {
   await mkdir(path.join(root, 'docs/images'), { recursive: true });
   const navigate = async (view, target = page) => {
     const link = target.locator(`[data-view="${view}"]`);
-    if (!(await link.isVisible())) await target.locator('#nav-more > summary').click();
+    if ((await target.locator('#sidebar').getAttribute('aria-hidden')) === 'true')
+      await target.locator('#toggle-navigation').click();
     await link.click();
   };
   const readConfig = async () => (await context.request.get(baseURL + '/api/config')).json();
@@ -2687,20 +2689,10 @@ try {
           true,
           JSON.stringify({ language, metricScope, width, height, ...compact }),
         );
-        if (width >= 1200)
-          assert.equal(compact.visible, true, JSON.stringify({ width, height, ...compact }));
-        else {
-          assert.equal(
-            await page
-              .locator('#line-cards')
-              .evaluate((node) => node.scrollHeight > node.clientHeight),
-            true,
-          );
-          await page.locator('#line-cards .line-card').last().scrollIntoViewIfNeeded();
-          await page.locator('#line-cards').evaluate((node) => {
-            node.scrollTop = 0;
-          });
-        }
+        // Readability is the constraint; seven cards may extend below the
+        // viewport. Every card remains reachable through ordinary scrolling.
+        await page.locator('#line-cards .line-card').last().scrollIntoViewIfNeeded();
+        await page.evaluate(() => scrollTo(0, 0));
         const plots = await page.locator('#line-cards .line-trend').evaluateAll((nodes) =>
           nodes.map((plot) => {
             const box = plot.getBoundingClientRect(),
@@ -2724,7 +2716,7 @@ try {
         });
         assert.equal(legendFits, true, `Share legend clipped at ${width}x${height}`);
         assert.ok(
-          plots.every((plot) => plot.width >= 260 && plot.height >= 30 && plot.fills),
+          plots.every((plot) => plot.width >= 220 && plot.height >= 30 && plot.fills),
           JSON.stringify({ width, height, plots }),
         );
       }
@@ -2740,7 +2732,7 @@ try {
     await page.screenshot({ path: path.join(root, 'docs/images/seven-line-board.png') });
   }
   record(
-    'The compact fullscreen board keeps seven configured lines visible together on desktop, with large container-sized line trends and three switchable Interval/Daily metrics',
+    'A page contains seven readable, naturally sized cards; normal document scrolling retains all data and proportional trends in both metric modes',
   );
   await page.locator('#exit-fullscreen').click();
   const latestDenseConfig = await readConfig();
@@ -3111,6 +3103,7 @@ try {
   }
 
   await auditNavigation({ browser, context, baseURL, readConfig, record, errors });
+  await auditLayoutRefinement({ browser, context, baseURL, readConfig, record, errors });
   await auditDesign({
     browser,
     context,

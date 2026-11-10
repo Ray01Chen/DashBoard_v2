@@ -90,6 +90,7 @@ export function defaultMonitoring(config) {
     uiVersion: 2,
     ruleControlsVersion: 1,
     refreshSeconds: 10,
+    pageRotateSeconds: 20,
     alertMode: 'all',
     rules: [
       {

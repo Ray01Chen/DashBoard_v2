@@ -2,7 +2,9 @@
 
 Open your deployed Production Center. A manager account manages shared settings; a member account enters production, imports and reviews reports. The in-app User guide follows the logged-in role. Language choices are Chinese / English / Thai in every interface language.
 
-The main page is **Production Overview**. Overview and Production entry are direct top links; **More** groups Production details, Settings and User guide. Language/theme/account controls remain at the upper right. Both ordinary and fullscreen views place scope filters, Group Overview, alert filters, line cards and detailed charts in that order. Fullscreen retains date/shift controls. Compact cards use readable metrics and localized short alert summaries; full reasons and values remain in tooltips and the expansion. On narrower desktops, source/next-slot metadata moves to the expansion. Seven standard collapsed rows fit from 1280×720; large values, zoom and narrower screens grow/reflow/scroll rather than shrinking important text. [Overview screenshot](./images/production-overview.png).
+The main page is **Production Overview**. The collapsible left sidebar groups Production, Review & analysis, and Settings & help. Desktop collapse is remembered; hover icons for names. Small screens and fullscreen use a temporary drawer from the header menu. Escape or the backdrop closes it. Language, theme and account stay in the header. Both views use filters → Group Overview → alert filters → line cards → detailed charts. Cards retain model, source, metrics, proportional trend, schedule and next slot, wrapping and growing vertically rather than shrinking text. Expand for full alert reasons and values. [Overview screenshot](./images/production-overview.png).
+
+Both views show **at most seven units per page**, with previous/next and page counts. In Settings → Alerts & refresh, set the page rotation seconds (default 20; 0 disables) and Save settings. Manual navigation restarts a full interval. Rotation pauses for dialogs, the temporary drawer, expanded cards, focus inside a card, and a hidden browser tab. Filters reset the page; entering/leaving fullscreen preserves it. Scroll when seven readable cards exceed the viewport.
 
 Catalogs and normal option lists use locale-aware natural sorting (CD2 before CD10). Explicit display order, configured station order and shift/overnight interval sequence take precedence. Sorting never rewrites saved arrays or changes selected IDs.
 
@@ -113,9 +115,9 @@ CSV uses Row ID + Time slot, or an unambiguous Line + Model + Job/Station + Time
 
 Each enabled line/model uses its selected **Output station** for dashboard target, output, gap, trends and alerts. Group totals add units, not every station traversed by the same products. Changing that source updates the active unit’s view immediately. Retired line/model combinations retain their captured historical source; saved station values remain intact.
 
-Normal line clicks open details; full-screen clicks open a station-detail dialog. Closing retains the board group/page. Trend and share charts can be toggled independently. The fullscreen board uses seven units per page with compact single-row desktop cards, even with both charts enabled. Smaller screens scroll the list; additional units use pagination. Open details for the full model name. Phone daily-target cards retain field labels.
+Normal line clicks open details; full-screen clicks open a station-detail dialog. Closing retains the board group/page. Trend and share charts can be toggled independently. Both views use at most seven readable cards per page. Cards wrap and grow; scroll when necessary. The full model remains visible and all alert details can be expanded. Phone daily-target cards retain field labels.
 
-![Compact seven-line fullscreen board](./images/seven-line-board.png)
+![Readable paginated fullscreen board](./images/seven-line-board.png)
 
 This pilot requires manual reporting; automatic data integration is planned for a future version. See the [manager walkthrough](./MANAGER_GUIDE.md), [member walkthrough](./MEMBER_GUIDE.md) and [validation record](./VALIDATION.md).
 
@@ -127,7 +129,9 @@ Managers open **Settings → Alerts & refresh** (`/settings/alerts`), enable eac
 | --- | --- |
 | Performance | Ended, reported production intervals only: Actual / corresponding Target. Green ≥95%, yellow ≥85%, red <85% |
 | Completion risk | Required UPH / Planned UPH. Green ≤100%, yellow ≤110%, red >110% |
-| Reporting | After a production interval ends: 10-minute grace, then yellow; another 30 minutes overdue becomes red |
+| Reporting | Both thresholds count from slot end: yellow after the default 10-minute grace; red after 40 total minutes |
+
+Reporting example: grace 30 / red after 45 means red after 45 total minutes, not 75. The red total cannot be below grace. Legacy extra-wait rules are converted to their original effective total (30 + 45 displays 75); review, edit and save the desired total. This preserves existing behavior until deliberately changed.
 
 Blank Actual is unreported; submitted **0** is a valid report. Breaks never require Actual. Backfilling clears reporting alerts automatically.
 
