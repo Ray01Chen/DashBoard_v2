@@ -866,6 +866,8 @@ const files = {
   '/alert-display.js': ['alert-display.js', 'text/javascript'],
   '/alerts.js': ['alerts.js', 'text/javascript'],
   '/monitor.js': ['monitor.js', 'text/javascript'],
+  '/monitor-ui.js': ['monitor-ui.js', 'text/javascript'],
+  '/design-system.css': ['design-system.css', 'text/css'],
   '/dashboard.js': ['dashboard.js', 'text/javascript'],
   '/style.css': ['style.css', 'text/css'],
   '/favicon.svg': ['favicon.svg', 'image/svg+xml'],

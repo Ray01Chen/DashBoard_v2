@@ -1,14 +1,14 @@
 import {
-  alertReasonText,
-  rotatedReason,
-  productionStatusText,
-  updateAlertDisplay,
-  updateAlertList,
-} from './alert-display.js';
+  monitorCard,
+  updateMonitorCard,
+  rememberMonitorLines,
+  updateStatusFilters,
+} from './monitor-ui.js';
+import { productionStatusText, updateAlertDisplay, updateAlertList } from './alert-display.js';
 import { alertConfig } from './alerts.js';
 import { scheduleCatalog } from './production-schedules.js';
-import { buildLineMonitor, boardPage, monitoringPeriodState } from './monitor.js';
-import { productionLabel, productionIdentityMarkup } from './production-models.js';
+import { buildLineMonitor, boardPage } from './monitor.js';
+import { productionIdentityMarkup } from './production-models.js';
 
 /** Aggregate by stable interval ID, including intervals retired after a report was saved. */
 export function aggregateMonitorSeries(lines, scheduledSlots) {
@@ -29,6 +29,8 @@ export function aggregateMonitorSeries(lines, scheduledSlots) {
     });
 }
 
+// Keep live row controls and lamp animation nodes stable across quiet polling.
+const cardViews = new WeakMap();
 const detailMetricKeys = [
   'dailyTarget',
   'currentTarget',
@@ -42,7 +44,11 @@ const intervalMetricKeys = ['currentTarget', 'currentActual', 'currentGap'];
 const dailyMetricKeys = ['dailyTarget', 'dailyActual', 'dailyGap'];
 const isGap = (key) => ['currentGap', 'dailyGap', 'cumulativeGap'].includes(key);
 
-export function overviewMetricsMarkup(metrics, { t, esc, number }, keys = detailMetricKeys) {
+export function overviewMetricsMarkup(
+  metrics,
+  { t, esc, number, compactMetrics = false },
+  keys = detailMetricKeys,
+) {
   return keys
     .map((key) => {
       const value = metrics[key];
@@ -55,7 +61,7 @@ export function overviewMetricsMarkup(metrics, { t, esc, number }, keys = detail
               ? 'positive'
               : ''
           : '';
-      return `<span class="production-metric" data-metric="${key}" title="${esc(t(key + 'Help'))}"><small>${esc(t(key))}</small><b class="${tone}" title="${esc(number(value))}">${difference && value > 0 ? '+' : ''}${number(value)}</b></span>`;
+      return `<span class="production-metric" data-metric="${key}" title="${esc(t(key + 'Help'))}"><small>${esc(t(compactMetrics ? { currentTarget: 'target', dailyTarget: 'target', currentActual: 'actual', dailyActual: 'actual', currentGap: 'gap', dailyGap: 'gap' }[key] || key : key))}</small><b class="${tone}" title="${esc(number(value))}">${difference && value > 0 ? '+' : ''}${number(value)}</b></span>`;
     })
     .join('');
 }
@@ -85,7 +91,7 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
   const dailyTotals = new Map(daily.map((line) => [line.key || line.line, line]));
   const cardMetricKeys = ctx.metricScope === 'day' ? dailyMetricKeys : intervalMetricKeys;
   const group = config.monitoring.groups.find((g) => g.id === groupId);
-  const lines = all
+  const grouped = all
     .filter((line) => !group || group.lines.includes(line.line))
     .map((line) => {
       const daily = dailyTotals.get(line.key || line.line);
@@ -97,6 +103,14 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
           daily?.target == null || daily?.actual == null ? null : daily.actual - daily.target,
       };
     });
+  updateStatusFilters(document.querySelector('#monitor-status-filters'), grouped, ctx);
+  const lines = grouped.filter(
+    (line) =>
+      !ctx.alertFilter ||
+      ctx.alertFilter === 'all' ||
+      line.unified.severity === ctx.alertFilter,
+  );
+  rememberMonitorLines(lines);
   const totals = Object.fromEntries(
     [...new Set([...detailMetricKeys, ...dailyMetricKeys, ...intervalMetricKeys])].map(
       (key) => [key, sum(lines.map((line) => line[key]))],
@@ -120,59 +134,38 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
   });
   const page = boardPage(lines, ctx.boardPage, ctx.boardSize),
     cardLines = ctx.board ? page.lines : lines;
-  const cardMarkup =
-    cardLines
-      .map((l) => {
-        const period = l.periodState || monitoringPeriodState(config, date, shift, now);
-        const actual = ctx.metricScope === 'day' ? l.dailyActual : l.currentActual;
-        const gap = ctx.metricScope === 'day' ? l.dailyGap : l.currentGap;
-        const progressFallback =
-          actual == null
-            ? t('waiting')
-            : gap == null
-              ? t('noComparableTarget')
-              : t(gap < 0 ? 'belowTarget' : 'onTarget');
-        const progress = alertReasonText(rotatedReason(l.unified, now, l.key, date), t);
-        const status =
-          t('alertState_' + l.unified.severity) +
-          ' · ' +
-          t('outputStatus') +
-          ': ' +
-          progressFallback +
-          ' · ' +
-          progress;
-        const monitorText = productionStatusText({ ...l, periodState: period }, t);
-        const monitor = t('monitoringStatus') + ': ' + monitorText;
-
-        if (!chart) {
-          const card = [...cards.children].find(
-            (c) => c.dataset.monitorLine === (l.key || l.line),
-          );
-          if (card) {
-            updateOverviewMetrics(card, l, ctx);
-            const classes =
-              'line-card alarm-' +
-              l.status +
-              (l.blink ? ' blinking-frame' : '') +
-              (chartLine === (l.key || l.line) ? ' selected' : '');
-            if (card.className !== classes) card.className = classes;
-            const lamp = card.querySelector('.signal-lamp');
-            const lampClass = 'signal-lamp lamp-' + l.status;
-            if (lamp.className !== lampClass) lamp.className = lampClass;
-            lamp.setAttribute('aria-label', status);
-            const label = card.querySelector('.line-card-status>span');
-            label.textContent = progress;
-            label.title = progress;
-            label.className = ['red', 'yellow'].includes(l.unified.severity)
-              ? 'alert-text'
-              : '';
-            card.querySelector('.line-card-status>small').textContent = monitorText;
-          }
-          return '';
-        }
-        return `<button class="line-card alarm-${l.status} ${l.blink ? 'blinking-frame' : ''} ${chartLine === (l.key || l.line) ? 'selected' : ''}" data-monitor-line="${esc(l.key || l.line)}" aria-label="${esc(productionLabel(l))}" aria-pressed="${chartLine === (l.key || l.line)}"><span class="line-card-top">${productionIdentityMarkup(l, esc)}<span class="signal-lamp lamp-${l.status} " role="img" aria-label="${esc(status)}"></span></span><span class="line-source">${esc(t('sourceLabel', { name: l.sourceLabel || t('noSource') }))}</span><span class="line-card-values">${overviewMetricsMarkup(l, ctx, cardMetricKeys)}</span><span class="line-trend"></span><span class="line-card-status" title="${esc(t('achievementExplain') + ' / ' + monitor)}"><span title="${esc(progress)}" class="${['red', 'yellow'].includes(l.unified.severity) ? 'alert-text' : ''}">${esc(progress)}</span><small>${esc(monitorText)}</small></span></button>`;
-      })
-      .join('') || `<div class="empty-cell">${esc(t('emptyGroup'))}</div>`;
+  if (!chart) {
+    const keys = cardLines.map((line) => line.key || line.line);
+    if (
+      JSON.stringify(
+        [...cards.children]
+          .filter((card) => card.dataset.monitorLine)
+          .map((card) => card.dataset.monitorLine),
+      ) !== JSON.stringify(keys)
+    )
+      return renderMonitoring(ctx);
+    for (const line of cardLines) {
+      const card = [...cards.children].find(
+        (card) => card.dataset.monitorLine === (line.key || line.line),
+      );
+      if (card) {
+        updateOverviewMetrics(card, line, ctx);
+        updateMonitorCard(card, line, ctx);
+      }
+    }
+  }
+  const cardMarkup = chart
+    ? cardLines
+        .map((line) =>
+          monitorCard(
+            line,
+            ctx,
+            overviewMetricsMarkup(line, { ...ctx, compactMetrics: true }, cardMetricKeys),
+          ),
+        )
+        .join('') ||
+      `<div class="empty-cell">${esc(t(grouped.length ? 'noMatchingLines' : 'emptyGroup'))}</div>`
+    : '';
   if (!chart) {
     updateOverviewMetrics(document.querySelector('#group-summary'), totals, ctx);
     const dialog = document.querySelector('#line-detail-dialog[open]');
@@ -183,12 +176,28 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
       updateAlertDisplay(dialog.querySelector('[data-detail-alert]'), detail, t, now);
       updateAlertList(dialog.querySelector('[data-detail-alert-list]'), detail.unified, t);
       const state = dialog.querySelector('[data-detail-status]');
-      if (state) state.textContent = productionStatusText(detail, t);
+      if (state) state.textContent = productionStatusText(detail, t, now);
     }
     updatePageAlerts(lines, chartLine, ctx);
     return;
   }
-  cards.innerHTML = cardMarkup;
+  const viewKey = JSON.stringify([
+    cardLines.map((line) => line.key || line.line),
+    date,
+    ctx.metricScope,
+    ctx.board,
+    t('achievementRate'),
+    ctx.alertFilter,
+    grouped.length,
+  ]);
+  if (cardViews.get(cards) !== viewKey) {
+    cards.innerHTML = cardMarkup;
+    cardViews.set(cards, viewKey);
+  }
+  for (const [index, line] of cardLines.entries())
+    updateOverviewMetrics(cards.children[index], line, ctx);
+  for (const [index, line] of cardLines.entries())
+    updateMonitorCard(cards.children[index], line, ctx);
   updatePageAlerts(lines, chartLine, ctx);
   for (const [index, line] of cardLines.entries()) {
     const plot = cards.children[index]?.querySelector('.line-trend');
@@ -671,5 +680,5 @@ function updatePageAlerts(lines, key, { t, now, detail }) {
   if (!line) return;
   updateAlertDisplay(panel.querySelector('[data-page-alert]'), line, t, now);
   updateAlertList(panel.querySelector('[data-page-alert-list]'), line.unified, t);
-  panel.querySelector('[data-page-status]').textContent = productionStatusText(line, t);
+  panel.querySelector('[data-page-status]').textContent = productionStatusText(line, t, now);
 }

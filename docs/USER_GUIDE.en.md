@@ -2,7 +2,7 @@
 
 Open your deployed Production Center. A manager account manages shared settings; a member account enters production, imports and reviews reports. The in-app User guide follows the logged-in role. Language choices are Chinese / English / Thai in every interface language.
 
-The refreshed shell uses DELTA branding, a soft theme-coloured header, an active navigation marker and consistent filter/card spacing. Language, theme and account controls stay in the upper-right corner; sidebar collapse and all production actions remain available. [Overview screenshot](./images/production-overview.png).
+The shared shell uses a compact top navigation, DELTA branding, rounded surfaces and consistent controls. Language, theme and account controls remain at the upper right. Horizontal line cards show identity/source, overall light, production state, Target, Actual, Gap, achievement, trend and current/next interval. Status tabs combine with floor filters; reason arrows page manually and the card chevron expands full evaluations. Selecting the line opens production details. Seven collapsed rows fit desktop screens from 1280×720; smaller screens reflow and scroll. Aggregate charts remain below the list and independently selectable in fullscreen. All five themes retain the same layout and semantic alert colours. [Overview screenshot](./images/production-overview.png).
 
 ## Manager: eight setup steps
 

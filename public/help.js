@@ -86,6 +86,7 @@ const guides = {
       {
         title: 'Overview, details and full-screen board',
         paragraphs: [
+          'The top navigation opens each workspace; language, theme and account controls stay at the right. Horizontal line cards show severity, schedule state, Target, Actual, Gap, achievement, trend and current/next interval. Use the status tabs alongside floor groups to narrow the list. Expand the arrow for every alert evaluation, use the reason arrows to page manually, or select the line identity to open production details. Seven collapsed rows fit desktop screens from 1280×720; smaller screens stack the content and scroll. Group charts remain below the list and optional in fullscreen.',
           'Overview defaults to Whole day. Use Interval / Daily beside the title or in the fullscreen header; your choice persists after refresh. Interval shows the active target, actual and gap. Daily shows the complete two-shift target, reported actual and gap, regardless of the shift filter. Missing values stay —. Large per-line curves adapt to their containers. Alerts and output share retain their cumulative rules. Whole day / Day / Night is available above both Overview and Production details. Each line/model uses its selected output station; group totals never double-count every station.',
           'Normal line clicks open details. Full screen clicks open a station-detail dialog; X or Esc returns to the same group/page. Its header follows the active colour theme and keeps line, model, owner and the six interval/daily/cumulative metrics together. Each station labels Day and Night personnel separately.',
           'The group trend keeps every time label readable; dense schedules scroll horizontally inside the chart, including fullscreen. Hover or Tab to an interval to see its values. Refresh keeps the scroll position. Display options independently toggle group trend and output share. Missing output remains blank. The fullscreen board uses seven compact desktop rows per page, including with both charts enabled. Smaller screens scroll the list; additional units use pagination.',
@@ -198,6 +199,7 @@ const guides = {
       {
         title: '總覽、細節與全螢幕看板',
         paragraphs: [
+          '頂部導覽切換各功能，右上角選語言、主題。橫向產線卡依序顯示總燈號、班表狀態、目標、實績、差額、達成率、曲線及目前／下一時段；狀態分頁可搭配樓層篩選。右側箭頭展開全部告警判斷，原因旁左右箭頭可手動切換；點產線名稱開生產細節。1280×720 以上桌面可同屏看七張未展開卡，較小螢幕改為分列及捲動。分組圖表保留在清單下方，全螢幕可獨立開關。',
           '總覽預設「全天」。標題旁或全螢幕頂部可切「時段／每日」，重新整理保留選擇；時段顯示目前目標、實績、差額，每日顯示雙班完整目標、已填實績及差額，不受早晚班篩選影響。各產線大曲線隨容器調整；缺值顯示 —，警示與占比維持累計規則。生產總覽與生產細節上方都可切換全天／早班／晚班。每組產線／Model 仍只使用所選來源站，避免重複計產量。',
           '全螢幕明細頂部沿用目前主題配色，集中產線、機種、負責人及六項時段／全日／累計數字；各站人員分早班、晚班標示。X 或 Esc 關閉後保留分組與頁次。',
           '分組總產量趨勢保留每個時段名稱與間距；時段較多時在圖表內左右捲動，全螢幕也適用。滑鼠停留或 Tab 聚焦查看數值，刷新保留捲動位置。顯示選項可分別控制趨勢與占比；未填報保持空白。全螢幕固定每頁七組，桌面以單列精簡卡片顯示；較小螢幕可捲動，超過七組用頁次切換。',
@@ -311,6 +313,7 @@ const guides = {
       {
         title: 'ภาพรวม รายละเอียด และกระดานเต็มหน้าจอ',
         paragraphs: [
+          'ใช้เมนูด้านบนเปลี่ยนหน้า เลือกภาษาและธีมที่มุมขวา การ์ดแนวนอนแสดงไฟรวม สถานะตาราง เป้า ผลจริง ผลต่าง อัตราบรรลุ กราฟและช่วงปัจจุบัน/ถัดไป กรองสถานะร่วมกับชั้นได้ ลูกศรขวาขยายผลแจ้งเตือนทั้งหมด ลูกศรข้างเหตุผลสลับด้วยตนเอง คลิกชื่อสายเปิดรายละเอียด เดสก์ท็อปตั้งแต่ 1280×720 แสดงเจ็ดแถวที่ยังไม่ขยาย จอเล็กจัดข้อมูลหลายแถวและเลื่อนดู กราฟรวมยังอยู่ใต้รายการและเลือกเปิดในโหมดเต็มจอได้',
           'ภาพรวมเริ่มต้นที่ทั้งวัน สลับช่วงเวลา/รายวันข้างชื่อหน้าหรือด้านบนเต็มจอ จำตัวเลือกหลังรีเฟรช ช่วงเวลาแสดงเป้า ผลจริงและผลต่างปัจจุบัน รายวันแสดงเป้าเต็มวัน ผลจริงและผลต่างรวมสองกะโดยไม่ขึ้นกับตัวกรองกะ กราฟแต่ละสายขยายตามพื้นที่ ไม่มีข้อมูลแสดง — การแจ้งเตือนและสัดส่วนยังใช้ข้อมูลสะสม ทั้งหน้าภาพรวมและรายละเอียดเลือกทั้งวัน/กะเช้า/กะกลางคืนได้ แต่ละสาย/Model ยังใช้สถานีแหล่งผลผลิตเดียวเพื่อไม่ให้นับซ้ำ',
           'หน้าต่างเต็มหน้าจอใช้สีตามธีมและรวมสาย Model ผู้รับผิดชอบ และหกค่าของช่วงปัจจุบัน รายวัน และสะสมไว้ด้านบน การ์ดแต่ละสถานีแยกบุคลากรกะเช้าและกะกลางคืน X หรือ Esc กลับกลุ่ม/หน้าเดิม',
           'กราฟรวมรักษาระยะห่างของป้ายเวลาทุกช่วง หากมีหลายช่วงให้เลื่อนแนวนอนในกราฟ รวมถึงเต็มหน้าจอ ชี้เมาส์หรือกด Tab เพื่อดูค่า รีเฟรชเก็บตำแหน่งเลื่อนเดิม ตัวเลือกเปิดแนวโน้มและสัดส่วนแยกกัน ไม่กรอกไม่ถือเป็นศูนย์ เต็มหน้าจอแสดงเจ็ดคู่ต่อหน้าด้วยการ์ดแถวเดียวบนเดสก์ท็อป หน้าจอเล็กเลื่อนรายการได้ ใช้ปุ่มเปลี่ยนหน้าเมื่อเกินเจ็ดคู่',

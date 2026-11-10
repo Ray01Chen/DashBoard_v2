@@ -14,15 +14,31 @@ export function rotatedReason(alert, now, identity = 'default', date = '') {
     ? alert.reasons[Math.floor((now - rotation.start) / 5000) % alert.reasons.length]
     : null;
 }
-export function productionStatusText(line, t) {
-  const status = {
+/** Manual paging resets the five-second dwell without changing alert severity. */
+export function cycleReason(alert, now, identity, date, direction) {
+  const current = rotatedReason(alert, now, identity, date);
+  if (!current || alert.reasons.length < 2) return;
+  const next =
+    (alert.reasons.indexOf(current) + direction + alert.reasons.length) % alert.reasons.length;
+  rotations.get(identity).start = now - next * 5000;
+}
+export function productionState(line, now = Date.now()) {
+  const states = {
     activeMonitoring: 'producing',
     breakMonitoring: 'onBreak',
     futureShift: 'upcoming',
     historicalShift: 'completed',
-    outsideShift: 'outsideShift',
   };
-  const label = t(status[line.periodState] || 'outsideShift');
+  if (states[line.periodState]) return states[line.periodState];
+  // A gap is not a break unless CONFIG says so. Describe the last ended slot
+  // while preserving the next production range as separate information.
+  if (line.series?.some((slot) => slot.endAt <= now)) return 'completed';
+  if (line.series?.some((slot) => slot.startAt > now)) return 'upcoming';
+  return 'unscheduled';
+}
+export function productionStatusText(line, t, now = Date.now()) {
+  const state = productionState(line, now);
+  const label = t(state === 'completed' ? 'slotCompleted' : state);
   return line.currentSlot?.kind === 'break'
     ? label + ' · ' + line.currentSlot.start + '–' + line.currentSlot.end
     : label;
@@ -39,6 +55,13 @@ export function updateAlertDisplay(element, line, t, now) {
 export function alertReasonText(reason, t) {
   if (!reason) return t('alertDisabled');
   const params = { ...reason.params };
+  // Keep raw precision in evaluation, but avoid long floating-point tails in
+  // compact cards and full explanations. Timestamps are formatted separately.
+  for (const [key, value] of Object.entries(params)) {
+    const numeric = typeof value === 'number' || ['rate', 'required', 'hours'].includes(key);
+    if (numeric && Number.isFinite(Number(value)) && !['cutoff', 'deadline'].includes(key))
+      params[key] = Number(Number(value).toFixed(2));
+  }
   if (params.comparison)
     params.comparison = t(params.comparison === 'gt' ? 'above' : 'atLeast');
   if (params.detail) params.detail = t(params.detail);

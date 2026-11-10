@@ -1,3 +1,4 @@
+import { handleMonitorAction } from './monitor-ui.js';
 import { schedulePreview } from './schedule-preview.js';
 import { alertConfig, validAlertConfig } from './alerts.js';
 import {
@@ -403,6 +404,7 @@ function updateConnection() {
 }
 function updateHeadings() {
   const view = state.view;
+  document.body.dataset.page = view;
   document.title = `BP9 · ${t(view)}`;
   $('#breadcrumb').textContent = t(view);
   $('#page-title').textContent = t(view);
@@ -752,6 +754,7 @@ function monitorContext() {
     board: document.body.classList.contains('fullscreen-board'),
     boardPage: state.boardPage,
     boardSize: 7,
+    alertFilter: state.view === 'overview' ? state.alertFilter || 'all' : 'all',
     metricScope: stored('bp-metric-scope') === 'day' ? 'day' : 'interval',
     chartLine: state.view === 'details' ? state.line : state.chartLine,
     t,
@@ -2154,7 +2157,16 @@ $('#group-tabs').onclick = (e) => {
     renderChart();
   }
 };
+$('#monitor-status-filters').onclick = (event) => {
+  const button = event.target.closest('[data-alert-filter]');
+  if (!button) return;
+  state.alertFilter = button.dataset.alertFilter;
+  state.boardPage = 0;
+  renderChart();
+  $(`[data-alert-filter="${state.alertFilter}"]`)?.focus({ preventScroll: true });
+};
 $('#line-cards').onclick = (e) => {
+  if (handleMonitorAction(e, monitorContext())) return;
   const button = e.target.closest('[data-monitor-line]');
   if (button) {
     if (document.body.classList.contains('fullscreen-board')) {

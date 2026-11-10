@@ -3,6 +3,18 @@ export const locales = ['zh', 'en', 'th'];
 export const localeTags = { zh: 'zh-TW', en: 'en-GB', th: 'th-TH-u-ca-gregory' };
 export const messages = {
   zh: {
+    allStatuses: '全部狀態',
+    slotCompleted: '時段已結束',
+    unscheduled: '未排生產',
+    productionMonitoring: '生產監控',
+    achievementRate: '達成率',
+    nextSlot: '下一時段',
+    previousSlot: '上一時段',
+    noNextSlot: '無後續生產時段',
+    alertFilters: '依告警狀態篩選',
+    noMatchingLines: '沒有符合此告警狀態的產線，請切換篩選條件。',
+    alertReasons: '告警原因輪播',
+    openProductionDetails: '查看生產細節',
     alertOverall: '總燈號：{state}',
     alertMissingSource: '尚無啟用的產量來源站',
     alertMissingPrefix: '尚無連續完整的已結束回報',
@@ -348,8 +360,7 @@ export const messages = {
     appearance: '語言與外觀',
     saveSettings: '儲存設定',
     settingsSaved: '設定已儲存，所有裝置重新整理後即可使用',
-    settingsShared:
-      '產線、時段與預設外觀保存於 SQLite，所有使用者共用。右上角的語言與主題選擇只套用到此瀏覽器。',
+    settingsShared: '儲存設定後套用至所有使用者；語言與配色偏好可個別切換。',
     catalogsTitle: '建立基礎資料',
     catalogsDesc:
       '建立產線、Model、職務與站點，下拉新增各線使用的機種配對，再設定班別時間。改名同步目前設定，移除可在本頁確認影響並停用相關配置。',
@@ -505,6 +516,18 @@ export const messages = {
     selectedPeopleCount: '選擇人員 · 已選 {count} 位',
   },
   en: {
+    allStatuses: 'All statuses',
+    slotCompleted: 'Slot ended',
+    unscheduled: 'Unscheduled',
+    productionMonitoring: 'Production Monitoring',
+    achievementRate: 'Achievement',
+    nextSlot: 'Next slot',
+    previousSlot: 'Previous slot',
+    noNextSlot: 'No later production slot',
+    alertFilters: 'Filter by alert status',
+    noMatchingLines: 'No lines match this alert status. Choose another filter.',
+    alertReasons: 'Alert reasons',
+    openProductionDetails: 'Open production details',
     alertOverall: 'Overall: {state}',
     alertMissingSource: 'No enabled output source',
     alertMissingPrefix: 'No contiguous completed report yet',
@@ -879,7 +902,7 @@ export const messages = {
     saveSettings: 'Save settings',
     settingsSaved: 'Settings saved. Refresh other devices to apply them.',
     settingsShared:
-      'Production setup and defaults are shared through SQLite. The language and theme controls in the header apply only to this browser.',
+      'Saved settings apply to all users. Language and theme can be personalized.',
     catalogsTitle: 'Build your master lists',
     catalogsDesc:
       'Maintain Lines, Models, Jobs and Stations, add the line/model pairs using dropdowns, then define shift times. Renames update current settings; removal reviews and retires dependencies here.',
@@ -1055,6 +1078,18 @@ export const messages = {
     selectedPeopleCount: 'Select people · {count} selected',
   },
   th: {
+    allStatuses: 'ทุกสถานะ',
+    slotCompleted: 'ช่วงสิ้นสุด',
+    unscheduled: 'ไม่ได้จัดผลิต',
+    productionMonitoring: 'ติดตามการผลิต',
+    achievementRate: 'อัตราบรรลุ',
+    nextSlot: 'ช่วงถัดไป',
+    previousSlot: 'ช่วงก่อนหน้า',
+    noNextSlot: 'ไม่มีช่วงผลิตถัดไป',
+    alertFilters: 'กรองตามสถานะแจ้งเตือน',
+    noMatchingLines: 'ไม่มีสายตรงกับสถานะแจ้งเตือนนี้ กรุณาเลือกตัวกรองอื่น',
+    alertReasons: 'เหตุผลแจ้งเตือน',
+    openProductionDetails: 'เปิดรายละเอียดการผลิต',
     alertOverall: 'ไฟรวม: {state}',
     alertMissingSource: 'ไม่มีสถานีแหล่งผลผลิตที่เปิดใช้',
     alertMissingPrefix: 'ยังไม่มีรายงานช่วงที่จบครบต่อเนื่อง',
@@ -1416,8 +1451,7 @@ export const messages = {
     appearance: 'ภาษาและรูปแบบ',
     saveSettings: 'บันทึกการตั้งค่า',
     settingsSaved: 'บันทึกการตั้งค่าแล้ว รีเฟรชอุปกรณ์อื่นเพื่อใช้งานการตั้งค่าใหม่',
-    settingsShared:
-      'โครงสร้างการผลิตและค่าเริ่มต้นบันทึกใน SQLite และใช้ร่วมกัน ส่วนภาษาและธีมที่เลือกจากแถบด้านบนใช้เฉพาะเบราว์เซอร์นี้',
+    settingsShared: 'การตั้งค่าที่บันทึกใช้กับทุกคน ภาษาและธีมเลือกส่วนตัวได้',
     catalogsTitle: 'สร้างรายการข้อมูลหลัก',
     catalogsDesc:
       'ดูแล Lines, Models, Jobs, Stations เพิ่มคู่สาย/Model จากรายการแล้วตั้งเวลากะ เปลี่ยนชื่อเพื่ออัปเดตการตั้งค่า ลบเพื่อดูผลกระทบและปิดรายการที่เกี่ยวข้องในหน้านี้',

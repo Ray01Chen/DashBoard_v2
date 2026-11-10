@@ -1,3 +1,4 @@
+import { auditDesign } from './design-audit.mjs';
 /**
  * Real Chromium workflow checks against a fresh, temporary SQLite database.
  * Requires playwright-core (test-only) and installed Chrome/Edge. No production
@@ -1279,14 +1280,14 @@ try {
   assert.match(await page.locator('.line-modal-stations').innerText(), /Night shift/);
   const deltaHeader = await page
     .locator('.line-modal-header')
-    .evaluate((header) => getComputedStyle(header).backgroundImage);
+    .evaluate((header) => getComputedStyle(header).backgroundColor);
   await page.locator('#theme-select').evaluate((select) => {
     select.value = 'green';
     select.dispatchEvent(new Event('change', { bubbles: true }));
   });
   const greenHeader = await page
     .locator('.line-modal-header')
-    .evaluate((header) => getComputedStyle(header).backgroundImage);
+    .evaluate((header) => getComputedStyle(header).backgroundColor);
   assert.notEqual(greenHeader, deltaHeader);
   const trendBounds = await page.locator('.line-modal-trend').boundingBox();
   const svgBounds = await page.locator('.line-modal-trend svg').boundingBox();
@@ -2677,7 +2678,20 @@ try {
           true,
           JSON.stringify({ language, metricScope, width, height, ...compact }),
         );
-        assert.equal(compact.visible, true, JSON.stringify({ width, height, ...compact }));
+        if (width >= 1200)
+          assert.equal(compact.visible, true, JSON.stringify({ width, height, ...compact }));
+        else {
+          assert.equal(
+            await page
+              .locator('#line-cards')
+              .evaluate((node) => node.scrollHeight > node.clientHeight),
+            true,
+          );
+          await page.locator('#line-cards .line-card').last().scrollIntoViewIfNeeded();
+          await page.locator('#line-cards').evaluate((node) => {
+            node.scrollTop = 0;
+          });
+        }
         const plots = await page.locator('#line-cards .line-trend').evaluateAll((nodes) =>
           nodes.map((plot) => {
             const box = plot.getBoundingClientRect(),
@@ -3087,6 +3101,16 @@ try {
     );
   }
 
+  await auditDesign({
+    browser,
+    context,
+    baseURL,
+    readConfig,
+    record,
+    root,
+    screenshots,
+    errors,
+  });
   assert.deepEqual(errors, []);
   record('No uncaught browser errors');
   console.log(
