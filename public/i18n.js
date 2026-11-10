@@ -8,7 +8,7 @@ export const messages = {
     alertMissingPrefix: '尚無連續完整的已結束回報',
     alertMissingTarget: '缺少完整且大於零的對應目標',
     alertMissingSchedule: '尚未設定生產時段',
-    alertMissingUPH: '未設定標準 UPH',
+    alertMissingPlan: '缺少大於零的計畫目標或有效生產時數',
     alertMissingDeadline: '缺少有效截止時間',
     alertName_legacy: '既有缺口／停滯',
     scheduleInvalid: '請修正無效時間、重疊或超過 12 小時的單一時段後儲存。',
@@ -35,17 +35,12 @@ export const messages = {
     alertReportingReason:
       '{start}–{end} 已結束 {minutes} 分鐘，{count} 個時段未回報；寬限 {grace} 分鐘，超過 {red} 分鐘升紅燈。',
     alertCompletionReason:
-      '產能負荷 {rate}%（需 {required}／標準 {standard} UPH）；剩餘 {remaining}、有效 {hours} 小時；資料截至 {cutoff}，截止 {deadline}。綠 ≤{green}%，紅 >{red}%。',
+      '需求速度為計畫的 {rate}%（需 {required}／計畫 {planned} UPH）；剩餘 {remaining}、有效 {hours} 小時；資料截至 {cutoff}，截止 {deadline}。綠 ≤{green}%，紅 >{red}%。',
     alertPerformanceReason:
       '達成率 {rate}%（實績 {actual}／目標 {target}）；綠 ≥{green}%，紅 <{red}%。',
     alertNoData: '{name}：{detail}。',
     unifiedLightHelp:
       '總燈號：紅優先於黃；全部可判斷且正常才亮綠。資料不足或未啟用為灰色。黃燈慢閃、紅燈快閃；多個原因每 5 秒輪播，燈號不隨文字改變。既有藍／紫規則以黃燈整合。',
-    deadline: '完工截止時間',
-    standardUPH: '標準 UPH',
-    capacityHelp:
-      '標準 UPH 為每小時標準產量。截止時間留白時使用最後生產時段結束時間；早於日班起點的時間屬於翌日。缺少 UPH 時顯示無資料。',
-    capacitySettings: '各產線／Model 產能基準',
     alertField_reporting_redMinutes: '寬限後升紅燈（分鐘）',
     alertField_reporting_graceMinutes: '回報寬限（分鐘）',
     alertField_completion_red: '紅燈界線：超過 (%)',
@@ -54,7 +49,7 @@ export const messages = {
     alertField_performance_green: '綠燈下限 (%)',
     alertHelp_reporting: '生產時段結束後才計算逾期；空白是未回報，已填 0 是有效回報。',
     alertHelp_completion:
-      '以最後連續完整回報時段為基準，按標準 UPH 與截止前有效工時計算；休息不計入。',
+      '以最後連續完整回報為基準，比較需求速度與自動計算的計畫 UPH；截止採最後生產時段結束時間，排除休息。',
     alertHelp_performance: '只計算已結束且已填實績的生產時段。達成率＝累計實績 ÷ 對應目標。',
     alertName_reporting: '資料未回報',
     alertName_completion: '完工風險',
@@ -515,7 +510,7 @@ export const messages = {
     alertMissingPrefix: 'No contiguous completed report yet',
     alertMissingTarget: 'Missing complete positive target',
     alertMissingSchedule: 'No production schedule',
-    alertMissingUPH: 'Standard UPH is not configured',
+    alertMissingPlan: 'A positive plan target and productive hours are required',
     alertMissingDeadline: 'No valid deadline',
     alertName_legacy: 'Legacy shortfall / idle',
     scheduleInvalid:
@@ -545,17 +540,12 @@ export const messages = {
     alertReportingReason:
       '{count} missing interval(s); {start}–{end} ended {minutes} min ago. Grace {grace} min; red after {red} min.',
     alertCompletionReason:
-      'Capacity {rate}% (required {required} / standard {standard} UPH); remaining {remaining} in {hours} productive h; data through {cutoff}, deadline {deadline}. Green ≤{green}%, red >{red}%.',
+      'Required pace {rate}% (required {required} / planned {planned} UPH); remaining {remaining} in {hours} productive h; data through {cutoff}, deadline {deadline}. Green ≤{green}%, red >{red}%.',
     alertPerformanceReason:
       'Achievement {rate}% ({actual} / target {target}); green ≥{green}%, red <{red}%.',
     alertNoData: '{name}: {detail}.',
     unifiedLightHelp:
       'Overall: red before yellow; green only when all enabled checks are evaluable and normal. Missing data / disabled is gray. Yellow flashes slowly, red quickly. Reasons rotate every 5 seconds independently of the light. Legacy blue/purple rules contribute yellow.',
-    deadline: 'Deadline',
-    standardUPH: 'Standard UPH',
-    capacityHelp:
-      'Standard UPH is the planned hourly output. Blank deadline uses the last production end; a clock time before the day anchor is next day. Missing UPH means NO DATA.',
-    capacitySettings: 'Capacity by line / model',
     alertField_reporting_redMinutes: 'Escalate after grace (minutes)',
     alertField_reporting_graceMinutes: 'Reporting grace (minutes)',
     alertField_completion_red: 'Red above (%)',
@@ -565,7 +555,7 @@ export const messages = {
     alertHelp_reporting:
       'A blank Actual is missing; submitted zero is valid. Only ended production intervals can be overdue.',
     alertHelp_completion:
-      'Forecast from the last contiguous completed report using standard UPH and productive time before the deadline; excludes breaks.',
+      'Compare required pace with Planned UPH derived from the preset and productive hours, starting at the last contiguous completed report. Deadline is the last production end; breaks excluded.',
     alertHelp_performance:
       'Completed, reported production intervals only. Achievement = reported actual / corresponding target.',
     alertName_reporting: 'Missing reports',
@@ -1070,7 +1060,7 @@ export const messages = {
     alertMissingPrefix: 'ยังไม่มีรายงานช่วงที่จบครบต่อเนื่อง',
     alertMissingTarget: 'ไม่มีเป้าหมายที่ครบและมากกว่าศูนย์',
     alertMissingSchedule: 'ยังไม่มีตารางผลิต',
-    alertMissingUPH: 'ยังไม่ได้กำหนด UPH มาตรฐาน',
+    alertMissingPlan: 'ต้องมีเป้าหมายแผนมากกว่าศูนย์และชั่วโมงผลิต',
     alertMissingDeadline: 'ไม่มีกำหนดเสร็จที่ถูกต้อง',
     alertName_legacy: 'ขาดเป้าหมาย / ผลผลิตไม่เพิ่มเดิม',
     scheduleInvalid:
@@ -1100,17 +1090,12 @@ export const messages = {
     alertReportingReason:
       'ยังไม่รายงาน {count} ช่วง; {start}–{end} จบแล้ว {minutes} นาที ผ่อนผัน {grace} นาที แดงหลัง {red} นาที',
     alertCompletionReason:
-      'ภาระกำลังผลิต {rate}% (ต้องการ {required} / มาตรฐาน {standard} UPH); เหลือ {remaining} ใน {hours} ชม.ผลิต ข้อมูลถึง {cutoff} กำหนด {deadline} เขียว ≤{green}% แดง >{red}%',
+      'ความเร็วที่ต้องการ {rate}% ของแผน (ต้องการ {required} / แผน {planned} UPH); เหลือ {remaining} ใน {hours} ชม.ผลิต ข้อมูลถึง {cutoff} กำหนด {deadline} เขียว ≤{green}% แดง >{red}%',
     alertPerformanceReason:
       'บรรลุ {rate}% (ผลผลิต {actual} / เป้าหมาย {target}); เขียว ≥{green}%, แดง <{red}%',
     alertNoData: '{name}: {detail}',
     unifiedLightHelp:
       'ไฟรวมให้แดงสำคัญกว่าเหลือง เขียวเมื่อทุกกฎประเมินได้และปกติ ข้อมูลไม่พอหรือปิดใช้แสดงเทา เหลืองกะพริบช้า แดงเร็ว เหตุผลเปลี่ยนทุก 5 วินาทีโดยไม่เปลี่ยนไฟ กฎเดิมสีน้ำเงิน/ม่วงรวมเป็นเหลือง',
-    deadline: 'กำหนดเสร็จ',
-    standardUPH: 'UPH มาตรฐาน',
-    capacityHelp:
-      'UPH มาตรฐานคือผลผลิตมาตรฐานต่อชั่วโมง หากไม่ระบุกำหนดเสร็จใช้เวลาจบช่วงผลิตสุดท้าย เวลาก่อนเริ่มกะเช้าถือเป็นวันถัดไป หากไม่มี UPH จะแสดงไม่มีข้อมูล',
-    capacitySettings: 'กำลังผลิตตามสาย / รุ่น',
     alertField_reporting_redMinutes: 'เปลี่ยนเป็นแดงหลังผ่อนผัน (นาที)',
     alertField_reporting_graceMinutes: 'เวลาผ่อนผันรายงาน (นาที)',
     alertField_completion_red: 'สีแดงเมื่อเกิน (%)',
@@ -1120,7 +1105,7 @@ export const messages = {
     alertHelp_reporting:
       'ผลผลิตว่างคือยังไม่รายงาน ค่า 0 ที่บันทึกแล้วเป็นรายงานที่ถูกต้อง ตรวจเฉพาะช่วงผลิตที่จบแล้ว',
     alertHelp_completion:
-      'ประเมินจากช่วงสุดท้ายที่รายงานครบต่อเนื่อง ใช้ UPH มาตรฐานและเวลาผลิตก่อนกำหนด ไม่นับเวลาพัก',
+      'เทียบความเร็วที่ต้องการกับ UPH ตามแผนจากเป้าหมายและชั่วโมงผลิต เริ่มจากรายงานที่ครบต่อเนื่อง กำหนดเสร็จคือจบช่วงผลิตสุดท้าย ไม่นับพัก',
     alertHelp_performance:
       'คำนวณเฉพาะช่วงผลิตที่จบและรายงานแล้ว อัตราบรรลุ = ผลผลิต / เป้าหมายของช่วงนั้น',
     alertName_reporting: 'ข้อมูลยังไม่รายงาน',

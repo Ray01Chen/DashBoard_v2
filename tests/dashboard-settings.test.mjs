@@ -46,7 +46,7 @@ test('group settings render groups without duplicating per-unit station source c
   assert.doesNotMatch(html, /data-alert-field|refresh-seconds|data-action="add-alert"/);
 });
 
-test('alert settings keep legacy indexes and expose per-unit capacity without group catalogs', () => {
+test('alert settings keep legacy indexes and remove per-unit capacity without group catalogs', () => {
   const rule = (id, type, enabled = true) => ({
     id,
     type,
@@ -68,6 +68,7 @@ test('alert settings keep legacy indexes and expose per-unit capacity without gr
     productionUnits: [{ line: 'A', model: 'Default', dailyTarget: 100 }],
   };
   const html = alertSettings(context(draft));
+  assert.doesNotMatch(html, /data-capacity|capacity-settings/);
   assert.match(html, /id="refresh-seconds"[^>]*value="25"/);
   assert.match(html, /data-alert-field="enabled" data-index="1"\s+aria-label/);
   assert.match(html, /data-alert-field="enabled" data-index="2" checked/);

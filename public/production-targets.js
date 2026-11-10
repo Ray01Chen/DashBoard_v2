@@ -46,3 +46,45 @@ export function allocateDailyTarget(config, dailyTarget, line) {
   for (let index = 0; index < remaining; index++) ranked[index].target++;
   return allocated;
 }
+
+/** A plan is a pace derived from the preset, not a machine capacity limit.
+ * Shift targets use the same integer allocation as entry; dividing the full
+ * daily target by just one shift would count the daily requirement twice. */
+export function plannedProduction(config, dailyTarget, line, shift = 'all') {
+  const schedule = scheduleFor(config, line, 'all');
+  const clock = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+  if (
+    schedule.some(
+      (slot) =>
+        !clock.test(slot.start) ||
+        !clock.test(slot.end) ||
+        (minutes(slot.end) - minutes(slot.start) + 1440) % 1440 === 0,
+    )
+  )
+    return { target: null, hours: null, uph: null };
+  // Legacy schedules can predate overlap validation. Ambiguous productive or
+  // break ranges must not turn into a plausible-looking pace by double counting.
+  const ranges = schedule
+    .flatMap((slot) => {
+      const start = minutes(slot.start),
+        end = minutes(slot.end);
+      return end > start
+        ? [[start, end]]
+        : [
+            [start, 1440],
+            [0, end],
+          ];
+    })
+    .sort((a, b) => a[0] - b[0]);
+  if (ranges.some((range, index) => index > 0 && range[0] < ranges[index - 1][1]))
+    return { target: null, hours: null, uph: null };
+  const validTarget =
+    Number.isSafeInteger(dailyTarget) && dailyTarget >= 0 && dailyTarget <= 99999999;
+  const slots = allocateDailyTarget(config, validTarget ? dailyTarget : null, line).filter(
+    (slot) => shift === 'all' || slot.shift === shift,
+  );
+  const hours = slots.reduce((sum, slot) => sum + slot.minutes, 0) / 60;
+  const target =
+    validTarget && slots.length ? slots.reduce((sum, slot) => sum + slot.target, 0) : null;
+  return { target, hours, uph: target != null && hours > 0 ? target / hours : null };
+}

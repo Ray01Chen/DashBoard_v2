@@ -210,6 +210,17 @@ if (
       db.prepare('UPDATE app_settings SET value=? WHERE id=1').run(JSON.stringify(config));
     }
   });
+// Retire only the redundant settings. Production records and their plan
+// snapshots remain intact; old clients cannot restore this key on a config save.
+if (Object.hasOwn(config.monitoring, 'capacity'))
+  transaction(() => {
+    refreshConfig();
+    if (Object.hasOwn(config.monitoring, 'capacity')) {
+      delete config.monitoring.capacity;
+      config.version++;
+      db.prepare('UPDATE app_settings SET value=? WHERE id=1').run(JSON.stringify(config));
+    }
+  });
 // Give legacy array positions stable time IDs and retain their original row definitions.
 const migrate = db.prepare(
   'UPDATE production_records SET slots=?,row_snapshot=? WHERE date=? AND shift=? AND row_id=?',
@@ -503,26 +514,6 @@ function validateConfig(data) {
   const unified = alertConfig(monitoring);
   if (!validAlertConfig(monitoring)) fail(400, 'errMonitoring');
   validateProductionDefaults(data, next, config, fail);
-  if (
-    monitoring.capacity != null &&
-    (typeof monitoring.capacity !== 'object' || Array.isArray(monitoring.capacity))
-  )
-    fail(400, 'errMonitoring');
-  const capacity = Object.create(null);
-  for (const [key, value] of Object.entries(monitoring.capacity || {})) {
-    // Removed line/model pairs no longer need a capacity preset.
-    if (!next.productionUnits.some((unit) => productionKey(unit) === key)) continue;
-    if (
-      !value ||
-      (value.standardUPH != null &&
-        (!Number.isFinite(value.standardUPH) ||
-          value.standardUPH <= 0 ||
-          value.standardUPH > 99999999)) ||
-      (value.deadline && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value.deadline))
-    )
-      fail(400, 'errMonitoring');
-    capacity[key] = { standardUPH: value.standardUPH ?? null, deadline: value.deadline || '' };
-  }
   const groupNames = new Set(),
     groupIds = new Set();
   next.monitoring = {
@@ -544,7 +535,6 @@ function validateConfig(data) {
     }),
     outputSources: Object.create(null),
     unified,
-    capacity,
     rules: [],
   };
   for (const line of next.lines) {

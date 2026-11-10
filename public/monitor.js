@@ -1,3 +1,4 @@
+import { plannedProduction, lineDailyTarget } from './production-targets.js';
 import { alertConfig, evaluateAlerts } from './alerts.js';
 import {
   scheduleFor,
@@ -390,7 +391,6 @@ export function buildLineMonitor(
       })
       .sort((a, b) => weights[b.color] - weights[a.color] || b.threshold - a.threshold);
     const rule = matches[0] || null;
-    const capacity = monitoring.capacity?.[productionKey(unit)] || {};
     let alertSeries = daily?.get(config.models ? productionKey(unit) : line)?.series || series;
     let alertWindows = daily ? productionWindows(lineConfig, date, 'all') : windows;
     // A past report owns its captured intervals. Today's template must not
@@ -406,11 +406,12 @@ export function buildLineMonitor(
         alertWindows = alertSeries;
       }
     }
-    const anchor = scheduleFor(config, line, 'all')[0]?.start || '00:00';
-    const deadline = capacity.deadline
-      ? Date.parse(date + 'T' + capacity.deadline + ':00+07:00') +
-        (capacity.deadline < anchor ? 86400000 : 0)
-      : Math.max(...alertWindows.map((slot) => slot.endAt));
+    const plan =
+      daily?.get(config.models ? productionKey(unit) : line)?.plan ||
+      monitoringPlan(config, unit, saved, date, shift, now);
+    const deadline = alertWindows.length
+      ? Math.max(...alertWindows.map((slot) => slot.endAt))
+      : null;
     const unified =
       daily?.get(config.models ? productionKey(unit) : line)?.unified ||
       evaluateAlerts({
@@ -424,7 +425,7 @@ export function buildLineMonitor(
         legacyEnabled: monitoring.rules.some((rule) => rule.enabled),
         legacyNeedsTarget: monitoring.rules.some((rule) => rule.enabled && rule.type === 'gap'),
         settings: alertConfig(monitoring),
-        standardUPH: capacity.standardUPH,
+        plannedUPH: plan.uph,
         deadline,
         available: rows.length > 0,
       });
@@ -433,6 +434,7 @@ export function buildLineMonitor(
       line,
       date,
       unified,
+      plan,
       currentSlot: currentScheduleInterval(lineConfig, date, shift, now),
       periodState: monitoringPeriodState(lineConfig, date, shift, now),
       model: modelOf(unit),
@@ -475,4 +477,26 @@ export function migrateRuleControls(monitoring) {
   monitoring.alertMode = 'all';
   monitoring.ruleControlsVersion = 1;
   return true;
+}
+
+/** Archived plans must not borrow today's edited preset or timetable. Modern
+ * snapshots contain both shifts, including productive intervals with no report. */
+function monitoringPlan(config, unit, records, date, shift, now) {
+  let basis = config;
+  let target = lineDailyTarget(config, unit.line, modelOf(unit));
+  if (isArchivedProductionDate(config, unit.line, date, now)) {
+    const snapshot = records.find(
+      (record) => record.defaultsSnapshot?.productionDay,
+    )?.defaultsSnapshot;
+    const day = snapshot?.productionDay;
+    if (!Array.isArray(day?.day?.slots) || !Array.isArray(day?.night?.slots))
+      return { target: null, hours: null, uph: null };
+    basis = { schedules: { day: day?.day?.slots || [], night: day?.night?.slots || [] } };
+    target =
+      snapshot?.sourceDailyTarget ??
+      day?.day?.sourceDailyTarget ??
+      day?.night?.sourceDailyTarget ??
+      null;
+  }
+  return plannedProduction(basis, target, unit.line, shift);
 }

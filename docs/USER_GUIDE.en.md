@@ -117,17 +117,17 @@ This pilot requires manual reporting; automatic data integration is planned for 
 
 ## Unified alerts and production states
 
-Managers open **Settings → Alerts & refresh** (`/settings/alerts`), enable each policy, adjust thresholds, and **Save settings**. The three new policies start disabled. Existing shortfall/idle rules remain independently selectable. Set **Standard UPH per line/model**; an empty deadline uses the final production interval end. A clock time before the day anchor belongs to the next day.
+Managers open **Settings → Alerts & refresh** (`/settings/alerts`), enable each policy, adjust thresholds, and **Save settings**. The three new policies start disabled. Existing shortfall/idle rules remain independently selectable. Planned UPH and deadline are now automatic; view the baseline in **Daily targets**.
 
 | Policy | Default thresholds |
 | --- | --- |
 | Performance | Ended, reported production intervals only: Actual / corresponding Target. Green ≥95%, yellow ≥85%, red <85% |
-| Completion risk | Required UPH / Standard UPH. Green ≤100%, yellow ≤110%, red >110% |
+| Completion risk | Required UPH / Planned UPH. Green ≤100%, yellow ≤110%, red >110% |
 | Reporting | After a production interval ends: 10-minute grace, then yellow; another 30 minutes overdue becomes red |
 
 Blank Actual is unreported; submitted **0** is a valid report. Breaks never require Actual. Backfilling clears reporting alerts automatically.
 
-The completion forecast starts at the **last contiguous completed report**, divides remaining target by productive time from that cutoff to the deadline, and excludes breaks. Unreported production is unknown; it is never replaced with zero or recent average output. The reason includes the data cutoff, deadline and capacity figures. Missing required data shows **NO DATA**; overdue reports mark **STALE**.
+The completion forecast starts at the **last contiguous completed report**, divides remaining target by productive time from that cutoff to the deadline, and excludes breaks. Unreported production is unknown; it is never replaced with zero or recent average output. The reason includes the data cutoff, deadline and planned pace figures. Missing required data shows **NO DATA**; overdue reports mark **STALE**.
 
 The overall light prioritizes **red over yellow**. Green requires every enabled check to be evaluable and normal; no data or all disabled is gray. Yellow pulses slowly, red quickly, green stays steady. Multiple reasons rotate every **5 seconds**, red first; the light does not change with the reason. Legacy blue/purple rules contribute yellow; optional frame flashing is separate. Open line details to read full reasons and all evaluations. Language changes translate reasons immediately.
 
@@ -141,3 +141,13 @@ The existing schedule editor now has a daily timeline: theme colour = production
 Thai, Chinese and English operation instructions are maintained together in the site's existing **User guide** (`/guide`).
 
 ![Alert reasons and data cutoff](./images/alert-details.png)
+
+## Automatic Planned UPH
+
+**Settings → Daily targets** shows read-only Planned UPH and productive hours for the full day and each shift. Planned UPH = target / productive hours, excluding breaks and unscheduled gaps. Day/Night use their allocated targets, so the full daily target is not counted twice. Target edits update the preview immediately; editing the line schedule recalculates it too. Save settings publishes the changes.
+
+For a target of 400 across 3 day hours and 1 night hour, daily UPH is 100. Shift targets are 300/100 and each shift’s UPH is 100. Deadline is automatically the last production interval end in the evaluated plan; breaks are excluded and overnight production keeps its production date.
+
+The risk expresses how much faster than the original planned pace is required; Planned UPH is not a physical machine capacity. Overall signals keep the existing whole-day scope. Missing targets or productive time show NO DATA. Historical forecasts use saved plans; if the original plan cannot be reconstructed, they also show NO DATA.
+
+![Daily targets and automatic planned pace](./images/daily-targets.png)

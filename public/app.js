@@ -912,7 +912,7 @@ function updateSettingsSaveState() {
   const policiesValid =
     !state.draft ||
     (validAlertConfig(state.draft.monitoring) &&
-      [...document.querySelectorAll('[data-policy-field], [data-capacity-field]')].every(
+      [...document.querySelectorAll('[data-policy-field]')].every(
         (input) => input.validity.valid,
       ));
   const status = settingsSaving
@@ -1055,6 +1055,7 @@ function openSettingsStep(key) {
   syncPageAddress();
   renderSettings();
 }
+const setupStepMarkup = new WeakMap();
 function renderSetupProgress() {
   if (!state.draft) return;
   const ready = setupReadiness(state.draft);
@@ -1070,8 +1071,14 @@ function renderSetupProgress() {
     button.disabled = settingsSaving || !access[key].enabled;
     button.setAttribute('aria-disabled', String(button.disabled));
     button.title = access[key].enabled ? status : setupBlockedReason(access[key]);
-    button.innerHTML = `<span class="step-number">${index + 1}</span><span>${esc(settingsStepName(key))}</span>
+    const markup = `<span class="step-number">${index + 1}</span><span>${esc(settingsStepName(key))}</span>
       <span class="step-state ${ready[key] ? 'is-ready' : ''}" aria-hidden="true">${ready[key] ? '&#10003;' : '&#183;'}</span>`;
+    // A blur event can run between pointer down/up on a navigation label.
+    // Keep identical children so the first click still reaches its anchor.
+    if (setupStepMarkup.get(button) !== markup) {
+      button.innerHTML = markup;
+      setupStepMarkup.set(button, markup);
+    }
     button.setAttribute(
       'aria-label',
       t('stepLabel', { step: index + 1, name: settingsStepName(key), status }) +
@@ -1491,15 +1498,6 @@ $('#settings-body').addEventListener('change', async (e) => {
     state.draft.monitoring.unified = alertConfig(state.draft.monitoring);
     state.draft.monitoring.unified[d.policy][d.policyField] =
       d.policyField === 'enabled' ? el.checked : Number(el.value);
-  } else if (d.capacity) {
-    state.draft.monitoring.capacity ||= {};
-    state.draft.monitoring.capacity[d.capacity] ||= { standardUPH: null, deadline: '' };
-    state.draft.monitoring.capacity[d.capacity][d.capacityField] =
-      d.capacityField === 'standardUPH'
-        ? el.value === ''
-          ? null
-          : Number(el.value)
-        : el.value;
   } else if (d.alertField) {
     state.draft.monitoring.rules[Number(d.index)][d.alertField] = ['enabled', 'blink'].includes(
       d.alertField,

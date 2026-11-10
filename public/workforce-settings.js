@@ -3,7 +3,11 @@
  * No API or production-record writes belong here. The host saves one versioned
  * configuration; saved records retain their own personnel/target snapshots.
  */
-import { allocateDailyTarget, lineDailyTarget } from './production-targets.js';
+import {
+  allocateDailyTarget,
+  lineDailyTarget,
+  plannedProduction,
+} from './production-targets.js';
 import { removePersonnel } from './catalog-settings.js';
 import {
   modelOf,
@@ -19,6 +23,8 @@ import {
 
 export const workforceMessages = {
   en: {
+    plannedUPH: 'Planned UPH',
+    effectiveHours: 'Productive hours',
     mappingOrder: 'Order',
     hasOutput: 'Produces output',
     outputRequired: 'Production reporting required',
@@ -137,6 +143,8 @@ export const workforceMessages = {
     line: 'Line',
   },
   zh: {
+    plannedUPH: '計畫 UPH',
+    effectiveHours: '有效生產時數',
     mappingOrder: '順序',
     hasOutput: '有產出',
     outputRequired: '需填寫生產填報',
@@ -250,6 +258,8 @@ export const workforceMessages = {
     line: '產線',
   },
   th: {
+    plannedUPH: 'UPH ตามแผน',
+    effectiveHours: 'ชั่วโมงผลิต',
     mappingOrder: 'ลำดับ',
     hasOutput: 'มีผลผลิต',
     outputRequired: 'ต้องบันทึกการผลิต',
@@ -1337,15 +1347,41 @@ export function targetsSettingsMarkup({ draft, esc, language, selectedLine = nul
   const lines = draft.lines.filter((value) => !line || value === line);
   return `<div class="settings-section-heading"><div><h2>${esc(text('targetTitle'))}</h2><p>${esc(text('targetDescription'))}</p></div></div>
     <div class="panel target-filter"><label for="target-line">${esc(text('line'))}</label><select id="target-line" data-target-line><option value="">${esc(text('allLines'))}</option>${draft.lines.map((value) => `<option value="${esc(value)}" ${line === value ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select><span role="status">${esc(text('targetCount', { count: lines.length, total: draft.lines.length }))}</span></div>
-    <section class="panel targets-panel"><div class="table-scroll"><table class="targets-table"><thead><tr>${['line', ...(draft.models ? ['model'] : []), 'targetLabel', 'dayTarget', 'nightTarget'].map((key) => `<th>${esc(text(key))}</th>`).join('')}</tr></thead><tbody>${
+    <section class="panel targets-panel"><div class="table-scroll"><table class="targets-table"><thead><tr>${['line', ...(draft.models ? ['model'] : []), 'targetLabel', 'dayTarget', 'nightTarget', 'plannedUPH'].map((key) => `<th>${esc(text(key))}</th>`).join('')}</tr></thead><tbody>${
       productionUnits(draft)
         .filter((unit) => lines.includes(unit.line))
         .map(
           (unit) =>
-            `<tr><th scope="row" class="target-line-name">${esc(unit.line)}</th>${draft.models ? `<td class="target-model-name" data-label="Model">${esc(unit.model)}</td>` : ''}<td class="target-daily-value" data-label="${esc(text('targetLabel'))}"><input type="number" min="0" max="99999999" step="1" inputmode="numeric" data-line-target="${esc(unit.line)}" ${draft.models ? `data-target-model="${esc(unit.model)}"` : ''} value="${lineDailyTarget(draft, unit.line, unit.model) ?? ''}" placeholder="${esc(text('targetUnset'))}" aria-label="${esc(productionLabel(unit) + ' ' + text('targetLabel'))}"></td>${['day', 'night'].map((shift) => `<td class="target-shift-value" data-label="${esc(text(shift === 'day' ? 'dayTarget' : 'nightTarget'))}"><output data-target-preview="${shift}">${esc(shiftTarget(draft, unit.line, shift, unit.model))}</output></td>`).join('')}</tr>`,
+            `<tr><th scope="row" class="target-line-name">${esc(unit.line)}</th>${draft.models ? `<td class="target-model-name" data-label="Model">${esc(unit.model)}</td>` : ''}<td class="target-daily-value" data-label="${esc(text('targetLabel'))}"><input type="number" min="0" max="99999999" step="1" inputmode="numeric" data-line-target="${esc(unit.line)}" ${draft.models ? `data-target-model="${esc(unit.model)}"` : ''} value="${lineDailyTarget(draft, unit.line, unit.model) ?? ''}" placeholder="${esc(text('targetUnset'))}" aria-label="${esc(productionLabel(unit) + ' ' + text('targetLabel'))}"></td>${['day', 'night'].map((shift) => `<td class="target-shift-value" data-label="${esc(text(shift === 'day' ? 'dayTarget' : 'nightTarget'))}"><output data-target-preview="${shift}">${esc(shiftTarget(draft, unit.line, shift, unit.model))}</output>${plannedSummary(draft, unit, shift, text, esc)}</td>`).join('')}<td class="target-plan-value" data-label="${esc(text('plannedUPH'))}">${plannedSummary(draft, unit, 'all', text, esc)}</td></tr>`,
         )
-        .join('') || `<tr><td colspan="5">${esc(text('noUnits'))}</td></tr>`
+        .join('') ||
+      `<tr><td colspan="${draft.models ? 6 : 5}">${esc(text('noUnits'))}</td></tr>`
     }</tbody></table></div></section><p class="form-hint">${esc(text('allocationFormula'))}</p><p class="form-hint">${esc(text('defaultSnapshotHint'))}</p>`;
+}
+
+const planNumber = (value) =>
+  value == null || !Number.isFinite(value) ? '—' : String(Number(value.toFixed(2)));
+function plannedSummary(draft, unit, shift, text, esc) {
+  const plan = plannedProduction(
+    draft,
+    lineDailyTarget(draft, unit.line, unit.model),
+    unit.line,
+    shift,
+  );
+  return `<span class="planned-summary"><span>${shift === 'all' ? '' : esc(text('plannedUPH')) + ' '}<output data-planned-scope="${shift}" data-planned-field="uph">${planNumber(plan.uph)}</output></span><small>${esc(text('effectiveHours'))} <output data-planned-scope="${shift}" data-planned-field="hours">${planNumber(plan.hours)}</output></small></span>`;
+}
+function updatePlannedPreview(draft, element) {
+  const { lineTarget, targetModel } = element.dataset;
+  for (const output of element.closest?.('tr')?.querySelectorAll('[data-planned-scope]') ||
+    []) {
+    const plan = plannedProduction(
+      draft,
+      lineDailyTarget(draft, lineTarget, targetModel),
+      lineTarget,
+      output.dataset.plannedScope,
+    );
+    output.textContent = planNumber(plan[output.dataset.plannedField]);
+  }
 }
 
 function shiftTarget(draft, line, shift, model) {
@@ -1378,6 +1414,7 @@ export function handleWorkforceChange(draft, element) {
       const unit = unitFor(draft, { line: data.lineTarget, model: data.targetModel });
       if (!unit) return false;
       unit.dailyTarget = element.value.trim() === '' ? null : Number(element.value);
+      updatePlannedPreview(draft, element);
       for (const output of element.closest?.('tr')?.querySelectorAll('[data-target-preview]') ||
         [])
         output.textContent = shiftTarget(
@@ -1397,6 +1434,7 @@ export function handleWorkforceChange(draft, element) {
       enumerable: true,
       configurable: true,
     });
+    updatePlannedPreview(draft, element);
     for (const output of element.closest?.('tr')?.querySelectorAll('[data-target-preview]') ||
       [])
       output.textContent = shiftTarget(draft, data.lineTarget, output.dataset.targetPreview);

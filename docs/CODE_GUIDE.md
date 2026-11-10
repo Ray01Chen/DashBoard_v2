@@ -60,6 +60,7 @@
 
 - `public/alerts.js` 是純計算：接收已組好的來源站 series、有效生產 windows、現在時間、門檻及產能基準；回傳 severity 與 translation key/params，不操作 DOM。NULL 與 0、連續回報 cutoff、休息排除及 STALE 都集中在此。
 - `public/alert-display.js` 管理原因翻譯、每組線體的五秒輪播及 DOM 更新。輪播狀態只因原因識別／嚴重度改變而重設，不隨每秒的實際數字重設；總燈號與輪播無關。
-- `monitoring.unified` 儲存三項門檻，`monitoring.capacity[productionKey(unit)]` 儲存標準 UPH／可選截止時間。沿用設定版本檢查、SQLite 原子保存、既有產量來源與多語言字典。重新命名產線／Model 會遷移產能鍵，移除配對時清除不用的基準。
+- `monitoring.unified` 儲存三項門檻。`production-targets.js` 的 `plannedProduction` 沿用日目標整數分配，回傳對應範圍的 target、hours、uph；設定預覽與告警共用計算，派生值不另存。`monitor.js` 負責選當日 CONFIG 或歷史 productionDay 快照，並取最後生產段結束作截止。
+- 舊 `monitoring.capacity` 在啟動時只清理該設定鍵並更新設定版本，正常儲存也不接收舊鍵。保留生產記錄、目標、實績、快照與其他告警設定。
 - `public/schedule-preview.js` 只顯示既有班表的視覺化與目標分配，不建立另一份排程；伺服器 `schedule-config.mjs` 仍是儲存驗證的權威。時間軸 SVG 使用屬性而非行內 style，符合既有 CSP。
 - `tests/alerts.test.mjs` 覆蓋門檻邊界、未填與 0、連續回報缺口、截止、休息、無基準、三語與輪播。API 測試驗證非法設定不寫入與重啟後保存；Chromium 實際驗證設定及不同告警狀態。

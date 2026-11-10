@@ -719,3 +719,32 @@
 .help-example figure {
   padding: 14px;
 }
+
+/* Reuse the existing shift target columns; plan details stay secondary rather
+ * than multiplying wide per-shift columns on smaller settings screens. */
+.planned-summary {
+  display: grid;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 6px;
+}
+.planned-summary small {
+  font-size: 10px;
+}
+.target-plan-value .planned-summary {
+  margin-top: 0;
+}
+.target-plan-value .planned-summary > span {
+  color: var(--primary-dark);
+  font-size: 15px;
+  font-weight: 600;
+}
+@media (max-width: 750px) {
+  .targets-table .target-plan-value {
+    grid-column: 1 / -1;
+    background: var(--tint);
+    border-radius: 6px;
+  }
+}

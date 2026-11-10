@@ -38,7 +38,7 @@ export function evaluateAlerts({
   legacyEnabled = false,
   legacyNeedsTarget = false,
   settings,
-  standardUPH,
+  plannedUPH,
   deadline,
   available = true,
 }) {
@@ -132,7 +132,7 @@ export function evaluateAlerts({
       !available ||
       !cutoff ||
       !targetKnown ||
-      !(standardUPH > 0) ||
+      !(plannedUPH > 0) ||
       !Number.isFinite(deadline)
     )
       add('completion', 'noData', 'alertNoData', {
@@ -140,8 +140,8 @@ export function evaluateAlerts({
         stale: overdue.length > 0,
         detail: !available
           ? 'alertMissingSource'
-          : !(standardUPH > 0)
-            ? 'alertMissingUPH'
+          : !(plannedUPH > 0)
+            ? 'alertMissingPlan'
             : !cutoff
               ? 'alertMissingPrefix'
               : !targetKnown
@@ -159,7 +159,7 @@ export function evaluateAlerts({
           0,
         ) / 3600000;
       const required = remaining === 0 ? 0 : hours > 0 ? remaining / hours : Infinity;
-      const rate = Number(((required / standardUPH) * 100).toFixed(9));
+      const rate = Number(((required / plannedUPH) * 100).toFixed(9));
       const severity =
         rate <= settings.completion.green
           ? 'green'
@@ -170,7 +170,7 @@ export function evaluateAlerts({
         actual,
         remaining,
         hours: hours.toFixed(2),
-        standard: standardUPH,
+        planned: plannedUPH,
         required: Number.isFinite(required) ? String(Number(required.toFixed(9))) : '∞',
         rate: Number.isFinite(rate) ? String(rate) : '∞',
         cutoff,

@@ -29,7 +29,7 @@ function evaluate(type, overrides = {}) {
     windows: series,
     now: base + 1.25 * hour,
     settings,
-    standardUPH: 100,
+    plannedUPH: 100,
     deadline: base + 3.5 * hour,
     ...overrides,
   });
@@ -97,11 +97,11 @@ test('completion forecasts from the contiguous prefix, not recent averages or th
   assert.equal(stale.severity, 'noData');
   assert.equal(stale.stale, true);
 });
-test('completion capacity thresholds, deadlines, zero balance, missing standards and unconfirmed aggregate', () => {
-  assert.equal(evaluate('completion', { standardUPH: 100 / 1.1 }).severity, 'yellow');
-  assert.equal(evaluate('completion', { standardUPH: 90 }).severity, 'red');
+test('completion capacity thresholds, deadlines, zero balance, missing plans and unconfirmed aggregate', () => {
+  assert.equal(evaluate('completion', { plannedUPH: 100 / 1.1 }).severity, 'yellow');
+  assert.equal(evaluate('completion', { plannedUPH: 90 }).severity, 'red');
   assert.equal(evaluate('completion', { deadline: base + 2 * hour }).severity, 'red');
-  assert.equal(evaluate('completion', { standardUPH: null }).severity, 'noData');
+  assert.equal(evaluate('completion', { plannedUPH: null }).severity, 'noData');
   assert.equal(evaluate('completion', { deadline: NaN }).severity, 'noData');
   assert.equal(
     evaluate('completion', { series: [{ ...series[0], reported: false }] }).severity,
@@ -121,13 +121,13 @@ test('completion capacity thresholds, deadlines, zero balance, missing standards
 test('overall signal retains highest severity, unknown prevents false green, disabled is gray', () => {
   assert.equal(evaluate(null).severity, 'disabled');
   assert.equal(
-    evaluate(['performance', 'completion'], { standardUPH: null }).severity,
+    evaluate(['performance', 'completion'], { plannedUPH: null }).severity,
     'noData',
   );
   const red = evaluate(['performance', 'reporting'], { series: [{ ...series[0], actual: 0 }] });
   assert.equal(red.severity, 'red');
   const legacy = evaluate('completion', {
-    standardUPH: null,
+    plannedUPH: null,
     legacyEnabled: true,
     legacy: [
       { id: 'gap', type: 'gap', color: 'red', value: 30, threshold: 10, comparison: 'gte' },
@@ -145,7 +145,7 @@ test('overall signal retains highest severity, unknown prevents false green, dis
 });
 test('reason carousel starts with highest severity and resets immediately after a rule is cleared', () => {
   const alert = evaluate(['completion', 'reporting'], {
-    standardUPH: 50,
+    plannedUPH: 50,
     now: base + 2.75 * hour,
   });
   assert.equal(alert.reasons[0].severity, 'red');
@@ -160,7 +160,7 @@ test('all alert messages, settings and production states translate in every exis
   const scenarios = [
     evaluate('performance'),
     evaluate('completion'),
-    evaluate('completion', { standardUPH: null }),
+    evaluate('completion', { plannedUPH: null }),
     evaluate('reporting'),
     evaluate('reporting', { series: [{ ...series[0], actual: null }], now: base + 2 * hour }),
     evaluate(null, {
@@ -271,7 +271,6 @@ test('overnight source monitoring keeps midnight, break and whole-day alert calc
   config.monitoring.rules = [];
   config.monitoring.unified = alertConfig();
   for (const rule of Object.values(config.monitoring.unified)) rule.enabled = true;
-  config.monitoring.capacity = { '["L","M"]': { standardUPH: 200, deadline: '01:30' } };
   const records = [
     {
       rowId: 1,
@@ -290,7 +289,8 @@ test('overnight source monitoring keeps midnight, break and whole-day alert calc
   assert.equal(risk.params.cutoff, Date.parse('2026-11-05T00:00:00+07:00'));
   assert.equal(risk.params.hours, '1.00');
   assert.equal(risk.params.remaining, 200);
-  assert.equal(risk.severity, 'green');
+  assert.equal(risk.params.planned, 100);
+  assert.equal(risk.severity, 'red');
   assert.equal(
     whole.unified.results.find((result) => result.id === 'reporting').severity,
     'green',
@@ -392,11 +392,21 @@ test('archived alerts use the saved schedule without inventing missing intervals
   config.monitoring.rules = [];
   config.monitoring.unified = alertConfig();
   for (const rule of Object.values(config.monitoring.unified)) rule.enabled = true;
-  config.monitoring.capacity = { '["L","M"]': { standardUPH: 100 } };
   const records = [
     {
       rowId: 1,
       version: 1,
+      defaultsSnapshot: {
+        sourceDailyTarget: 100,
+        productionDay: {
+          day: {
+            slots: [
+              { id: 'old', kind: 'production', start: '08:00', end: '09:00', target: 100 },
+            ],
+          },
+          night: { slots: [] },
+        },
+      },
       rowSnapshot: config.rows[0],
       slots: [{ id: 'old', start: '08:00', end: '09:00', target: 100, actual: 100 }],
     },
@@ -418,25 +428,6 @@ test('archived alerts use the saved schedule without inventing missing intervals
     line.unified.results.find((result) => result.id === 'reporting').severity,
     'green',
   );
-});
-
-test('renaming or retiring line/model catalogs migrates or removes capacity presets', async () => {
-  const { renameCatalogItem, removeCatalogItem } =
-    await import('../public/catalog-settings.js');
-  const preset = { standardUPH: 123, deadline: '01:30' };
-  const config = {
-    lines: ['L'],
-    models: ['M'],
-    rows: [],
-    personnel: [],
-    productionUnits: [{ line: 'L', model: 'M' }],
-    monitoring: { capacity: { '["L","M"]': preset } },
-  };
-  renameCatalogItem(config, 'lines', 'L', 'L2');
-  renameCatalogItem(config, 'models', 'M', 'M2');
-  assert.deepEqual(config.monitoring.capacity, { '["L2","M2"]': preset });
-  removeCatalogItem(config, 'models', 'M2');
-  assert.deepEqual(config.monitoring.capacity, {});
 });
 
 test('a night shift starting after midnight keeps the production-day date when filtered alone', async () => {
@@ -483,7 +474,7 @@ test('reason percentages retain enough precision to explain a threshold crossing
   const performance = evaluate('performance', { series: values });
   assert.equal(performance.severity, 'yellow');
   assert.equal(performance.results[0].params.rate, '94.999');
-  const risk = evaluate('completion', { standardUPH: 100 / 1.10001 });
+  const risk = evaluate('completion', { plannedUPH: 100 / 1.10001 });
   assert.equal(risk.severity, 'red');
   assert.equal(risk.results[0].params.rate, '110.001');
 });

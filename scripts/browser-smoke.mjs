@@ -106,21 +106,21 @@ try {
     );
   // Capture a focused operation at a stable viewport. Fixed page chrome must
   // not be composited over a tall element screenshot by Chromium.
-  const screenshot = async (selector, name) => {
+  const screenshot = async (selector, name, capturePage = page) => {
     if (!screenshots) return;
-    const viewport = page.viewportSize();
-    const menus = await page
+    const viewport = capturePage.viewportSize();
+    const menus = await capturePage
       .locator('.entry-import-scope[open], .board-display-options[open]')
       .elementHandles();
     for (const menu of menus) await menu.evaluate((node) => (node.open = false));
-    await page.mouse.move(0, 0);
-    const position = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
-    await page.setViewportSize({ width: 1440, height: 1200 });
-    await page.locator('#toast').waitFor({ state: 'hidden' });
-    await page.evaluate(() => document.fonts.ready);
+    await capturePage.mouse.move(0, 0);
+    const position = await capturePage.evaluate(() => ({ x: scrollX, y: scrollY }));
+    await capturePage.setViewportSize({ width: 1440, height: 1200 });
+    await capturePage.locator('#toast').waitFor({ state: 'hidden' });
+    await capturePage.evaluate(() => document.fonts.ready);
     // Serve test-only CSS from this same origin; retain the app's real CSP.
     const captureCSS = '**/__guide-capture.css';
-    await page.route(captureCSS, (route) =>
+    await capturePage.route(captureCSS, (route) =>
       route.fulfill({
         contentType: 'text/css',
         body: `
@@ -129,10 +129,12 @@ try {
     `,
       }),
     );
-    const captureStyle = await page.addStyleTag({ url: baseURL + '/__guide-capture.css' });
+    const captureStyle = await capturePage.addStyleTag({
+      url: baseURL + '/__guide-capture.css',
+    });
     let internalScroll;
     try {
-      const target = page.locator(selector).first();
+      const target = capturePage.locator(selector).first();
       internalScroll = await target.evaluateHandle((node) =>
         [node, ...node.querySelectorAll('*')]
           .filter((element) => element.scrollLeft || element.scrollTop)
@@ -160,9 +162,9 @@ try {
           if (node.isConnected) node.open = true;
         });
       await captureStyle.evaluate((node) => node.remove());
-      await page.unroute(captureCSS);
-      await page.setViewportSize(viewport);
-      await page.evaluate(({ x, y }) => scrollTo(x, y), position);
+      await capturePage.unroute(captureCSS);
+      await capturePage.setViewportSize(viewport);
+      await capturePage.evaluate(({ x, y }) => scrollTo(x, y), position);
     }
   };
   const model = secondModel,
@@ -664,13 +666,11 @@ try {
   for (const type of ['performance', 'completion', 'reporting'])
     await page.locator(`[data-policy="${type}"][data-policy-field="enabled"]`).check();
   await page.locator('[data-policy="reporting"][data-policy-field="graceMinutes"]').fill('12');
-  await page.locator('[data-capacity-field="standardUPH"]').first().fill('123');
-  await page.locator('[data-capacity-field="deadline"]').first().fill('18:30');
+  assert.equal(await page.locator('[data-capacity-field], .capacity-settings').count(), 0);
   await saveSettings();
   const policyConfig = await readConfig();
   assert.equal(policyConfig.monitoring.unified.reporting.graceMinutes, 12);
-  assert.equal(Object.values(policyConfig.monitoring.capacity)[0].standardUPH, 123);
-  assert.equal(Object.values(policyConfig.monitoring.capacity)[0].deadline, '18:30');
+  assert.equal(Object.hasOwn(policyConfig.monitoring, 'capacity'), false);
   await page.reload();
   await page.locator('[data-policy="reporting"][data-policy-field="graceMinutes"]').waitFor();
   assert.equal(
@@ -685,7 +685,7 @@ try {
   await page.locator('[data-policy="reporting"][data-policy-field="graceMinutes"]').fill('10');
   await saveSettings();
   record(
-    'Unified alert checkboxes, capacity/deadline and thresholds persist through reload and translate in all three languages',
+    'Unified alert checkboxes and thresholds persist through reload and translate, with no redundant manual capacity settings',
   );
 
   await page.locator('[data-settings-tab="structure"]').click();
@@ -2825,7 +2825,6 @@ try {
       completion: { enabled: true, green: 100, red: 110 },
       reporting: { enabled: true, graceMinutes: 10, redMinutes: 30 },
     };
-    cfg.monitoring.capacity = { [key]: { standardUPH: 100, deadline: '12:00' } };
     cfg.monitoring.unitOutputSources ||= {};
     cfg.monitoring.unitOutputSources[key] = row.id;
     cfg.lineSchedules ||= {};
@@ -2902,7 +2901,7 @@ try {
     assert.equal(await monitor.locator('[data-page-alert-list] li').count(), 3);
     assert.match(
       await monitor.locator('[data-page-alert-list]').textContent(),
-      /STALE.*09:00.*12:00/,
+      /STALE.*09:00.*19:00/,
     );
     assert.match(await monitor.locator('[data-page-status]').innerText(), /Break/);
     for (const language of ['zh', 'th', 'en']) {
@@ -2915,9 +2914,7 @@ try {
     await monitor.locator('[data-page-alert-panel] details').evaluate((node) => {
       node.open = true;
     });
-    await monitor
-      .locator('[data-page-alert-panel]')
-      .screenshot({ path: path.join(root, 'docs/images/alert-details.png') });
+    await screenshot('[data-page-alert-panel]', 'alert-details', monitor);
     cfg = await readConfig();
     cfg.monitoring.unified.performance.enabled = false;
     assert.equal(
@@ -2947,7 +2944,9 @@ try {
       /STALE|missing interval/,
     );
     cfg = await readConfig();
-    cfg.monitoring.capacity[key].standardUPH = null;
+    cfg.productionUnits.find(
+      (item) => item.line === unit.line && item.model === unit.model,
+    ).dailyTarget = null;
     assert.equal(
       (await context.request.put(baseURL + '/api/config', { data: cfg })).status(),
       200,
@@ -2966,6 +2965,83 @@ try {
     await monitor.reload();
     await monitor.locator('#detail-line').selectOption(key);
     await monitor.locator('[data-page-alert][data-severity="disabled"]').waitFor();
+    await monitor.goto(baseURL + '/settings/daily-targets');
+    await monitor.locator('[data-target-line]').selectOption(unit.line);
+    const targetInput = monitor.locator('[data-line-target]').first();
+    const planRow = monitor.locator('.targets-table tbody tr').first();
+    await targetInput.fill('400');
+    assert.equal(
+      await planRow
+        .locator('[data-planned-scope="all"][data-planned-field="uph"]')
+        .textContent(),
+      '100',
+    );
+    assert.equal(
+      await planRow
+        .locator('[data-planned-scope="all"][data-planned-field="hours"]')
+        .textContent(),
+      '4',
+    );
+    assert.equal(await planRow.locator('[data-target-preview="day"]').textContent(), '300');
+    assert.equal(await planRow.locator('[data-target-preview="night"]').textContent(), '100');
+    await targetInput.fill('800');
+    assert.equal(
+      await planRow
+        .locator('[data-planned-scope="all"][data-planned-field="uph"]')
+        .textContent(),
+      '200',
+    );
+    assert.equal(await targetInput.evaluate((input) => input === document.activeElement), true);
+    await targetInput.fill('400');
+    await monitor.locator('[data-settings-tab="structure"]').click();
+    await monitor.locator('#schedule-line-select').selectOption(unit.line);
+    const nightEnd = monitor.locator('[data-time-field="end"][data-shift-key="night"]').first();
+    await nightEnd.fill('20:00');
+    await nightEnd.dispatchEvent('change');
+    await monitor.locator('[data-settings-tab="targets"]').click();
+    assert.equal(
+      await planRow
+        .locator('[data-planned-scope="all"][data-planned-field="uph"]')
+        .textContent(),
+      '80',
+    );
+    assert.equal(
+      await planRow
+        .locator('[data-planned-scope="all"][data-planned-field="hours"]')
+        .textContent(),
+      '5',
+    );
+    await monitor.locator('[data-settings-tab="structure"]').click();
+    await nightEnd.fill('19:00');
+    await nightEnd.dispatchEvent('change');
+    await monitor.locator('[data-save-settings]').first().click();
+    await monitor.waitForFunction(
+      () =>
+        document.querySelector('#settings-save-status').textContent ===
+        'All settings are saved.',
+    );
+    await monitor.locator('[data-settings-tab="targets"]').click();
+    await screenshot('.targets-panel', 'daily-targets', monitor);
+    for (const width of [375, 768, 1366, 1920]) {
+      await monitor.setViewportSize({ width, height: 1000 });
+      for (const language of ['zh', 'th', 'en']) {
+        await monitor.locator('#language-select').selectOption(language);
+        assert.equal(
+          await monitor.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+          false,
+          'Planned pace overflow: ' + width + '/' + language,
+        );
+        assert.equal(await monitor.locator('input[data-planned-scope]').count(), 0);
+        assert.doesNotMatch(
+          await monitor.locator('.targets-panel').innerText(),
+          /NaN|Infinity|effectiveHours|plannedUPH/,
+        );
+      }
+    }
+    record(
+      'Read-only daily and shift Planned UPH updates immediately with targets and schedule edits, preserves input focus, and fits three languages and four widths',
+    );
+    await monitor.setViewportSize({ width: 1440, height: 1000 });
     await monitor.goto(baseURL + '/settings/master-data');
     await monitor.locator('#schedule-line-select').selectOption(unit.line);
     await monitor.locator('[data-schedule-preview-unit]').selectOption(key);
@@ -2977,9 +3053,7 @@ try {
       /10:00–11:00.*Break/s,
     );
     assert.match(await monitor.locator('.schedule-preview tbody').innerText(), /100/);
-    await monitor
-      .locator('.schedule-preview')
-      .screenshot({ path: path.join(root, 'docs/images/schedule-timeline.png') });
+    await screenshot('.schedule-preview', 'schedule-timeline', monitor);
     for (const width of [375, 768, 1366, 1920]) {
       await monitor.setViewportSize({ width, height: 1000 });
       for (const language of ['zh', 'th', 'en']) {

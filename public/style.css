@@ -4751,17 +4751,14 @@ html:fullscreen {
   }
 }
 .unified-policy,
-.capacity-settings,
 .schedule-preview {
   padding: 18px 20px;
 }
-.unified-policy h2,
-.capacity-settings h2 {
+.unified-policy h2 {
   font-size: 15px;
   margin: 0 0 12px;
 }
 .unified-policy p,
-.capacity-settings p,
 .schedule-preview p {
   font-size: 12px;
   line-height: 1.6;
@@ -4781,8 +4778,7 @@ html:fullscreen {
   font-weight: 600;
   color: var(--ink);
 }
-.policy-fields input,
-.capacity-settings input {
+.policy-fields input {
   width: 100%;
   min-width: 0;
   border: 1px solid var(--line);
@@ -4792,12 +4788,8 @@ html:fullscreen {
   color: var(--ink);
   font: inherit;
 }
-.capacity-settings input {
-  min-width: 110px;
-  max-width: 180px;
-}
-.policy-fields input:focus,
-.capacity-settings input:focus {
+
+.policy-fields input:focus {
   outline: 2px solid var(--soft-strong);
   border-color: var(--primary);
 }

@@ -6,7 +6,6 @@ import {
   updateAlertList,
 } from './alert-display.js';
 import { alertConfig } from './alerts.js';
-import { productionUnits, productionKey } from './production-models.js';
 import { scheduleCatalog } from './production-schedules.js';
 import { buildLineMonitor, boardPage, monitoringPeriodState } from './monitor.js';
 import { productionLabel, productionIdentityMarkup } from './production-models.js';
@@ -661,15 +660,7 @@ function unifiedSettings({ draft, t, esc }) {
       return `<section class="panel monitor-settings-card unified-policy"><h2><label><input type="checkbox" data-policy="${type}" data-policy-field="enabled" ${rule.enabled ? 'checked' : ''}>${esc(t('alertName_' + type))}</label></h2><p>${esc(t('alertHelp_' + type))}</p><div class="policy-fields">${fields.map((field) => `<label>${esc(t('alertField_' + type + '_' + field))}<input type="number" min="0" max="${type === 'performance' ? 100 : 99999}" step="any" data-policy="${type}" data-policy-field="${field}" value="${rule[field]}" required></label>`).join('')}</div></section>`;
     })
     .join('');
-  return `<div class="unified-policies">${policyMarkup}</div><section class="panel monitor-settings-card capacity-settings"><h2>${esc(t('capacitySettings'))}</h2><p>${esc(t('capacityHelp'))}</p><div class="table-scroll"><table><thead><tr><th>${esc(t('line'))} / ${esc(t('model'))}</th><th>${esc(t('standardUPH'))}</th><th>${esc(t('deadline'))}</th></tr></thead><tbody>${productionUnits(
-    draft,
-  )
-    .map((unit) => {
-      const key = productionKey(unit),
-        capacity = draft.monitoring.capacity?.[key] || {};
-      return `<tr><td>${esc(productionLabel(unit))}</td><td><input type="number" min="0.01" max="99999999" step="any" data-capacity="${esc(key)}" data-capacity-field="standardUPH" value="${capacity.standardUPH ?? ''}" aria-label="${esc(t('standardUPH'))}"></td><td><input type="time" data-capacity="${esc(key)}" data-capacity-field="deadline" value="${esc(capacity.deadline || '')}" aria-label="${esc(t('deadline'))}"></td></tr>`;
-    })
-    .join('')}</tbody></table></div><p>${esc(t('unifiedLightHelp'))}</p></section>`;
+  return `<div class="unified-policies">${policyMarkup}</div><p class="form-hint">${esc(t('unifiedLightHelp'))}</p>`;
 }
 
 function updatePageAlerts(lines, key, { t, now, detail }) {

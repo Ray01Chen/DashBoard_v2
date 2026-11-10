@@ -1,3 +1,4 @@
+import { DatabaseSync } from 'node:sqlite';
 import { createTestClient, testAuthEnv } from './test-auth.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -258,7 +259,7 @@ test('production API and SQLite persistence', async (t) => {
       );
     });
     await t.test(
-      'unified alert thresholds and per-model capacity validate atomically and persist',
+      'unified thresholds persist and retired manual capacity settings are discarded',
       async () => {
         const config = await (await client(base + '/api/config')).json();
         const key = JSON.stringify([
@@ -279,32 +280,36 @@ test('production API and SQLite persistence', async (t) => {
           config.version,
         );
         invalid.monitoring.unified.performance.red = 86;
-        invalid.monitoring.capacity[key].standardUPH = 0;
-        assert.equal((await request('PUT', '/api/config', invalid)).status, 400);
-        invalid.monitoring.capacity[key].standardUPH = 123;
-        invalid.monitoring.capacity[key].deadline = '25:00';
-        assert.equal((await request('PUT', '/api/config', invalid)).status, 400);
         const response = await request('PUT', '/api/config', config);
         assert.equal(response.status, 200);
         const saved = await response.json();
         assert.equal(saved.monitoring.unified.reporting.graceMinutes, 12);
-        assert.deepEqual(saved.monitoring.capacity[key], {
-          standardUPH: 123,
-          deadline: '01:30',
-        });
+        assert.equal(Object.hasOwn(saved.monitoring, 'capacity'), false);
       },
     );
-    await t.test('persists after server restart', async () => {
-      await stop();
-      await start();
-      const saved = (await get()).records[0];
-      assert.equal(saved.version, 2);
-      assert.equal(saved.slots[0].actual, 90);
-      assert.equal(saved.dayTeam, '陳小明');
-      const config = await (await client(base + '/api/config')).json();
-      assert.equal(config.monitoring.unified.performance.green, 96);
-      assert.equal(Object.values(config.monitoring.capacity)[0].standardUPH, 123);
-    });
+    await t.test(
+      'persists after server restart and safely retires old manual capacity',
+      async () => {
+        await stop();
+        const database = new DatabaseSync(path.join(folder, 'test.sqlite'));
+        const prior = JSON.parse(
+          database.prepare('SELECT value FROM app_settings WHERE id=1').get().value,
+        );
+        prior.monitoring.capacity = { obsolete: { standardUPH: 123, deadline: '01:30' } };
+        database
+          .prepare('UPDATE app_settings SET value=? WHERE id=1')
+          .run(JSON.stringify(prior));
+        database.close();
+        await start();
+        const saved = (await get()).records[0];
+        assert.equal(saved.version, 2);
+        assert.equal(saved.slots[0].actual, 90);
+        assert.equal(saved.dayTeam, '陳小明');
+        const config = await (await client(base + '/api/config')).json();
+        assert.equal(config.monitoring.unified.performance.green, 96);
+        assert.equal(Object.hasOwn(config.monitoring, 'capacity'), false);
+      },
+    );
     await t.test('delete checks version and only removes selected record', async () => {
       assert.equal(
         (

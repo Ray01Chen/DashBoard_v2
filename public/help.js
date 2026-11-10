@@ -53,6 +53,7 @@ const guides = {
         managerOnly: true,
         title: 'One line + model preset, two shifts and editable reports',
         paragraphs: [
+          'Daily targets shows read-only Planned UPH = target / productive hours, excluding breaks and gaps. Day/Night use their allocated targets instead of repeating the daily target. Changing a target updates the preview immediately; schedule changes update it too. The deadline is automatically the plan’s last production end, including overnight shifts.',
           'Each enabled line/model has one default daily target. Every station receives its own interval targets using: daily target × interval production minutes ÷ total production minutes across day and night. Breaks are excluded; integer rounding preserves each station’s daily total.',
           'Example: daily preset 1,000, total production 500 minutes, 20-minute interval → 40 per station. Changing one station’s interval Target to 50 changes only that station’s report-day total to 1,010. Other stations, other dates and the 1,000 preset remain unchanged. Blank means unknown; zero is an explicit zero.',
           'Source selection affects monitoring, not station entry. Changing the output station for an enabled unit immediately changes its displayed source. Retired combinations use their captured historical source. Saved personnel, station identities and production intervals remain captured.',
@@ -93,9 +94,9 @@ const guides = {
       {
         title: 'Read output status and alerts',
         paragraphs: [
-          'Managers open Settings → Alerts & refresh, tick each production performance, completion risk, missing-report or existing shortfall/idle rule, adjust thresholds, then Save settings. New policies start disabled. Set Standard UPH and an optional deadline separately for each line/model; blank deadline uses the last production end.',
+          'Managers open Settings → Alerts & refresh, tick each production performance, completion risk, missing-report or existing shortfall/idle rule, adjust thresholds, then Save settings. New policies start disabled. Planned UPH and deadline are automatic. Read the all/day/night planned pace and productive hours in Daily targets; no capacity setup is needed here.',
           'Performance compares Actual/Target for ended, reported production intervals only (default green ≥95%, yellow ≥85%, red <85%). Blank Actual is missing; submitted 0 is a valid report. Missing-report alerts start after the 10-minute grace and escalate after another 30 minutes; filling the report clears them.',
-          'Completion risk compares required UPH with Standard UPH (default green ≤100%, yellow ≤110%, red >110%). The baseline is the last contiguous completed report, not recent output averages. The reason shows its data cutoff, deadline and productive hours excluding breaks. Missing standards show NO DATA; overdue reports mark the forecast STALE.',
+          'Completion risk compares required UPH with Planned UPH (default green ≤100%, yellow ≤110%, red >110%); it indicates how much faster than the original plan is needed, not a physical capacity limit. The baseline is the last contiguous completed report, not recent output averages. The reason shows its data cutoff, deadline and productive hours excluding breaks. Missing plan targets or productive time show NO DATA; overdue reports mark the forecast STALE.',
           'The overall light uses red before yellow, green only when every enabled check can be evaluated and is normal. No data or all disabled is gray. Yellow flashes slowly, red quickly. Multiple reasons rotate every 5 seconds, red first, without changing the overall light. Open line details to read the full reason and all evaluations. Legacy blue/purple rules contribute yellow; optional frame flashing remains separate.',
           'Producing, Break, Upcoming and Completed describe the schedule, independently of the alert. Break shows its time range and pauses the idle timer; existing production risks remain visible. Breaks never require Actual. Automatic refresh reads saved reports at the configured interval; Refresh now retrieves them immediately.',
         ],
@@ -164,6 +165,7 @@ const guides = {
         managerOnly: true,
         title: '產線＋Model 預設、兩班分配與當日調整',
         paragraphs: [
+          '「產線日目標」顯示唯讀計畫 UPH＝目標 ÷ 有效生產時數，排除休息與未排生產的時間。早晚班使用各自分配目標，不重複使用全日目標。修改目標即時更新預覽，班表調整後同步重算；截止自動採該計畫最後生產時段結束時間，支援跨日。',
           '每組產線／Model 有一個日目標預設。每站各自依「日目標 × 本時段生產分鐘 ÷ 兩班總生產分鐘」取得時段目標；排除休息，整數分配保留該站全日總量。',
           '例如預設 1,000、總生產 500 分鐘，20 分鐘時段各站預設 40。把其中一站該段 Target 改成 50，只會讓該站當日合計變成 1,010；其他站、其他日期及 1,000 預設不變。空白未知，0 是明確零值。',
           '來源選站只影響看板，不會同步站點輸入。目前啟用配對切換來源站後立即改用該站；已移除的歷史配對沿用保存的來源。已存姓名、站點與時間仍保留快照。',
@@ -204,9 +206,9 @@ const guides = {
       {
         title: '讀懂產量狀態與警示',
         paragraphs: [
-          '管理員進入「設定 → 警示與刷新」，勾選各項生產達成率、完工風險、資料未回報或既有缺口／停滯規則，調整門檻後按「儲存設定」。新增規則預設停用。各產線／Model 分別設定標準 UPH 與截止時間；截止留白時採最後生產時段結束時間。',
+          '管理員進入「設定 → 警示與刷新」，勾選各項生產達成率、完工風險、資料未回報或既有缺口／停滯規則，調整門檻後按「儲存設定」。新增規則預設停用。計畫 UPH 與截止時間自動取得；全天及兩班的計畫 UPH、有效生產時數顯示於「產線日目標」，此頁不需再設定產能基準。',
           '生產達成率只計已結束且有實績的生產時段，預設綠 ≥95%、黃 ≥85%、紅 <85%。Actual 空白是未回報，已提交 0 是有效回報。未回報超過預設 10 分鐘寬限亮黃，再逾期 30 分鐘亮紅，補填即解除。',
-          '完工風險比較需求 UPH／標準 UPH，預設綠 ≤100%、黃 ≤110%、紅 >110%。以最後連續完整回報時段為基準，不使用最近平均產量；原因列出資料截止時間、完工截止及排除休息的有效工時。缺少基準顯示「無資料」，回報逾期會標示「資料過期」。',
+          '完工風險比較需求 UPH／計畫 UPH，預設綠 ≤100%、黃 ≤110%、紅 >110%，表示需比原計畫加快多少，並非設備最大產能限制。以最後連續完整回報時段為基準，不使用最近平均產量；原因列出資料截止時間、完工截止及排除休息的有效工時。缺少基準顯示「無資料」，回報逾期會標示「資料過期」。',
           '總燈號紅優先於黃，全部啟用判斷都有資料且正常才亮綠；無資料或全部停用顯示灰色。黃燈慢閃、紅燈快閃，多個原因每 5 秒輪播，紅色原因優先，燈號不隨輪播改變。點產線細節可讀完整原因及所有判斷。既有藍／紫規則以黃燈整合，外框閃爍設定獨立保留。',
           '生產中、休息中、尚未開始、已結束表示班表狀態，與告警分開判讀。休息會顯示起訖並暫停停滯計時，不要求 Actual；既有生產風險不會因休息自動解除。自動刷新依設定讀取已儲存資料，也可按「立即刷新」。',
         ],
@@ -276,6 +278,7 @@ const guides = {
         managerOnly: true,
         title: 'เป้าหมายต่อสาย + Model สองกะและรายงานที่ปรับได้',
         paragraphs: [
+          'หน้าเป้าหมายรายวันแสดง UPH ตามแผนแบบอ่านอย่างเดียว = เป้าหมาย / ชั่วโมงผลิต ไม่นับพักและช่วงไม่มีการผลิต แต่ละกะใช้เป้าหมายที่จัดสรร ไม่ใช้เป้าทั้งวันซ้ำ แก้เป้าหมายหรือตารางแล้วคำนวณใหม่ กำหนดเสร็จคือจบช่วงผลิตสุดท้าย รองรับข้ามวัน',
           'แต่ละคู่สาย/Model มีเป้าหมายรายวันหนึ่งค่า ทุกสถานีแบ่งเป้าหมายของตนด้วย เป้ารายวัน × นาทีผลิตช่วงนี้ ÷ นาทีผลิตรวมสองกะ ไม่รวมพักและปัดจำนวนเต็มโดยรักษายอดวัน',
           'เช่น ค่าเริ่มต้น 1,000 ผลิต 500 นาที ช่วง 20 นาทีได้ 40 ต่อสถานี เปลี่ยน Target สถานีหนึ่งเป็น 50 จะเปลี่ยนยอดวันสถานีนั้นเป็น 1,010 สถานีอื่น วันอื่นและค่าเริ่มต้นไม่เปลี่ยน ว่างคือไม่ทราบ 0 คือศูนย์ที่ยืนยัน',
           'สถานีแหล่งผลผลิตใช้สำหรับกระดาน ไม่ซิงค์การกรอก เปลี่ยนแหล่งของคู่ที่เปิดใช้งานมีผลทันที คู่ที่เลิกใช้เก็บแหล่งเดิมสำหรับประวัติ ชื่อ สถานีและเวลาที่บันทึกไว้ยังอยู่',
@@ -316,9 +319,9 @@ const guides = {
       {
         title: 'อ่านสถานะผลผลิตและการแจ้งเตือน',
         paragraphs: [
-          'ผู้จัดการเปิด Settings → การแจ้งเตือนและรีเฟรช เลือกเปิดแต่ละกฎการบรรลุการผลิต ความเสี่ยงผลิตไม่ทัน ข้อมูลไม่รายงาน หรือกฎเดิม ปรับเกณฑ์แล้วบันทึกการตั้งค่า กฎใหม่เริ่มปิดใช้ กำหนด UPH มาตรฐานและกำหนดเสร็จตามสาย/รุ่น หากว่างใช้เวลาจบช่วงผลิตสุดท้าย',
+          'ผู้จัดการเปิด Settings → การแจ้งเตือนและรีเฟรช เลือกเปิดแต่ละกฎการบรรลุการผลิต ความเสี่ยงผลิตไม่ทัน ข้อมูลไม่รายงาน หรือกฎเดิม ปรับเกณฑ์แล้วบันทึกการตั้งค่า กฎใหม่เริ่มปิดใช้ UPH ตามแผนและกำหนดเสร็จคำนวณอัตโนมัติ ดูความเร็วและชั่วโมงผลิตของทั้งวัน/แต่ละกะในหน้าเป้าหมายรายวัน ไม่ต้องตั้งกำลังผลิตที่หน้านี้',
           'อัตราบรรลุคำนวณ Actual/Target เฉพาะช่วงผลิตที่จบและรายงานแล้ว ค่าเริ่มต้นเขียว ≥95% เหลือง ≥85% แดง <85% Actual ว่างคือยังไม่รายงาน ค่า 0 ที่บันทึกแล้วใช้ได้ เมื่อเกินผ่อนผัน 10 นาทีเป็นเหลือง อีก 30 นาทีเป็นแดง รายงานแล้วปลดเตือนทันที',
-          'ความเสี่ยงเทียบ UPH ที่ต้องการกับ UPH มาตรฐาน เขียว ≤100% เหลือง ≤110% แดง >110% เริ่มจากรายงานช่วงสุดท้ายที่ครบต่อเนื่อง ไม่ใช้ค่าเฉลี่ยล่าสุด เหตุผลแสดงข้อมูลถึงเวลาใด กำหนดเสร็จและชั่วโมงผลิตไม่รวมพัก ไม่มีมาตรฐานแสดงไม่มีข้อมูล รายงานเกินกำหนดระบุข้อมูลล้าสมัย',
+          'ความเสี่ยงเทียบ UPH ที่ต้องการกับ UPH ตามแผน เขียว ≤100% เหลือง ≤110% แดง >110% บอกว่าต้องเร่งกว่าแผนเท่าใด ไม่ใช่ขีดจำกัดเครื่องจักร เริ่มจากรายงานช่วงสุดท้ายที่ครบต่อเนื่อง ไม่ใช้ค่าเฉลี่ยล่าสุด เหตุผลแสดงข้อมูลถึงเวลาใด กำหนดเสร็จและชั่วโมงผลิตไม่รวมพัก ไม่มีเป้าหมายแผนหรือชั่วโมงผลิตแสดงไม่มีข้อมูล รายงานเกินกำหนดระบุข้อมูลล้าสมัย',
           'ไฟรวมให้แดงสำคัญกว่าเหลือง เขียวเมื่อทุกกฎที่เปิดมีข้อมูลและปกติ ไม่มีข้อมูลหรือปิดทั้งหมดแสดงเทา เหลืองกะพริบช้า แดงเร็ว เหตุผลสลับทุก 5 วินาที เริ่มจากแดงโดยไม่เปลี่ยนไฟรวม เปิดรายละเอียดสายเพื่ออ่านเหตุผลเต็มและทุกผลประเมิน กฎเดิมน้ำเงิน/ม่วงรวมเป็นเหลือง การกะพริบกรอบยังแยกตั้งค่า',
           'กำลังผลิต พัก ยังไม่เริ่มและสิ้นสุดแล้วคือสถานะตารางแยกจากไฟเตือน ช่วงพักแสดงเวลาและหยุดตัวจับเวลาผลผลิตไม่เพิ่ม ไม่ต้องกรอก Actual และไม่ปลดความเสี่ยงเดิมอัตโนมัติ รีเฟรชอัตโนมัติอ่านรายงานที่บันทึกตามเวลาที่ตั้ง หรือกดรีเฟรชทันที',
         ],
