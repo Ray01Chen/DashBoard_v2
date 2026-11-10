@@ -1,3 +1,4 @@
+import { updateAlertDisplay, productionStatusText, updateAlertList } from './alert-display.js';
 import { buildLineMonitor } from './monitor.js';
 import { renderTrend, sum, overviewMetricsMarkup } from './dashboard.js';
 import {
@@ -18,6 +19,7 @@ export function showLineDetail(dialog, context) {
     shift,
     context.activity,
     context.now,
+    context.dailyRecords,
   ).find((item) => (item.key || item.line) === line);
   if (!monitor) return;
 
@@ -69,7 +71,7 @@ export function showLineDetail(dialog, context) {
       <div class="line-modal-totals">${overviewMetricsMarkup({ ...monitor, dailyTarget: dailyMonitor?.target ?? null }, context)}</div>
       <button class="icon-button" data-close-line-dialog aria-label="${esc(t('close'))}">${icon('close')}</button>
     </header>
-    <div class="line-modal-body">
+    <div class="line-modal-body"><section class="detail-alert-panel"><strong data-detail-status>${esc(productionStatusText(monitor, t))}</strong><p data-detail-alert></p><details><summary>${esc(t('alertDetails'))}</summary><ul data-detail-alert-list></ul></details></section>
       <section class="line-modal-trend"><h3>${esc(t('hourlyTrend'))}</h3><div class="line-modal-plot"></div></section>
       <div class="line-modal-table-wrap"><table class="line-modal-table"><thead><tr><th>${esc(t('timeSlot'))}</th><th>${esc(t('target'))}</th><th>${esc(t('actual'))}</th><th>${esc(t('gap'))}</th></tr></thead><tbody>${series.map((value) => `<tr><td>${esc(value.slot.start)}–${esc(value.slot.end)}</td><td>${number(value.target)}</td><td>${number(value.actual)}</td><td>${number(value.target != null && value.actual != null ? value.actual - value.target : null)}</td></tr>`).join('')}</tbody></table></div>
       <div class="line-modal-stations">${rows
@@ -102,6 +104,8 @@ export function showLineDetail(dialog, context) {
   dialog.querySelector('[data-close-line-dialog]').onclick = () => dialog.close();
   if (!dialog.open) dialog.showModal();
   const plot = dialog.querySelector('.line-modal-plot');
+  updateAlertDisplay(dialog.querySelector('[data-detail-alert]'), monitor, t, context.now);
+  updateAlertList(dialog.querySelector('[data-detail-alert-list]'), monitor.unified, t);
   renderTrend(plot, series, context);
   let previousSize = '';
   const observer = new ResizeObserver(([entry]) => {

@@ -1,4 +1,10 @@
-import { scheduleFor, schedulesForLine, reportSchedule } from './production-schedules.js';
+import { alertConfig, evaluateAlerts } from './alerts.js';
+import {
+  scheduleFor,
+  schedulesForLine,
+  reportSchedule,
+  isArchivedProductionDate,
+} from './production-schedules.js';
 import {
   modelOf,
   productionKey,
@@ -18,7 +24,7 @@ export function linesForGroup(config, groupId, extra = []) {
 }
 export function currentScheduleInterval(config, date, shift, now = Date.now()) {
   const slots = scheduleFor(config, null, shift),
-    anchor = slots[0]?.start || '00:00',
+    anchor = scheduleFor(config, null, 'all')[0]?.start || '00:00',
     base = Date.parse(date + 'T00:00:00+07:00');
   const minutes = (value) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3));
   return (
@@ -38,6 +44,11 @@ export function monitoringPeriodState(config, date, shift, now = Date.now()) {
     month: '2-digit',
     day: '2-digit',
   }).format(new Date(now));
+  const windows = productionWindows(config, date, shift);
+  if (windows.length && now < Math.min(...windows.map((slot) => slot.startAt)))
+    return 'futureShift';
+  if (windows.length && now >= Math.max(...windows.map((slot) => slot.endAt)))
+    return 'historicalShift';
   return date < today ? 'historicalShift' : date > today ? 'futureShift' : 'outsideShift';
 }
 export function boardPage(lines, page = 0, size = 7) {
@@ -132,7 +143,7 @@ function intervalWindow(slot, date, anchor) {
 
 export function productionWindows(config, date, shift) {
   const slots = scheduleFor(config, null, shift);
-  const anchor = slots[0]?.start || '00:00';
+  const anchor = scheduleFor(config, null, 'all')[0]?.start || '00:00';
   return slots
     .filter((slot) => slot.kind === 'production')
     .map((slot) => intervalWindow(slot, date, anchor));
@@ -187,6 +198,7 @@ export function buildLineMonitor(
   shift,
   activity = {},
   now = Date.now(),
+  dailyRecords = null,
 ) {
   // UI defaults have no saved revision or mapping snapshot. They may supply
   // current targets, but must never invent historical intervals or replace saves.
@@ -213,10 +225,20 @@ export function buildLineMonitor(
       ]),
     ).values(),
   ];
+  const daily =
+    dailyRecords && shift !== 'all'
+      ? new Map(
+          buildLineMonitor(config, dailyRecords, date, 'all', activity, now).map((line) => [
+            line.key,
+            line,
+          ]),
+        )
+      : null;
   return units.map((unit) => {
     const line = unit.line;
     const lineConfig = { ...config, schedules: schedulesForLine(config, line) };
     const windows = productionWindows(lineConfig, date, shift);
+    const onBreak = currentScheduleInterval(lineConfig, date, shift, now)?.kind === 'break';
     const active = windows.some((window) => now >= window.startAt && now < window.endAt);
     const firstStart = Math.min(...windows.map((window) => window.startAt));
     const lineRows = [...definitions.values()].filter(
@@ -278,13 +300,22 @@ export function buildLineMonitor(
       // Captured shifts may start earlier than today's edited schedule. Their
       // original first interval anchors midnight, preserving historical dates.
       const anchor =
+        record.defaultsSnapshot?.productionDay?.day?.slots.find((slot) => slot.start)?.start ||
         record.slots.find((slot) => slot.start)?.start ||
         scheduleFor(config, line, shift)[0]?.start ||
         '00:00';
       for (const slot of record.slots)
         if (slot.kind !== 'break' && (!activeLine || visibleIds.has(slot.id))) {
-          const captured = { ...slots.get(slot.id), ...slot };
-          slots.set(slot.id, intervalWindow(captured, date, anchor));
+          const current = slots.get(slot.id);
+          const captured = { ...current, ...slot };
+          // An after-midnight night shift still belongs to the production day
+          // anchored by Day. Selecting Night must not move it back 24 hours.
+          slots.set(
+            slot.id,
+            current && current.start === captured.start && current.end === captured.end
+              ? { ...captured, startAt: current.startAt, endAt: current.endAt }
+              : intervalWindow(captured, date, anchor),
+          );
         }
     }
     const series = [...slots.values()].map((slot) => {
@@ -308,7 +339,19 @@ export function buildLineMonitor(
         startAt: slot.startAt,
         endAt: slot.endAt,
         target: total(targets.map((s) => s.target)),
+        targetComplete:
+          targets.length ===
+            (sharedOutput && values.some((value) => value.targetShared) ? 1 : rows.length) &&
+          targets.length > 0 &&
+          targets.every((value) => value.target != null),
         actual: total(actuals.map((s) => s.actual)),
+        // Aggregate output is confirmed only when every contributing station
+        // reported. Display totals can still show a useful partial value.
+        reported:
+          actuals.length ===
+            (sharedOutput && values.some((value) => value.lineShared) ? 1 : rows.length) &&
+          actuals.length > 0 &&
+          actuals.every((value) => value.actual != null),
       };
     });
     const metrics = overviewMetrics(series, now);
@@ -320,12 +363,26 @@ export function buildLineMonitor(
     const idleSeconds = rows.length
       ? productiveSeconds(windows, Math.max(firstStart, lastIncreaseAt || firstStart), now)
       : 0;
-    const shortfall =
-      metrics.cumulativeGap === null ? null : Math.max(0, -metrics.cumulativeGap);
+    // A missing report cannot contribute zero to a target comparison. Legacy
+    // gap rules retain their quantity thresholds, using comparable values only.
+    const comparable = series.filter(
+      (slot) =>
+        slot.startAt <= now &&
+        slot.actual != null &&
+        slot.target != null &&
+        slot.reported !== false &&
+        slot.targetComplete !== false,
+    );
+    const shortfall = comparable.length
+      ? Math.max(
+          0,
+          comparable.reduce((gap, slot) => gap + slot.target - slot.actual, 0),
+        )
+      : null;
     const matches = monitoring.rules
       .filter((rule) => {
         if (!rule.enabled || !rows.length) return false;
-        const value = rule.type === 'gap' ? shortfall : active ? idleSeconds : null;
+        const value = rule.type === 'gap' ? shortfall : active || onBreak ? idleSeconds : null;
         return (
           value !== null &&
           (rule.comparison === 'gt' ? value > rule.threshold : value >= rule.threshold)
@@ -333,8 +390,50 @@ export function buildLineMonitor(
       })
       .sort((a, b) => weights[b.color] - weights[a.color] || b.threshold - a.threshold);
     const rule = matches[0] || null;
+    const capacity = monitoring.capacity?.[productionKey(unit)] || {};
+    let alertSeries = daily?.get(config.models ? productionKey(unit) : line)?.series || series;
+    let alertWindows = daily ? productionWindows(lineConfig, date, 'all') : windows;
+    // A past report owns its captured intervals. Today's template must not
+    // introduce phantom missing reports or change a historical forecast.
+    if (!daily && isArchivedProductionDate(config, line, date, now)) {
+      const capturedIds = new Set(
+        saved
+          .filter((record) => !isDefault(record))
+          .flatMap((record) => record.slots.map((slot) => slot.id)),
+      );
+      if (capturedIds.size) {
+        alertSeries = alertSeries.filter((slot) => capturedIds.has(slot.id));
+        alertWindows = alertSeries;
+      }
+    }
+    const anchor = scheduleFor(config, line, 'all')[0]?.start || '00:00';
+    const deadline = capacity.deadline
+      ? Date.parse(date + 'T' + capacity.deadline + ':00+07:00') +
+        (capacity.deadline < anchor ? 86400000 : 0)
+      : Math.max(...alertWindows.map((slot) => slot.endAt));
+    const unified =
+      daily?.get(config.models ? productionKey(unit) : line)?.unified ||
+      evaluateAlerts({
+        series: alertSeries,
+        windows: alertWindows,
+        now,
+        legacy: matches.map((rule) => ({
+          ...rule,
+          value: rule.type === 'gap' ? shortfall : idleSeconds,
+        })),
+        legacyEnabled: monitoring.rules.some((rule) => rule.enabled),
+        legacyNeedsTarget: monitoring.rules.some((rule) => rule.enabled && rule.type === 'gap'),
+        settings: alertConfig(monitoring),
+        standardUPH: capacity.standardUPH,
+        deadline,
+        available: rows.length > 0,
+      });
+
     return {
       line,
+      date,
+      unified,
+      currentSlot: currentScheduleInterval(lineConfig, date, shift, now),
       periodState: monitoringPeriodState(lineConfig, date, shift, now),
       model: modelOf(unit),
       key: config.models ? productionKey(unit) : line,
@@ -353,8 +452,13 @@ export function buildLineMonitor(
       active,
       rule,
       matches,
-      status: rule ? rule.color : metrics.cumulativeActual !== null ? 'green' : 'neutral',
-      blink: !!(rule?.blink && active),
+      status: ['red', 'yellow', 'green'].includes(unified.severity)
+        ? unified.severity
+        : 'neutral',
+      blink: rule
+        ? rule.blink &&
+          config.rows.some((row) => row.active !== false && sameProduction(row, unit))
+        : ['red', 'yellow'].includes(unified.severity),
     };
   });
 }

@@ -114,3 +114,30 @@ Normal line clicks open details; full-screen clicks open a station-detail dialog
 ![Compact seven-line fullscreen board](./images/seven-line-board.png)
 
 This pilot requires manual reporting; automatic data integration is planned for a future version. See the [manager walkthrough](./MANAGER_GUIDE.md), [member walkthrough](./MEMBER_GUIDE.md) and [validation record](./VALIDATION.md).
+
+## Unified alerts and production states
+
+Managers open **Settings → Alerts & refresh** (`/settings/alerts`), enable each policy, adjust thresholds, and **Save settings**. The three new policies start disabled. Existing shortfall/idle rules remain independently selectable. Set **Standard UPH per line/model**; an empty deadline uses the final production interval end. A clock time before the day anchor belongs to the next day.
+
+| Policy | Default thresholds |
+| --- | --- |
+| Performance | Ended, reported production intervals only: Actual / corresponding Target. Green ≥95%, yellow ≥85%, red <85% |
+| Completion risk | Required UPH / Standard UPH. Green ≤100%, yellow ≤110%, red >110% |
+| Reporting | After a production interval ends: 10-minute grace, then yellow; another 30 minutes overdue becomes red |
+
+Blank Actual is unreported; submitted **0** is a valid report. Breaks never require Actual. Backfilling clears reporting alerts automatically.
+
+The completion forecast starts at the **last contiguous completed report**, divides remaining target by productive time from that cutoff to the deadline, and excludes breaks. Unreported production is unknown; it is never replaced with zero or recent average output. The reason includes the data cutoff, deadline and capacity figures. Missing required data shows **NO DATA**; overdue reports mark **STALE**.
+
+The overall light prioritizes **red over yellow**. Green requires every enabled check to be evaluable and normal; no data or all disabled is gray. Yellow pulses slowly, red quickly, green stays steady. Multiple reasons rotate every **5 seconds**, red first; the light does not change with the reason. Legacy blue/purple rules contribute yellow; optional frame flashing is separate. Open line details to read full reasons and all evaluations. Language changes translate reasons immediately.
+
+**Producing / Break / Upcoming / Completed** describe the schedule independently of the signal. Break shows its time range, pauses idle counting, and preserves earlier production risks.
+
+The existing schedule editor now has a daily timeline: theme colour = production, gray = break. Expand the labelled model's target preview to see its preset allocation. Edit the existing time/type controls; invalid clock times, overlaps (including midnight) and individual slots over 12 hours are flagged. Named templates still require selecting lines, applying and saving.
+
+![Alert policies](./images/unified-alerts.png)
+![Production and break timeline](./images/schedule-timeline.png)
+
+Thai, Chinese and English operation instructions are maintained together in the site's existing **User guide** (`/guide`).
+
+![Alert reasons and data cutoff](./images/alert-details.png)

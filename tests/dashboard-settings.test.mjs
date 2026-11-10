@@ -46,7 +46,7 @@ test('group settings render groups without duplicating per-unit station source c
   assert.doesNotMatch(html, /data-alert-field|refresh-seconds|data-action="add-alert"/);
 });
 
-test('alert settings need no group catalogs and keep original indexes across alert types', () => {
+test('alert settings keep legacy indexes and expose per-unit capacity without group catalogs', () => {
   const rule = (id, type, enabled = true) => ({
     id,
     type,
@@ -64,9 +64,8 @@ test('alert settings need no group catalogs and keep original indexes across ale
         throw new Error('The alert page must not render groups.');
       },
     },
-    get lines() {
-      throw new Error('The alert page must not render line catalogs.');
-    },
+    lines: ['A'],
+    productionUnits: [{ line: 'A', model: 'Default', dailyTarget: 100 }],
   };
   const html = alertSettings(context(draft));
   assert.match(html, /id="refresh-seconds"[^>]*value="25"/);

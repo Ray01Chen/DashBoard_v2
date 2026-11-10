@@ -36,16 +36,17 @@ export function renameCatalogItem(config, catalog, old, name) {
       if (matches(unit, catalog, old)) unit[fields[catalog]] = name;
   if (catalog === 'jobs')
     for (const person of config.personnel || []) if (person.job === old) person.job = name;
-  if (['lines', 'models'].includes(catalog) && config.monitoring?.unitOutputSources) {
-    config.monitoring.unitOutputSources = Object.fromEntries(
-      Object.entries(config.monitoring.unitOutputSources).map(([key, source]) => {
-        const [line, model] = JSON.parse(key);
-        const unit = { line, model };
-        if (matches(unit, catalog, old)) unit[fields[catalog]] = name;
-        return [productionKey(unit), source];
-      }),
-    );
-  }
+  for (const field of ['unitOutputSources', 'capacity'])
+    if (['lines', 'models'].includes(catalog) && config.monitoring?.[field]) {
+      config.monitoring[field] = Object.fromEntries(
+        Object.entries(config.monitoring[field]).map(([key, source]) => {
+          const [line, model] = JSON.parse(key);
+          const unit = { line, model };
+          if (matches(unit, catalog, old)) unit[fields[catalog]] = name;
+          return [productionKey(unit), source];
+        }),
+      );
+    }
   if (catalog === 'lines') {
     for (const group of config.monitoring?.groups || [])
       group.lines = group.lines.map((line) => (line === old ? name : line));
@@ -101,12 +102,13 @@ export function removeCatalogItem(config, catalog, value) {
     );
   }
   config[catalog] = config[catalog].filter((item) => item !== value);
-  if (config.monitoring?.unitOutputSources) {
-    const keys = new Set(productionUnits(config).map(productionKey));
-    config.monitoring.unitOutputSources = Object.fromEntries(
-      Object.entries(config.monitoring.unitOutputSources).filter(([key]) => keys.has(key)),
-    );
-  }
+  for (const field of ['unitOutputSources', 'capacity'])
+    if (config.monitoring?.[field]) {
+      const keys = new Set(productionUnits(config).map(productionKey));
+      config.monitoring[field] = Object.fromEntries(
+        Object.entries(config.monitoring[field]).filter(([key]) => keys.has(key)),
+      );
+    }
   if (catalog === 'lines') {
     for (const group of config.monitoring?.groups || [])
       group.lines = group.lines.filter((line) => line !== value);

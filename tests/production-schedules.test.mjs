@@ -117,7 +117,8 @@ test('monitoring, target defaults and idle alerts follow each physical line’s 
   const lines = buildLineMonitor(config, Object.values(defaults), '2026-11-09', 'day', {}, now);
   assert.equal(lines.find((line) => line.line === 'A').periodState, 'breakMonitoring');
   assert.equal(lines.find((line) => line.line === 'A').currentTarget, null);
-  assert.equal(lines.find((line) => line.line === 'A').rule, null);
+  // Entering a break freezes the timer but must not clear an existing warning.
+  assert.equal(lines.find((line) => line.line === 'A').rule.id, 'idle');
   assert.equal(lines.find((line) => line.line === 'B').currentTarget, 60);
   assert.equal(lines.find((line) => line.line === 'B').rule.type, 'idle');
   assert.equal(

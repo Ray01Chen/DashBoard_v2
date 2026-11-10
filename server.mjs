@@ -1,3 +1,4 @@
+import { alertConfig, validAlertConfig } from './public/alerts.js';
 import { normalizeSchedules } from './schedule-config.mjs';
 import {
   scheduleFor,
@@ -499,6 +500,29 @@ function validateConfig(data) {
     !['all', 'gap', 'idle'].includes(monitoring.alertMode)
   )
     fail(400, 'errMonitoring');
+  const unified = alertConfig(monitoring);
+  if (!validAlertConfig(monitoring)) fail(400, 'errMonitoring');
+  validateProductionDefaults(data, next, config, fail);
+  if (
+    monitoring.capacity != null &&
+    (typeof monitoring.capacity !== 'object' || Array.isArray(monitoring.capacity))
+  )
+    fail(400, 'errMonitoring');
+  const capacity = Object.create(null);
+  for (const [key, value] of Object.entries(monitoring.capacity || {})) {
+    // Removed line/model pairs no longer need a capacity preset.
+    if (!next.productionUnits.some((unit) => productionKey(unit) === key)) continue;
+    if (
+      !value ||
+      (value.standardUPH != null &&
+        (!Number.isFinite(value.standardUPH) ||
+          value.standardUPH <= 0 ||
+          value.standardUPH > 99999999)) ||
+      (value.deadline && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value.deadline))
+    )
+      fail(400, 'errMonitoring');
+    capacity[key] = { standardUPH: value.standardUPH ?? null, deadline: value.deadline || '' };
+  }
   const groupNames = new Set(),
     groupIds = new Set();
   next.monitoring = {
@@ -519,6 +543,8 @@ function validateConfig(data) {
       return { id, name, lines: [...new Set(g.lines)] };
     }),
     outputSources: Object.create(null),
+    unified,
+    capacity,
     rules: [],
   };
   for (const line of next.lines) {
@@ -571,7 +597,6 @@ function validateConfig(data) {
     alertMode: monitoring.alertMode,
   });
   migrateRuleControls(next.monitoring);
-  validateProductionDefaults(data, next, config, fail);
   const unitSources = monitoring.unitOutputSources ?? config.monitoring.unitOutputSources ?? {};
   if (!unitSources || typeof unitSources !== 'object' || Array.isArray(unitSources))
     fail(400, 'errMonitoring');
@@ -837,6 +862,8 @@ const files = {
       'production-overview',
       'seven-line-board',
       'line-schedules',
+      'schedule-timeline',
+      'unified-alerts',
       'group-trend-dense',
     ].map((name) => [`/guide-images/${name}.png`, [`../docs/images/${name}.png`, 'image/png']]),
   ),
@@ -845,6 +872,9 @@ const files = {
   '/pages.js': ['pages.js', 'text/javascript'],
   '/issue-presets.js': ['issue-presets.js', 'text/javascript'],
   '/i18n.js': ['i18n.js', 'text/javascript'],
+  '/schedule-preview.js': ['schedule-preview.js', 'text/javascript'],
+  '/alert-display.js': ['alert-display.js', 'text/javascript'],
+  '/alerts.js': ['alerts.js', 'text/javascript'],
   '/monitor.js': ['monitor.js', 'text/javascript'],
   '/dashboard.js': ['dashboard.js', 'text/javascript'],
   '/style.css': ['style.css', 'text/css'],

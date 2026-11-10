@@ -32,7 +32,7 @@ test('monitoring labels distinguish history, future shifts, breaks and active ov
     monitoringPeriodState(c, date, 'night', Date.parse(time + '+07:00'));
   assert.equal(state('2026-11-03', '2026-11-04T18:00:00'), 'historicalShift');
   assert.equal(state('2026-11-05', '2026-11-04T18:00:00'), 'futureShift');
-  assert.equal(state('2026-11-04', '2026-11-04T18:00:00'), 'outsideShift');
+  assert.equal(state('2026-11-04', '2026-11-04T18:00:00'), 'futureShift');
   assert.equal(state('2026-11-04', '2026-11-05T00:05:00'), 'breakMonitoring');
   assert.equal(state('2026-11-04', '2026-11-05T00:15:00'), 'activeMonitoring');
 });

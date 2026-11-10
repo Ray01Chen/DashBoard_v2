@@ -78,8 +78,14 @@ test('production API and SQLite persistence', async (t) => {
       assert.equal(config.rows.length, 77);
       assert.equal(new Set(config.rows.map((r) => r.line)).size, 12);
       assert.equal(config.slots.length, 5);
-      assert.equal(config.rows.find((r) => r.line === 'CDS301' && r.job === 'AE').station, null);
-      assert.match(await (await client(base)).text(), /<title>BP9 - Production Center<\/title>/);
+      assert.equal(
+        config.rows.find((r) => r.line === 'CDS301' && r.job === 'AE').station,
+        null,
+      );
+      assert.match(
+        await (await client(base)).text(),
+        /<title>BP9 - Production Center<\/title>/,
+      );
     });
     await t.test('create preserves explicit zero and blanks', async () => {
       const res = await request('PUT', '/api/records/3', record);
@@ -176,7 +182,10 @@ test('production API and SQLite persistence', async (t) => {
         (await request('PUT', '/api/records/4', { ...record, date: '2026-02-30' })).status,
         400,
       );
-      assert.equal((await request('PUT', '/api/records/4', { ...record, slots: [] })).status, 400);
+      assert.equal(
+        (await request('PUT', '/api/records/4', { ...record, slots: [] })).status,
+        400,
+      );
       assert.equal(
         (
           await request('PUT', '/api/records/4', {
@@ -248,6 +257,43 @@ test('production API and SQLite persistence', async (t) => {
         400,
       );
     });
+    await t.test(
+      'unified alert thresholds and per-model capacity validate atomically and persist',
+      async () => {
+        const config = await (await client(base + '/api/config')).json();
+        const key = JSON.stringify([
+          config.productionUnits[0].line,
+          config.productionUnits[0].model,
+        ]);
+        config.monitoring.unified = {
+          performance: { enabled: true, green: 96, red: 86 },
+          completion: { enabled: true, green: 100, red: 112 },
+          reporting: { enabled: true, graceMinutes: 12, redMinutes: 25 },
+        };
+        config.monitoring.capacity = { [key]: { standardUPH: 123, deadline: '01:30' } };
+        const invalid = structuredClone(config);
+        invalid.monitoring.unified.performance.red = 97;
+        assert.equal((await request('PUT', '/api/config', invalid)).status, 400);
+        assert.equal(
+          (await (await client(base + '/api/config')).json()).version,
+          config.version,
+        );
+        invalid.monitoring.unified.performance.red = 86;
+        invalid.monitoring.capacity[key].standardUPH = 0;
+        assert.equal((await request('PUT', '/api/config', invalid)).status, 400);
+        invalid.monitoring.capacity[key].standardUPH = 123;
+        invalid.monitoring.capacity[key].deadline = '25:00';
+        assert.equal((await request('PUT', '/api/config', invalid)).status, 400);
+        const response = await request('PUT', '/api/config', config);
+        assert.equal(response.status, 200);
+        const saved = await response.json();
+        assert.equal(saved.monitoring.unified.reporting.graceMinutes, 12);
+        assert.deepEqual(saved.monitoring.capacity[key], {
+          standardUPH: 123,
+          deadline: '01:30',
+        });
+      },
+    );
     await t.test('persists after server restart', async () => {
       await stop();
       await start();
@@ -255,16 +301,29 @@ test('production API and SQLite persistence', async (t) => {
       assert.equal(saved.version, 2);
       assert.equal(saved.slots[0].actual, 90);
       assert.equal(saved.dayTeam, '陳小明');
+      const config = await (await client(base + '/api/config')).json();
+      assert.equal(config.monitoring.unified.performance.green, 96);
+      assert.equal(Object.values(config.monitoring.capacity)[0].standardUPH, 123);
     });
     await t.test('delete checks version and only removes selected record', async () => {
       assert.equal(
-        (await request('DELETE', '/api/records/3', { date: record.date, shift: 'day', version: 1 }))
-          .status,
+        (
+          await request('DELETE', '/api/records/3', {
+            date: record.date,
+            shift: 'day',
+            version: 1,
+          })
+        ).status,
         409,
       );
       assert.equal(
-        (await request('DELETE', '/api/records/3', { date: record.date, shift: 'day', version: 2 }))
-          .status,
+        (
+          await request('DELETE', '/api/records/3', {
+            date: record.date,
+            shift: 'day',
+            version: 2,
+          })
+        ).status,
         200,
       );
       assert.equal((await get()).records.length, 0);
@@ -344,8 +403,8 @@ test('production API and SQLite persistence', async (t) => {
           csv = await (
             await client(base + `/api/export?date=${pendingDate}&shift=day&line=CD303&lang=en`)
           ).text(),
-          matrix = readSpreadsheet('export.csv', Buffer.from(csv).toString('base64')).map((row) =>
-            row.map((cell) => cell.value),
+          matrix = readSpreadsheet('export.csv', Buffer.from(csv).toString('base64')).map(
+            (row) => row.map((cell) => cell.value),
           );
         for (const id of [3, 4]) {
           const row = config.rows.find((row) => row.id === id),
@@ -374,9 +433,10 @@ test('production API and SQLite persistence', async (t) => {
         const savedCsv = await (
             await client(base + '/api/export?date=2026-11-06&shift=day&line=CD303&lang=en')
           ).text(),
-          savedRows = readSpreadsheet('export.csv', Buffer.from(savedCsv).toString('base64')).map(
-            (row) => row.map((cell) => cell.value),
-          ),
+          savedRows = readSpreadsheet(
+            'export.csv',
+            Buffer.from(savedCsv).toString('base64'),
+          ).map((row) => row.map((cell) => cell.value)),
           savedRow = config.rows.find((row) => row.id === 4),
           exported = savedRows.find(
             (cells) => cells[4] === savedRow.job && cells[5] === savedRow.station,

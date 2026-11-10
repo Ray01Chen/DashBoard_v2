@@ -1,3 +1,12 @@
+import {
+  alertReasonText,
+  rotatedReason,
+  productionStatusText,
+  updateAlertDisplay,
+  updateAlertList,
+} from './alert-display.js';
+import { alertConfig } from './alerts.js';
+import { productionUnits, productionKey } from './production-models.js';
 import { scheduleCatalog } from './production-schedules.js';
 import { buildLineMonitor, boardPage, monitoringPeriodState } from './monitor.js';
 import { productionLabel, productionIdentityMarkup } from './production-models.js';
@@ -69,7 +78,7 @@ function updateOverviewMetrics(element, metrics, { number }) {
 export function renderMonitoring(ctx, { chart = true } = {}) {
   const { config, records, date, shift, activity, now, groupId, chartLine, t, esc, number } =
     ctx;
-  const all = buildLineMonitor(config, records, date, shift, activity, now);
+  const all = buildLineMonitor(config, records, date, shift, activity, now, ctx.dailyRecords);
   const daily =
     shift === 'all' || !ctx.dailyRecords
       ? all
@@ -108,7 +117,7 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
       : totals.dailyActual - totals.dailyTarget;
   const cards = document.querySelector('#line-cards');
   document.querySelector('#alert-summary').textContent = t('alertCount', {
-    count: lines.filter((l) => l.rule).length,
+    count: lines.filter((l) => ['red', 'yellow'].includes(l.unified.severity)).length,
   });
   const page = boardPage(lines, ctx.boardPage, ctx.boardSize),
     cardLines = ctx.board ? page.lines : lines;
@@ -118,15 +127,22 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
         const period = l.periodState || monitoringPeriodState(config, date, shift, now);
         const actual = ctx.metricScope === 'day' ? l.dailyActual : l.currentActual;
         const gap = ctx.metricScope === 'day' ? l.dailyGap : l.currentGap;
-        const progress =
+        const progressFallback =
           actual == null
             ? t('waiting')
             : gap == null
               ? t('noComparableTarget')
               : t(gap < 0 ? 'belowTarget' : 'onTarget');
-        const status = t('outputStatus') + ': ' + progress;
-        const monitorText =
-          period === 'activeMonitoring' ? t('idleFor', { seconds: l.idleSeconds }) : t(period);
+        const progress = alertReasonText(rotatedReason(l.unified, now, l.key, date), t);
+        const status =
+          t('alertState_' + l.unified.severity) +
+          ' · ' +
+          t('outputStatus') +
+          ': ' +
+          progressFallback +
+          ' · ' +
+          progress;
+        const monitorText = productionStatusText({ ...l, periodState: period }, t);
         const monitor = t('monitoringStatus') + ': ' + monitorText;
 
         if (!chart) {
@@ -142,16 +158,20 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
               (chartLine === (l.key || l.line) ? ' selected' : '');
             if (card.className !== classes) card.className = classes;
             const lamp = card.querySelector('.signal-lamp');
-            lamp.className = 'signal-lamp lamp-' + l.status;
+            const lampClass = 'signal-lamp lamp-' + l.status;
+            if (lamp.className !== lampClass) lamp.className = lampClass;
             lamp.setAttribute('aria-label', status);
             const label = card.querySelector('.line-card-status>span');
             label.textContent = progress;
-            label.className = l.rule ? 'alert-text' : '';
+            label.title = progress;
+            label.className = ['red', 'yellow'].includes(l.unified.severity)
+              ? 'alert-text'
+              : '';
             card.querySelector('.line-card-status>small').textContent = monitorText;
           }
           return '';
         }
-        return `<button class="line-card alarm-${l.status} ${l.blink ? 'blinking-frame' : ''} ${chartLine === (l.key || l.line) ? 'selected' : ''}" data-monitor-line="${esc(l.key || l.line)}" aria-label="${esc(productionLabel(l))}" aria-pressed="${chartLine === (l.key || l.line)}"><span class="line-card-top">${productionIdentityMarkup(l, esc)}<span class="signal-lamp lamp-${l.status} " role="img" aria-label="${esc(status)}"></span></span><span class="line-source">${esc(t('sourceLabel', { name: l.sourceLabel || t('noSource') }))}</span><span class="line-card-values">${overviewMetricsMarkup(l, ctx, cardMetricKeys)}</span><span class="line-trend"></span><span class="line-card-status" title="${esc(t('achievementExplain') + ' / ' + monitor)}"><span class="${l.rule ? 'alert-text' : ''}">${esc(progress)}</span><small>${esc(monitorText)}</small></span></button>`;
+        return `<button class="line-card alarm-${l.status} ${l.blink ? 'blinking-frame' : ''} ${chartLine === (l.key || l.line) ? 'selected' : ''}" data-monitor-line="${esc(l.key || l.line)}" aria-label="${esc(productionLabel(l))}" aria-pressed="${chartLine === (l.key || l.line)}"><span class="line-card-top">${productionIdentityMarkup(l, esc)}<span class="signal-lamp lamp-${l.status} " role="img" aria-label="${esc(status)}"></span></span><span class="line-source">${esc(t('sourceLabel', { name: l.sourceLabel || t('noSource') }))}</span><span class="line-card-values">${overviewMetricsMarkup(l, ctx, cardMetricKeys)}</span><span class="line-trend"></span><span class="line-card-status" title="${esc(t('achievementExplain') + ' / ' + monitor)}"><span title="${esc(progress)}" class="${['red', 'yellow'].includes(l.unified.severity) ? 'alert-text' : ''}">${esc(progress)}</span><small>${esc(monitorText)}</small></span></button>`;
       })
       .join('') || `<div class="empty-cell">${esc(t('emptyGroup'))}</div>`;
   if (!chart) {
@@ -159,10 +179,18 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
     const dialog = document.querySelector('#line-detail-dialog[open]');
     const detailKey = dialog?.querySelector('[data-detail-line]')?.dataset.detailLine;
     const detail = lines.find((line) => (line.key || line.line) === detailKey);
-    if (detail) updateOverviewMetrics(dialog, detail, ctx);
+    if (detail) {
+      updateOverviewMetrics(dialog, detail, ctx);
+      updateAlertDisplay(dialog.querySelector('[data-detail-alert]'), detail, t, now);
+      updateAlertList(dialog.querySelector('[data-detail-alert-list]'), detail.unified, t);
+      const state = dialog.querySelector('[data-detail-status]');
+      if (state) state.textContent = productionStatusText(detail, t);
+    }
+    updatePageAlerts(lines, chartLine, ctx);
     return;
   }
   cards.innerHTML = cardMarkup;
+  updatePageAlerts(lines, chartLine, ctx);
   for (const [index, line] of cardLines.entries()) {
     const plot = cards.children[index]?.querySelector('.line-trend');
     if (plot)
@@ -232,7 +260,11 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
       .join('');
   document.querySelector('#chart-line').value = selected;
   const displayed = lines.filter((l) => !selected || (l.key || l.line) === selected);
-  const values = aggregateMonitorSeries(displayed, production),
+  // A single-line drill-down must not inherit other lines' time axes.
+  const detailSlots = scheduleCatalog(config, shift, [
+    ...new Set(displayed.map((line) => line.line)),
+  ]).filter((slot) => slot.kind === 'production');
+  const values = aggregateMonitorSeries(displayed, detailSlots),
     slots = values.map((value) => value.slot);
   const has = values.some((v) => v.actual !== null || v.target !== null),
     max = Math.max(10, ...values.flatMap((v) => [v.target || 0, v.actual || 0])),
@@ -324,7 +356,7 @@ export function groupSettings(ctx) {
 
 export function alertSettings(ctx) {
   const { draft, t, esc, icon } = ctx;
-  return `${alertControls(ctx)}${['gap', 'idle']
+  return `${alertControls(ctx)}${unifiedSettings(ctx)}${['gap', 'idle']
     .map(
       (type) =>
         `<section class="panel monitor-settings-card"><div class="panel-heading"><div><h2>${esc(t(type === 'gap' ? 'gapAlert' : 'idleAlert'))}</h2><p>${esc(t('alertDesc'))}</p></div><button class="button" data-action="add-alert" data-rule-type="${type}">${icon('plus')}${esc(t('addRule'))}</button></div><div class="table-scroll"><table class="alert-settings-table"><thead><tr><th>${esc(t('enabled'))}</th><th>${esc(t('comparison'))}</th><th>${esc(t('threshold'))} (${esc(t(type === 'gap' ? 'unit' : 'seconds'))})</th><th>${esc(t('lampColor'))}</th><th>${esc(t('flashing'))}</th><th>${esc(t('actions'))}</th></tr></thead><tbody>${draft.monitoring.rules
@@ -618,4 +650,35 @@ export function hourlyLabelLayout(width, count) {
     angle = spacing < 44 ? -55 : spacing < 75 ? -35 : 0,
     bottom = angle ? 76 : 38;
   return { compact, angle, bottom, height: 182 + bottom };
+}
+
+/** New policies share the existing settings draft and publication workflow. */
+function unifiedSettings({ draft, t, esc }) {
+  const policies = alertConfig(draft.monitoring);
+  const policyMarkup = Object.entries(policies)
+    .map(([type, rule]) => {
+      const fields = type === 'reporting' ? ['graceMinutes', 'redMinutes'] : ['green', 'red'];
+      return `<section class="panel monitor-settings-card unified-policy"><h2><label><input type="checkbox" data-policy="${type}" data-policy-field="enabled" ${rule.enabled ? 'checked' : ''}>${esc(t('alertName_' + type))}</label></h2><p>${esc(t('alertHelp_' + type))}</p><div class="policy-fields">${fields.map((field) => `<label>${esc(t('alertField_' + type + '_' + field))}<input type="number" min="0" max="${type === 'performance' ? 100 : 99999}" step="any" data-policy="${type}" data-policy-field="${field}" value="${rule[field]}" required></label>`).join('')}</div></section>`;
+    })
+    .join('');
+  return `<div class="unified-policies">${policyMarkup}</div><section class="panel monitor-settings-card capacity-settings"><h2>${esc(t('capacitySettings'))}</h2><p>${esc(t('capacityHelp'))}</p><div class="table-scroll"><table><thead><tr><th>${esc(t('line'))} / ${esc(t('model'))}</th><th>${esc(t('standardUPH'))}</th><th>${esc(t('deadline'))}</th></tr></thead><tbody>${productionUnits(
+    draft,
+  )
+    .map((unit) => {
+      const key = productionKey(unit),
+        capacity = draft.monitoring.capacity?.[key] || {};
+      return `<tr><td>${esc(productionLabel(unit))}</td><td><input type="number" min="0.01" max="99999999" step="any" data-capacity="${esc(key)}" data-capacity-field="standardUPH" value="${capacity.standardUPH ?? ''}" aria-label="${esc(t('standardUPH'))}"></td><td><input type="time" data-capacity="${esc(key)}" data-capacity-field="deadline" value="${esc(capacity.deadline || '')}" aria-label="${esc(t('deadline'))}"></td></tr>`;
+    })
+    .join('')}</tbody></table></div><p>${esc(t('unifiedLightHelp'))}</p></section>`;
+}
+
+function updatePageAlerts(lines, key, { t, now, detail }) {
+  const line = lines.find((line) => (line.key || line.line) === key);
+  const panel = document.querySelector('[data-page-alert-panel]');
+  if (!panel) return;
+  panel.hidden = !line || !detail;
+  if (!line) return;
+  updateAlertDisplay(panel.querySelector('[data-page-alert]'), line, t, now);
+  updateAlertList(panel.querySelector('[data-page-alert-list]'), line.unified, t);
+  panel.querySelector('[data-page-status]').textContent = productionStatusText(line, t);
 }

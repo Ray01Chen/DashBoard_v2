@@ -653,6 +653,41 @@ try {
   await saveSettings();
   await page.locator('[data-settings-tab="alerts"]').click();
   assert.equal(await page.locator('.issue-preset-settings').count(), 0);
+  for (const language of ['zh', 'th', 'en']) {
+    await page.locator('#language-select').selectOption(language);
+    assert.equal(await page.locator('[data-policy-field="enabled"]').count(), 3);
+    assert.doesNotMatch(
+      await page.locator('.unified-policies').innerText(),
+      /alertName_|alertField_|alertHelp_|undefined/,
+    );
+  }
+  for (const type of ['performance', 'completion', 'reporting'])
+    await page.locator(`[data-policy="${type}"][data-policy-field="enabled"]`).check();
+  await page.locator('[data-policy="reporting"][data-policy-field="graceMinutes"]').fill('12');
+  await page.locator('[data-capacity-field="standardUPH"]').first().fill('123');
+  await page.locator('[data-capacity-field="deadline"]').first().fill('18:30');
+  await saveSettings();
+  const policyConfig = await readConfig();
+  assert.equal(policyConfig.monitoring.unified.reporting.graceMinutes, 12);
+  assert.equal(Object.values(policyConfig.monitoring.capacity)[0].standardUPH, 123);
+  assert.equal(Object.values(policyConfig.monitoring.capacity)[0].deadline, '18:30');
+  await page.reload();
+  await page.locator('[data-policy="reporting"][data-policy-field="graceMinutes"]').waitFor();
+  assert.equal(
+    await page
+      .locator('[data-policy="reporting"][data-policy-field="graceMinutes"]')
+      .inputValue(),
+    '12',
+  );
+  await screenshot('.unified-policies', 'unified-alerts');
+  for (const type of ['performance', 'completion', 'reporting'])
+    await page.locator(`[data-policy="${type}"][data-policy-field="enabled"]`).uncheck();
+  await page.locator('[data-policy="reporting"][data-policy-field="graceMinutes"]').fill('10');
+  await saveSettings();
+  record(
+    'Unified alert checkboxes, capacity/deadline and thresholds persist through reload and translate in all three languages',
+  );
+
   await page.locator('[data-settings-tab="structure"]').click();
   assert.ok(
     await page
@@ -2767,6 +2802,216 @@ try {
   record(
     'All new configuration, source and station reporting operations preserve the saved historical report',
   );
+
+  // Exercise the real monitor against saved NULL/zero values at a deterministic
+  // reporting cutoff. Only the test response clock is replaced; SQLite remains real.
+  {
+    let cfg = await readConfig();
+    const unit = cfg.productionUnits[0],
+      key = JSON.stringify([unit.line, unit.model]);
+    unit.dailyTarget = 400;
+    const row = cfg.rows.find(
+      (row) =>
+        row.active &&
+        row.line === unit.line &&
+        row.model === unit.model &&
+        row.hasOutput !== false,
+    );
+    cfg.monitoring.rules.forEach((rule) => {
+      rule.enabled = false;
+    });
+    cfg.monitoring.unified = {
+      performance: { enabled: true, green: 95, red: 85 },
+      completion: { enabled: true, green: 100, red: 110 },
+      reporting: { enabled: true, graceMinutes: 10, redMinutes: 30 },
+    };
+    cfg.monitoring.capacity = { [key]: { standardUPH: 100, deadline: '12:00' } };
+    cfg.monitoring.unitOutputSources ||= {};
+    cfg.monitoring.unitOutputSources[key] = row.id;
+    cfg.lineSchedules ||= {};
+    cfg.lineSchedules[unit.line] = {
+      day: [
+        { id: 'alert-a', kind: 'production', start: '08:00', end: '09:00' },
+        { id: 'alert-b', kind: 'production', start: '09:00', end: '10:00' },
+        { id: 'alert-break', kind: 'break', start: '10:00', end: '11:00' },
+        { id: 'alert-c', kind: 'production', start: '11:00', end: '12:00' },
+      ],
+      night: [{ id: 'alert-night', kind: 'production', start: '18:00', end: '19:00' }],
+    };
+    const result = await context.request.put(baseURL + '/api/config', { data: cfg });
+    assert.equal(result.status(), 200);
+    cfg = await result.json();
+    const date = '2099-11-04',
+      clock = Date.parse(date + 'T10:15:00+07:00');
+    const slots = cfg.lineSchedules[unit.line].day.filter((slot) => slot.kind === 'production');
+    for (const shift of ['day', 'night']) {
+      const response = await context.request.put(baseURL + '/api/records/' + row.id, {
+        data: {
+          date,
+          shift,
+          version: 0,
+          configVersion: cfg.version,
+          entryMode: true,
+          editTargets: true,
+          slots: (shift === 'day' ? slots : cfg.lineSchedules[unit.line].night).map(
+            (slot, index) => ({
+              id: slot.id,
+              target: shift === 'day' ? 100 : 0,
+              actual: shift === 'day' && index === 0 ? 80 : null,
+              issue: '',
+            }),
+          ),
+        },
+      });
+      assert.equal(response.status(), 200);
+    }
+    const alertContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    await alertContext.request.post(baseURL + '/api/auth/login', {
+      data: { username: 'manager', password: 'manager' },
+    });
+    await alertContext.route('**/api/records?*', async (route) => {
+      const response = await route.fetch();
+      const data = await response.json();
+      await route.fulfill({ response, json: { ...data, serverTime: clock } });
+    });
+    const monitor = await alertContext.newPage();
+    monitor.on('pageerror', (error) => errors.push(error.message));
+    await monitor.clock.install({ time: clock });
+    await monitor.goto(baseURL + '/overview');
+    await monitor.locator('#language-select').selectOption('en');
+    await monitor.locator('#report-date').fill(date);
+    await monitor.locator('#report-date').dispatchEvent('change');
+    await monitor.locator('[data-report-scope="all"]').click();
+    const card = monitor.locator('#line-cards .line-card').first();
+    await card.waitFor();
+    assert.match(await card.locator('.signal-lamp').getAttribute('class'), /lamp-red/);
+    assert.match(
+      await card.locator('.line-card-status > small').innerText(),
+      /Break.*10:00.*11:00/,
+    );
+    assert.match(await card.locator('.line-card-status > span').innerText(), /Achievement 80/);
+    await monitor.waitForLoadState('networkidle');
+    await monitor.clock.runFor(6000);
+    assert.match(await card.locator('.signal-lamp').getAttribute('class'), /lamp-red/);
+    assert.doesNotMatch(
+      await card.locator('.line-card-status > span').innerText(),
+      /Achievement 80/,
+    );
+    await card.click();
+    await monitor.locator('[data-page-alert]').waitFor();
+    assert.equal(await monitor.locator('[data-page-alert-list] li').count(), 3);
+    assert.match(
+      await monitor.locator('[data-page-alert-list]').textContent(),
+      /STALE.*09:00.*12:00/,
+    );
+    assert.match(await monitor.locator('[data-page-status]').innerText(), /Break/);
+    for (const language of ['zh', 'th', 'en']) {
+      await monitor.locator('#language-select').selectOption(language);
+      assert.doesNotMatch(
+        await monitor.locator('[data-page-alert-panel]').innerText(),
+        /alertState_|alertCompletionReason|\{\w+\}/,
+      );
+    }
+    await monitor.locator('[data-page-alert-panel] details').evaluate((node) => {
+      node.open = true;
+    });
+    await monitor
+      .locator('[data-page-alert-panel]')
+      .screenshot({ path: path.join(root, 'docs/images/alert-details.png') });
+    cfg = await readConfig();
+    cfg.monitoring.unified.performance.enabled = false;
+    assert.equal(
+      (await context.request.put(baseURL + '/api/config', { data: cfg })).status(),
+      200,
+    );
+    await monitor.reload();
+    await monitor.locator('#detail-line').selectOption(key);
+    await monitor.locator('[data-page-alert][data-severity="yellow"]').waitFor();
+    const current = (await readReport(date)).records.find((record) => record.rowId === row.id);
+    const filled = await context.request.put(baseURL + '/api/records/' + row.id, {
+      data: {
+        date,
+        shift: 'day',
+        version: current.version,
+        configVersion: (await readConfig()).version,
+        entryMode: true,
+        slots: [{ id: slots[1].id, actual: 120 }],
+      },
+    });
+    assert.equal(filled.status(), 200);
+    await monitor.reload();
+    await monitor.locator('#detail-line').selectOption(key);
+    await monitor.locator('[data-page-alert][data-severity="green"]').waitFor();
+    assert.doesNotMatch(
+      await monitor.locator('[data-page-alert-list]').textContent(),
+      /STALE|missing interval/,
+    );
+    cfg = await readConfig();
+    cfg.monitoring.capacity[key].standardUPH = null;
+    assert.equal(
+      (await context.request.put(baseURL + '/api/config', { data: cfg })).status(),
+      200,
+    );
+    await monitor.reload();
+    await monitor.locator('#detail-line').selectOption(key);
+    await monitor.locator('[data-page-alert][data-severity="noData"]').waitFor();
+    cfg = await readConfig();
+    Object.values(cfg.monitoring.unified).forEach((rule) => {
+      rule.enabled = false;
+    });
+    assert.equal(
+      (await context.request.put(baseURL + '/api/config', { data: cfg })).status(),
+      200,
+    );
+    await monitor.reload();
+    await monitor.locator('#detail-line').selectOption(key);
+    await monitor.locator('[data-page-alert][data-severity="disabled"]').waitFor();
+    await monitor.goto(baseURL + '/settings/master-data');
+    await monitor.locator('#schedule-line-select').selectOption(unit.line);
+    await monitor.locator('[data-schedule-preview-unit]').selectOption(key);
+    await monitor.locator('.schedule-preview details').evaluate((node) => {
+      node.open = true;
+    });
+    assert.match(
+      await monitor.locator('.schedule-preview tbody').innerText(),
+      /10:00–11:00.*Break/s,
+    );
+    assert.match(await monitor.locator('.schedule-preview tbody').innerText(), /100/);
+    await monitor
+      .locator('.schedule-preview')
+      .screenshot({ path: path.join(root, 'docs/images/schedule-timeline.png') });
+    for (const width of [375, 768, 1366, 1920]) {
+      await monitor.setViewportSize({ width, height: 1000 });
+      for (const language of ['zh', 'th', 'en']) {
+        await monitor.locator('#language-select').selectOption(language);
+        assert.equal(
+          await monitor.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+          false,
+          'Schedule preview overflow: ' + width + '/' + language,
+        );
+        assert.doesNotMatch(
+          await monitor.locator('.schedule-preview').innerText(),
+          /scheduleTimeline|scheduleInvalid|schedulePreviewTarget/,
+        );
+      }
+    }
+    await monitor.goto(baseURL + '/settings/alerts');
+    for (const width of [375, 768, 1366, 1920]) {
+      await monitor.setViewportSize({ width, height: 1000 });
+      for (const language of ['zh', 'th', 'en']) {
+        await monitor.locator('#language-select').selectOption(language);
+        assert.equal(
+          await monitor.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+          false,
+          'Alert settings overflow: ' + width + '/' + language,
+        );
+      }
+    }
+    await alertContext.close();
+    record(
+      'Real saved reports drive red/yellow/green, NO DATA and Disabled consistently; break preserves risks, cutoff excludes missing output, reasons rotate independently and translate, and backfill clears reporting/staleness',
+    );
+  }
 
   assert.deepEqual(errors, []);
   record('No uncaught browser errors');

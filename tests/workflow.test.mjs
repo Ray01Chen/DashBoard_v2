@@ -514,7 +514,9 @@ test('fullscreen line details retain historical interval labels, assigned staff 
         ? content
         : selector === '.line-modal-plot'
           ? plot
-          : close,
+          : selector.startsWith('[data-detail-')
+            ? null
+            : close,
     addEventListener: (name, handler) => {
       if (name === 'close') onClose = handler;
     },

@@ -1,3 +1,5 @@
+import { schedulePreview } from './schedule-preview.js';
+import { alertConfig, validAlertConfig } from './alerts.js';
 import {
   scheduleFor,
   scheduleCatalog,
@@ -746,6 +748,7 @@ function monitorContext() {
     activity: state.activity,
     now: Date.now() + state.serverOffset,
     groupId: state.view === 'details' ? state.detailGroupId : state.groupId,
+    detail: state.view === 'details',
     board: document.body.classList.contains('fullscreen-board'),
     boardPage: state.boardPage,
     boardSize: 7,
@@ -906,18 +909,26 @@ $('#confirm-dialog').addEventListener('cancel', (e) => {
 });
 function updateSettingsSaveState() {
   const issueListValid = !state.draft || validateIssuePresets(issuePresets(state.draft));
+  const policiesValid =
+    !state.draft ||
+    (validAlertConfig(state.draft.monitoring) &&
+      [...document.querySelectorAll('[data-policy-field], [data-capacity-field]')].every(
+        (input) => input.validity.valid,
+      ));
   const status = settingsSaving
     ? 'saving'
     : !issueListValid
       ? 'errIssuePresets'
-      : localSettingsDraftSaved() && settingsDirty()
-        ? 'settingsDraftSaved'
-        : settingsDirty()
-          ? 'settingsUnsaved'
-          : 'settingsUpToDate';
+      : !policiesValid
+        ? 'errMonitoring'
+        : localSettingsDraftSaved() && settingsDirty()
+          ? 'settingsDraftSaved'
+          : settingsDirty()
+            ? 'settingsUnsaved'
+            : 'settingsUpToDate';
   $('#settings-save-status').textContent = t(status);
   for (const button of $$('[data-save-settings]')) {
-    button.disabled = settingsSaving || !issueListValid;
+    button.disabled = settingsSaving || !issueListValid || !policiesValid;
     button.innerHTML = icon('check') + esc(t(settingsSaving ? 'saving' : 'saveSettings'));
   }
   for (const button of $$('[data-save-draft]')) button.disabled = settingsSaving;
@@ -1227,6 +1238,7 @@ function scheduleMarkup() {
       <span class="muted">${esc(t(state.scheduleLine ? (custom ? 'scheduleCustom' : 'scheduleInherited') : 'scheduleTemplateHint'))}</span>
       ${state.scheduleLine ? `<div><button class="button" data-action="copy-schedule-template">${esc(t('copyScheduleTemplate'))}</button><button class="button" data-action="inherit-schedule" ${custom ? '' : 'disabled'}>${esc(t('inheritSchedule'))}</button></div>` : ''}
     </section>
+    ${schedulePreview(state.draft, schedules, state.scheduleLine, { t, esc, previewKey: state.schedulePreviewKey })}
     <div class="schedule-grid">${['day', 'night']
       .map(
         (shift) => `<section class="panel schedule-card">
@@ -1475,6 +1487,19 @@ $('#settings-body').addEventListener('change', async (e) => {
       el.value === 'all' || el.value.startsWith('new-') ? el.value : Number(el.value);
   } else if (el.id === 'refresh-seconds') {
     state.draft.monitoring.refreshSeconds = Number(el.value);
+  } else if (d.policy) {
+    state.draft.monitoring.unified = alertConfig(state.draft.monitoring);
+    state.draft.monitoring.unified[d.policy][d.policyField] =
+      d.policyField === 'enabled' ? el.checked : Number(el.value);
+  } else if (d.capacity) {
+    state.draft.monitoring.capacity ||= {};
+    state.draft.monitoring.capacity[d.capacity] ||= { standardUPH: null, deadline: '' };
+    state.draft.monitoring.capacity[d.capacity][d.capacityField] =
+      d.capacityField === 'standardUPH'
+        ? el.value === ''
+          ? null
+          : Number(el.value)
+        : el.value;
   } else if (d.alertField) {
     state.draft.monitoring.rules[Number(d.index)][d.alertField] = ['enabled', 'blink'].includes(
       d.alertField,
@@ -1509,6 +1534,10 @@ $('#settings-body').addEventListener('change', async (e) => {
     return;
   } else if (el.id === 'schedule-line-select') {
     state.scheduleLine = el.value;
+    renderSettings();
+    return;
+  } else if (d.schedulePreviewUnit !== undefined) {
+    state.schedulePreviewKey = el.value;
     renderSettings();
     return;
   } else if (d.timeField) {
@@ -2147,7 +2176,12 @@ $('#line-cards').onclick = (e) => {
 };
 $('#chart-line').onchange = () => selectDetailLine($('#chart-line').value);
 setInterval(() => {
-  if (state.user && state.config && state.view === 'overview' && !$('#login-dialog').open) {
+  if (
+    state.user &&
+    state.config &&
+    ['overview', 'details'].includes(state.view) &&
+    !$('#login-dialog').open
+  ) {
     renderMonitoring(monitorContext(), { chart: false });
     updateCurrentInterval();
   }
@@ -2161,8 +2195,7 @@ function configureAutoRefresh() {
   refreshTimer = setInterval(() => {
     if (
       state.user &&
-      state.view === 'overview' &&
-      !$('#line-detail-dialog').open &&
+      ['overview', 'details'].includes(state.view) &&
       !state.loading &&
       !$('#login-dialog').open &&
       document.visibilityState === 'visible'

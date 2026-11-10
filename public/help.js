@@ -44,6 +44,7 @@ const guides = {
           'Open Settings → Master data & shift times. Choose Default schedule template to edit the initial times, or select a saved template.',
           'Enter a name and choose Save as new template to keep another schedule. Adjust Day/Night production and break times, then Save settings. Rename and Remove manage saved templates.',
           'Tick the lines under Lines to apply, choose Apply to selected lines, confirm, then Save settings. Editing a template alone does not change existing lines; all models on a selected line share its applied schedule.',
+          'The daily timeline separates production and breaks. Choose a line/model in Target preview and expand the table to see every start/end/type and preset target. Invalid times, overlaps across midnight and individual slots over 12 hours are flagged before saving.',
           'Use Schedule scope to inspect or adjust an individual line. Copy selected template copies the template currently selected above. Deleting a template retains the copies already applied to lines.',
           'Current and future entry and Excel use the selected line’s CONFIG only; removed slots disappear. Archived dates retain saved original slots and values, including original night-shift production dates.',
         ],
@@ -92,10 +93,11 @@ const guides = {
       {
         title: 'Read output status and alerts',
         paragraphs: [
-          'Output status compares actual output with a comparable target. Monitoring status describes whether the selected shift is active, on break, historical, or outside production hours. A historical shift is not a live alarm.',
-          'Shortfall rules check the configured target gap. No-increase rules check how long reported output has not increased. Their timer pauses during configured breaks and outside the shift. This is based on saved reports, not an automatic machine connection.',
-          'Warning colours come from the enabled rules. When several rules match, the highest-priority matching colour is shown. Only the card border flashes when flashing is enabled; content stays steady.',
-          'Refresh now retrieves the latest saved reports. Automatic refresh follows the seconds chosen by the manager. Keep in mind that an unsaved change on another person’s page is not yet available to the board.',
+          'Managers open Settings → Alerts & refresh, tick each production performance, completion risk, missing-report or existing shortfall/idle rule, adjust thresholds, then Save settings. New policies start disabled. Set Standard UPH and an optional deadline separately for each line/model; blank deadline uses the last production end.',
+          'Performance compares Actual/Target for ended, reported production intervals only (default green ≥95%, yellow ≥85%, red <85%). Blank Actual is missing; submitted 0 is a valid report. Missing-report alerts start after the 10-minute grace and escalate after another 30 minutes; filling the report clears them.',
+          'Completion risk compares required UPH with Standard UPH (default green ≤100%, yellow ≤110%, red >110%). The baseline is the last contiguous completed report, not recent output averages. The reason shows its data cutoff, deadline and productive hours excluding breaks. Missing standards show NO DATA; overdue reports mark the forecast STALE.',
+          'The overall light uses red before yellow, green only when every enabled check can be evaluated and is normal. No data or all disabled is gray. Yellow flashes slowly, red quickly. Multiple reasons rotate every 5 seconds, red first, without changing the overall light. Open line details to read the full reason and all evaluations. Legacy blue/purple rules contribute yellow; optional frame flashing remains separate.',
+          'Producing, Break, Upcoming and Completed describe the schedule, independently of the alert. Break shows its time range and pauses the idle timer; existing production risks remain visible. Breaks never require Actual. Automatic refresh reads saved reports at the configured interval; Refresh now retrieves them immediately.',
         ],
       },
       {
@@ -153,6 +155,7 @@ const guides = {
           '開啟「設定 → 基礎資料與班別時間」。在「已儲存班表範本」選「預設班表範本」，即可修改原本的時段；也可選其他已存範本。',
           '輸入範本名稱，按「另存新範本」。調整早晚班的生產、休息時間後按「儲存設定」。可儲存多份，並使用修改名稱、刪除管理。',
           '在「選擇套用線體」勾選線體，按「套用至所選線體」，確認後再按「儲存設定」。只改範本不會自動改現有線體；同線所有 Model 共用套用結果。',
+          '全天時間軸以主題色區分生產、灰色區分休息；在目標預覽選產線／Model，展開可核對各時段起訖、類型與預設目標。無效時間、跨午夜重疊或單段超過 12 小時會先提示，修正後再儲存。',
           '「班表範圍」可選某線查看或個別調整；「複製所選範本」會複製上方選中的範本。刪除範本不會刪除已套用的線體班表。',
           '目前及未來日期的填報與 Excel 只顯示該線 CONFIG，刪掉的時段不再出現。過去日期仍保留當天已存時段與數值；跨午夜夜班仍屬開班日。',
         ],
@@ -201,10 +204,11 @@ const guides = {
       {
         title: '讀懂產量狀態與警示',
         paragraphs: [
-          '「產量」表示實績與可比較目標的達標情況；「監控」表示班別目前是否生產中、休息中、歷史班次或非生產時間。歷史班次的結果不代表現在有即時警報。',
-          '未達標規則檢查設定的產量差距；未增加規則檢查已填報產量多久沒有增加，排除休息及班外時間。這是依已儲存的填報資料判斷，不是直接連接機台。',
-          '顏色由已啟用的規則決定，多條同時符合時取優先度最高的顏色。啟用閃爍時只閃外框，內容不會跟著閃。',
-          '「立即刷新」讀取最新已儲存的資料；自動刷新依管理員設定的秒數執行。其他人尚未儲存的修改不會出現在看板上。',
+          '管理員進入「設定 → 警示與刷新」，勾選各項生產達成率、完工風險、資料未回報或既有缺口／停滯規則，調整門檻後按「儲存設定」。新增規則預設停用。各產線／Model 分別設定標準 UPH 與截止時間；截止留白時採最後生產時段結束時間。',
+          '生產達成率只計已結束且有實績的生產時段，預設綠 ≥95%、黃 ≥85%、紅 <85%。Actual 空白是未回報，已提交 0 是有效回報。未回報超過預設 10 分鐘寬限亮黃，再逾期 30 分鐘亮紅，補填即解除。',
+          '完工風險比較需求 UPH／標準 UPH，預設綠 ≤100%、黃 ≤110%、紅 >110%。以最後連續完整回報時段為基準，不使用最近平均產量；原因列出資料截止時間、完工截止及排除休息的有效工時。缺少基準顯示「無資料」，回報逾期會標示「資料過期」。',
+          '總燈號紅優先於黃，全部啟用判斷都有資料且正常才亮綠；無資料或全部停用顯示灰色。黃燈慢閃、紅燈快閃，多個原因每 5 秒輪播，紅色原因優先，燈號不隨輪播改變。點產線細節可讀完整原因及所有判斷。既有藍／紫規則以黃燈整合，外框閃爍設定獨立保留。',
+          '生產中、休息中、尚未開始、已結束表示班表狀態，與告警分開判讀。休息會顯示起訖並暫停停滯計時，不要求 Actual；既有生產風險不會因休息自動解除。自動刷新依設定讀取已儲存資料，也可按「立即刷新」。',
         ],
       },
       {
@@ -263,6 +267,7 @@ const guides = {
           'เปิด Settings → ข้อมูลหลัก เลือกแม่แบบเริ่มต้นเพื่อแก้เวลาเดิม หรือเลือกแม่แบบที่บันทึกไว้',
           'ใส่ชื่อแล้วบันทึกเป็นแม่แบบใหม่ ปรับช่วงผลิตและพักของทั้งสองกะ แล้วบันทึกการตั้งค่า เปลี่ยนชื่อหรือลบแม่แบบได้',
           'เลือกสายที่จะใช้ กดใช้แม่แบบ ยืนยัน แล้วบันทึกการตั้งค่า การแก้แม่แบบอย่างเดียวไม่เปลี่ยนสายเดิม ทุก Model ในสายใช้ตารางเดียวกัน',
+          'ไทม์ไลน์แยกผลิตและพัก เลือกสาย/รุ่นในตัวอย่างเป้าหมายแล้วขยายตารางเพื่อดูเวลาเริ่ม จบ ประเภทและเป้าหมาย ระบบแจ้งเวลาผิด ช่วงซ้อนทับข้ามเที่ยงคืนและช่วงเดียวยาวเกิน 12 ชั่วโมงก่อนบันทึก',
           'เลือกสายในขอบเขตตารางเวลาเพื่อดูหรือแก้รายสาย คัดลอกแม่แบบที่เลือกจากรายการด้านบน ลบแม่แบบไม่ลบตารางที่ใช้กับสายแล้ว',
           'วันที่ปัจจุบันและอนาคตแสดงเฉพาะ CONFIG ของสาย ช่วงที่ลบไม่แสดงในกรอกและ Excel วันที่เก่าใช้ช่วงเวลาและค่าที่บันทึก กะข้ามเที่ยงคืนยังเป็นวันเริ่มผลิต',
         ],
@@ -311,10 +316,11 @@ const guides = {
       {
         title: 'อ่านสถานะผลผลิตและการแจ้งเตือน',
         paragraphs: [
-          'สถานะผลผลิตเปรียบเทียบผลผลิตจริงกับเป้าหมายที่เปรียบเทียบได้ สถานะติดตามบอกว่ากะกำลังผลิต พัก เป็นกะที่ผ่านมา หรือนอกเวลาผลิต ผลของกะที่ผ่านมาไม่ใช่การแจ้งเตือนสด',
-          'กฎต่ำกว่าเป้าหมายตรวจผลต่างที่ตั้งไว้ กฎผลผลิตไม่เพิ่มตรวจเวลาที่ผลผลิตที่รายงานไม่เพิ่ม โดยหยุดนับระหว่างพักและนอกกะ ระบบอ้างอิงรายงานที่บันทึก ไม่ใช่การเชื่อมต่อเครื่องจักรโดยตรง',
-          'สีมาจากกฎที่เปิดใช้งาน หากตรงหลายกฎจะแสดงสีที่มีลำดับความสำคัญสูงสุด เมื่อเปิดกะพริบจะกะพริบเฉพาะกรอบ เนื้อหาไม่กะพริบ',
-          'รีเฟรชทันทีใช้ดึงข้อมูลที่บันทึกล่าสุด การรีเฟรชอัตโนมัติใช้วินาทีที่ผู้จัดการตั้งไว้ ข้อมูลที่ผู้อื่นยังไม่บันทึกจะยังไม่ปรากฏบนกระดาน',
+          'ผู้จัดการเปิด Settings → การแจ้งเตือนและรีเฟรช เลือกเปิดแต่ละกฎการบรรลุการผลิต ความเสี่ยงผลิตไม่ทัน ข้อมูลไม่รายงาน หรือกฎเดิม ปรับเกณฑ์แล้วบันทึกการตั้งค่า กฎใหม่เริ่มปิดใช้ กำหนด UPH มาตรฐานและกำหนดเสร็จตามสาย/รุ่น หากว่างใช้เวลาจบช่วงผลิตสุดท้าย',
+          'อัตราบรรลุคำนวณ Actual/Target เฉพาะช่วงผลิตที่จบและรายงานแล้ว ค่าเริ่มต้นเขียว ≥95% เหลือง ≥85% แดง <85% Actual ว่างคือยังไม่รายงาน ค่า 0 ที่บันทึกแล้วใช้ได้ เมื่อเกินผ่อนผัน 10 นาทีเป็นเหลือง อีก 30 นาทีเป็นแดง รายงานแล้วปลดเตือนทันที',
+          'ความเสี่ยงเทียบ UPH ที่ต้องการกับ UPH มาตรฐาน เขียว ≤100% เหลือง ≤110% แดง >110% เริ่มจากรายงานช่วงสุดท้ายที่ครบต่อเนื่อง ไม่ใช้ค่าเฉลี่ยล่าสุด เหตุผลแสดงข้อมูลถึงเวลาใด กำหนดเสร็จและชั่วโมงผลิตไม่รวมพัก ไม่มีมาตรฐานแสดงไม่มีข้อมูล รายงานเกินกำหนดระบุข้อมูลล้าสมัย',
+          'ไฟรวมให้แดงสำคัญกว่าเหลือง เขียวเมื่อทุกกฎที่เปิดมีข้อมูลและปกติ ไม่มีข้อมูลหรือปิดทั้งหมดแสดงเทา เหลืองกะพริบช้า แดงเร็ว เหตุผลสลับทุก 5 วินาที เริ่มจากแดงโดยไม่เปลี่ยนไฟรวม เปิดรายละเอียดสายเพื่ออ่านเหตุผลเต็มและทุกผลประเมิน กฎเดิมน้ำเงิน/ม่วงรวมเป็นเหลือง การกะพริบกรอบยังแยกตั้งค่า',
+          'กำลังผลิต พัก ยังไม่เริ่มและสิ้นสุดแล้วคือสถานะตารางแยกจากไฟเตือน ช่วงพักแสดงเวลาและหยุดตัวจับเวลาผลผลิตไม่เพิ่ม ไม่ต้องกรอก Actual และไม่ปลดความเสี่ยงเดิมอัตโนมัติ รีเฟรชอัตโนมัติอ่านรายงานที่บันทึกตามเวลาที่ตั้ง หรือกดรีเฟรชทันที',
         ],
       },
       {
@@ -341,7 +347,7 @@ const exampleScreens = [
     'line-people',
     'line-configuration',
   ],
-  ['line-schedules'],
+  ['line-schedules', 'schedule-timeline'],
   [],
   [
     'production-entry',
@@ -353,13 +359,15 @@ const exampleScreens = [
   ],
   ['excel-preview'],
   ['production-overview', 'seven-line-board', 'group-trend-dense', 'line-details'],
-  [],
+  ['unified-alerts'],
   [],
 ];
 const exampleLabels = {
   en: {
     note: 'Expand one operation below to see its screenshot. Examples use the English interface and DEMO data; click an image for full size.',
     captions: {
+      'schedule-timeline': 'Daily timeline and per-model target preview',
+      'unified-alerts': 'Enable alert policies and edit thresholds',
       'setup-order': 'Setup order',
       'models-and-lines': 'Line/model dropdown pairing',
       'issue-quick-text': 'English issue quick text in Master data',
@@ -385,6 +393,8 @@ const exampleLabels = {
   zh: {
     note: '依操作名稱展開對應圖片。截圖統一使用 English 介面與 DEMO 資料；Chinese／Thai 的操作位置相同，點圖可看原尺寸。',
     captions: {
+      'schedule-timeline': '全天時間軸與 Model 目標預覽',
+      'unified-alerts': '勾選告警並調整門檻',
       'setup-order': '設定順序',
       'models-and-lines': '下拉配對產線與 Model',
       'issue-quick-text': '基礎資料的英文異常快捷文字',
@@ -409,6 +419,8 @@ const exampleLabels = {
   th: {
     note: 'ขยายหัวข้อการทำงานเพื่อดูภาพ ตัวอย่างใช้เมนู English และข้อมูล DEMO ตำแหน่งปุ่มเหมือน Chinese/Thai คลิกภาพเพื่อดูขนาดเต็ม',
     captions: {
+      'schedule-timeline': 'ไทม์ไลน์ทั้งวันและตัวอย่างเป้าหมายรุ่น',
+      'unified-alerts': 'เปิดกฎเตือนและปรับเกณฑ์',
       'setup-order': 'ลำดับตั้งค่า',
       'models-and-lines': 'จับคู่สาย / Model',
       'issue-quick-text': 'ข้อความปัญหาภาษาอังกฤษในข้อมูลหลัก',
