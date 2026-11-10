@@ -954,7 +954,27 @@ body.navigation-open #sidebar {
   display: flex;
   gap: 8px;
 }
-#line-dashboard #line-cards {
+/* The stable viewport clips only composed page transitions, not information
+ * within a settled page. The snapshot is inert and never joins data updates. */
+#line-dashboard .monitor-card-viewport {
+  position: relative;
+  min-width: 0;
+  order: 3;
+  overflow: hidden;
+}
+#line-dashboard .monitor-card-viewport.is-page-moving {
+  isolation: isolate;
+}
+#line-dashboard .carousel-snapshot {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+#line-dashboard .is-page-moving :is(#line-cards, .carousel-snapshot) {
+  will-change: transform, opacity;
+}
+#line-dashboard :is(#line-cards, .carousel-snapshot) {
   display: flex;
   flex-direction: column;
   --monitor-row-height: 92px;
@@ -966,7 +986,7 @@ body.navigation-open #sidebar {
   order: 3;
   scroll-margin-top: 80px;
 }
-#line-dashboard #line-cards .line-card {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-card {
   --card-tone: var(--neutral);
   --card-tint: var(--surface);
   display: grid;
@@ -990,19 +1010,19 @@ body.navigation-open #sidebar {
   cursor: pointer;
   text-align: left;
 }
-#line-dashboard #line-cards .alarm-red {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .alarm-red {
   --card-tone: var(--critical);
   --card-tint: var(--critical-soft);
 }
-#line-dashboard #line-cards .alarm-yellow {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .alarm-yellow {
   --card-tone: var(--warning-line);
   --card-tint: var(--warning-soft);
 }
-#line-dashboard #line-cards .alarm-green {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .alarm-green {
   --card-tone: var(--success);
   --card-tint: var(--success-soft);
 }
-#line-dashboard #line-cards .line-card-top {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-top {
   grid-area: identity;
   display: flex;
   flex-direction: column;
@@ -1013,7 +1033,7 @@ body.navigation-open #sidebar {
   padding: 0;
   min-width: 0;
 }
-#line-dashboard #line-cards .line-identity-open {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-identity-open {
   border: 0;
   background: none;
   padding: 0;
@@ -1021,12 +1041,12 @@ body.navigation-open #sidebar {
   text-align: left;
   min-width: 0;
 }
-#line-dashboard #line-cards .production-identity {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .production-identity {
   display: grid;
   gap: 2px;
   min-width: 0;
 }
-#line-dashboard #line-cards .production-line {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .production-line {
   color: var(--ink);
   font-size: 21px;
   font-weight: 750;
@@ -1035,7 +1055,7 @@ body.navigation-open #sidebar {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-#line-dashboard #line-cards .production-model {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .production-model {
   display: block;
   overflow: hidden;
   max-height: 32px;
@@ -1044,13 +1064,13 @@ body.navigation-open #sidebar {
   line-height: 1.2;
   white-space: nowrap;
 }
-#line-dashboard #line-cards .production-model-main,
-#line-dashboard #line-cards .production-model-suffix {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .production-model-main,
+#line-dashboard :is(#line-cards, .carousel-snapshot) .production-model-suffix {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-#line-dashboard #line-cards .line-source {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-source {
   display: block;
   align-self: stretch;
   width: auto;
@@ -1062,7 +1082,7 @@ body.navigation-open #sidebar {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-#line-dashboard #line-cards .line-health {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-health {
   grid-area: health;
   display: grid;
   gap: 4px;
@@ -1075,7 +1095,7 @@ body.navigation-open #sidebar {
   align-items: center;
   gap: 8px;
 }
-#line-dashboard #line-cards .signal-lamp {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .signal-lamp {
   display: inline-block;
   width: 18px;
   height: 18px;
@@ -1085,19 +1105,19 @@ body.navigation-open #sidebar {
   border-radius: 50%;
   margin: 0 5px;
 }
-#line-dashboard #line-cards .lamp-red {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .lamp-red {
   background: var(--critical);
   box-shadow: 0 0 0 5px #fce0e7;
 }
-#line-dashboard #line-cards .lamp-yellow {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .lamp-yellow {
   background: var(--warning-line);
   box-shadow: 0 0 0 5px #fff0c8;
 }
-#line-dashboard #line-cards .lamp-green {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .lamp-green {
   background: var(--success);
   box-shadow: 0 0 0 5px #daefdf;
 }
-#line-dashboard #line-cards .lamp-neutral {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .lamp-neutral {
   background: var(--neutral);
   box-shadow: 0 0 0 5px #eaf0f6;
 }
@@ -1169,7 +1189,7 @@ body.navigation-open #sidebar {
   font-size: 13px;
   line-height: 1.3;
 }
-#line-dashboard #line-cards .line-card-values {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values {
   grid-area: metrics;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 0.9fr)) minmax(0, 1.3fr);
@@ -1180,7 +1200,7 @@ body.navigation-open #sidebar {
   border-left: 1px solid var(--ui-border);
   min-width: 0;
 }
-#line-dashboard #line-cards .line-card-values > span {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values > span {
   display: grid;
   min-width: 0;
   width: auto;
@@ -1189,7 +1209,7 @@ body.navigation-open #sidebar {
   padding: 0;
   border: 0;
 }
-#line-dashboard #line-cards .line-card-values small {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values small {
   color: var(--ink);
   font-size: 12px;
   line-height: 1.35;
@@ -1198,7 +1218,7 @@ body.navigation-open #sidebar {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-#line-dashboard #line-cards .line-card-values b {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values b {
   color: var(--ink);
   font-size: 22px;
   font-weight: 700;
@@ -1208,19 +1228,19 @@ body.navigation-open #sidebar {
   overflow: visible;
   max-width: none;
 }
-#line-dashboard #line-cards .line-card-values .negative {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values .negative {
   color: var(--critical);
 }
-#line-dashboard #line-cards .line-card-values .positive {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values .positive {
   color: var(--success);
 }
-#line-dashboard #line-cards .line-card-values .warning-value {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values .warning-value {
   color: var(--warning);
 }
-#line-dashboard #line-cards .line-card-values .unknown {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values .unknown {
   color: var(--neutral);
 }
-#line-dashboard #line-cards .line-trend {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-trend {
   grid-area: trend;
   height: 62px;
   min-width: 0;
@@ -1230,22 +1250,22 @@ body.navigation-open #sidebar {
   align-self: center;
   overflow: hidden;
 }
-#line-dashboard #line-cards .mini-trend {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .mini-trend {
   display: block;
   width: 100%;
   height: 100%;
 }
-#line-dashboard #line-cards .trend-target {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .trend-target {
   stroke: var(--primary-dark);
   opacity: 0.65;
   stroke-width: 1.8;
   stroke-dasharray: 5 4;
 }
-#line-dashboard #line-cards .trend-actual {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .trend-actual {
   stroke: var(--primary);
   stroke-width: 2.2;
 }
-#line-dashboard #line-cards .line-slot {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-slot {
   grid-area: slot;
   display: grid;
   justify-items: start;
@@ -1277,7 +1297,7 @@ body.navigation-open #sidebar {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-#line-dashboard #line-cards .line-card-status {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-status {
   grid-area: reason;
   display: flex;
   flex-direction: column;
@@ -1292,7 +1312,7 @@ body.navigation-open #sidebar {
   font-size: 13px;
   line-height: 1.35;
 }
-#line-dashboard #line-cards [data-card-reason] {
+#line-dashboard :is(#line-cards, .carousel-snapshot) [data-card-reason] {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -1302,7 +1322,7 @@ body.navigation-open #sidebar {
   color: var(--card-tone);
   font-weight: 550;
 }
-#line-dashboard #line-cards .alarm-yellow [data-card-reason] {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .alarm-yellow [data-card-reason] {
   color: var(--warning);
 }
 .card-period-summary {
@@ -1337,14 +1357,14 @@ body.navigation-open #sidebar {
 .reason-step:hover {
   background: var(--soft);
 }
-#line-dashboard #line-cards .card-reason-toggle {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .card-reason-toggle {
   grid-area: expand;
   width: 24px;
   height: 28px;
   padding: 5px;
   align-self: center;
 }
-#line-dashboard #line-cards .card-expanded-details {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .card-expanded-details {
   display: flex;
   flex-wrap: wrap;
   align-items: start;
@@ -1373,14 +1393,14 @@ body.navigation-open #sidebar {
 .expanded-slot-info p {
   margin: 0;
 }
-#line-dashboard #line-cards .line-card.is-expanded {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-card.is-expanded {
   height: auto;
   min-height: 0;
 }
-#line-dashboard #line-cards .is-expanded .card-reason-toggle {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .is-expanded .card-reason-toggle {
   transform: rotate(180deg);
 }
-#line-dashboard #line-cards .blinking-frame {
+#line-dashboard :is(#line-cards, .carousel-snapshot) .blinking-frame {
   animation-name: reference-frame-pulse;
 }
 .positive {
@@ -1407,29 +1427,29 @@ body.navigation-open #sidebar {
 /* Unusually large values borrow width from the flexible chart/reason tracks,
  * preserving every displayed digit and the same readable numeric font. */
 @container monitoring (min-width: 1066px) {
-  #line-dashboard #line-cards .has-wide-metrics {
+  #line-dashboard :is(#line-cards, .carousel-snapshot) .has-wide-metrics {
     grid-template-columns:
       minmax(118px, 0.9fr) minmax(126px, 0.95fr)
       minmax(max-content, 1.4fr) minmax(130px, 1.5fr)
       minmax(136px, 1fr) minmax(150px, 1.4fr) 24px;
   }
-  #line-dashboard #line-cards .has-wide-metrics .line-card-values {
+  #line-dashboard :is(#line-cards, .carousel-snapshot) .has-wide-metrics .line-card-values {
     grid-template-columns: repeat(3, minmax(max-content, 0.9fr)) minmax(max-content, 1.3fr);
   }
 }
 @container monitoring (max-width: 1065px) {
-  #line-dashboard #line-cards {
+  #line-dashboard :is(#line-cards, .carousel-snapshot) {
     --monitor-row-height: 176px;
   }
-  #line-dashboard #line-cards .line-card {
+  #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card {
     grid-template-columns: 130px 136px minmax(0, 1fr) 24px;
     grid-template-areas: 'identity health metrics expand' 'slot reason trend expand';
   }
-  #line-dashboard #line-cards .line-card-values {
+  #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values {
     border: 0;
     padding: 0;
   }
-  #line-dashboard #line-cards .line-card-status {
+  #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-status {
     border: 0;
     padding: 0;
   }
@@ -1445,21 +1465,21 @@ body.navigation-open #sidebar {
   }
 }
 @container monitoring (max-width: 620px) {
-  #line-dashboard #line-cards {
+  #line-dashboard :is(#line-cards, .carousel-snapshot) {
     --monitor-row-height: 350px;
   }
-  #line-dashboard #line-cards .line-card {
+  #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 24px;
     grid-template-areas: 'identity health expand' 'metrics metrics metrics' 'trend trend trend' 'slot slot slot' 'reason reason reason';
   }
-  #line-dashboard #line-cards .line-trend {
+  #line-dashboard :is(#line-cards, .carousel-snapshot) .line-trend {
     height: 44px;
   }
-  #line-dashboard #line-cards .line-slot {
+  #line-dashboard :is(#line-cards, .carousel-snapshot) .line-slot {
     display: flex;
     flex-wrap: wrap;
   }
-  #line-dashboard #line-cards .line-slot .next-slot {
+  #line-dashboard :is(#line-cards, .carousel-snapshot) .line-slot .next-slot {
     width: 100%;
   }
 }
@@ -1583,8 +1603,13 @@ body.fullscreen-board .monitor-summary .button {
   min-height: 28px;
   padding: 3px 8px;
 }
-body.fullscreen-board #line-dashboard #line-cards {
+body.fullscreen-board #line-dashboard .monitor-card-viewport {
   grid-area: cards;
+  min-height: 0;
+  height: 100%;
+  align-self: stretch;
+}
+body.fullscreen-board #line-dashboard :is(#line-cards, .carousel-snapshot) {
   min-height: 0;
   height: 100%;
   margin: 0;
@@ -1592,9 +1617,12 @@ body.fullscreen-board #line-dashboard #line-cards {
   overflow: hidden;
   align-self: stretch;
 }
-body.fullscreen-board #line-dashboard #line-cards .line-card {
-  height: var(--monitor-row-height);
+body.fullscreen-board #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card {
+  /* Capacity uses the unchanged minimum; actual rows share the free space.
+   * This prevents small final pages from reducing the next page's capacity. */
+  height: auto;
   min-height: var(--monitor-row-height);
+  flex: 1 1 0;
 }
 body.fullscreen-board #line-dashboard #board-pagination {
   grid-area: pager;
@@ -1729,5 +1757,11 @@ body.fullscreen-board .page-footer {
   }
   body.fullscreen-board #main {
     padding: 4px 6px;
+  }
+}
+
+@container monitoring (min-width: 1066px) {
+  body.fullscreen-board #line-dashboard :is(#line-cards, .carousel-snapshot) .line-trend {
+    height: clamp(62px, 50%, 104px);
   }
 }

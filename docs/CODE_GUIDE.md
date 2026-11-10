@@ -37,7 +37,7 @@
 
 ## 寫法與驗證
 
-`monitor-paging.js` 共用一般／全螢幕狀態機，`pageSize` 上限為 7；`fitMonitorPage` 以卡片軌道實際高度、CSS `--monitor-row-height` 及間距計算完整列數。全螢幕使用視窗高度 Grid，為控制區、分組、篩選、分頁與選用圖表保留空間，較矮時減少每頁筆數；頁面禁止垂直捲動。桌面維持單列橫向，窄容器才改堆疊。長名稱提供 Tooltip／完整明細；`monitorNumber` 只壓縮極大數值，原精度仍在 title 與明細中，不修改計算。
+`monitor-paging.js` 共用一般／全螢幕狀態機，`pageSize` 上限為 7；`fitMonitorPage` 以卡片軌道實際高度、CSS `--monitor-row-height` 及間距計算完整列數。全螢幕使用視窗高度 Grid，為控制區、分組、篩選、分頁與選用圖表保留空間，較矮時減少每頁筆數；當頁實際卡片以 flex 均分高度，但容量始終使用不變的 CSS 最小列高計算，避免 7／7／1 切頁後產生容量回饋循環。字級保持不變，主曲線最高 104px；頁面禁止垂直捲動。桌面維持單列橫向，窄容器才改堆疊。長名稱提供 Tooltip／完整明細；`monitorNumber` 只壓縮極大數值，原精度仍在 title 與明細中，不修改計算。
 
 `monitoring.pageRotateSeconds` 沿用原保存方式；暫停是瀏覽器內狀態，恢復及手動切頁重新給完整停留。篩選重設頁次，容量變動保留原首條產線所在頁。輪播走 quiet render，只更換卡片清單；Pager、分組、篩選及其他圖表節點保留。ResizeObserver 只在寬度影響曲線時重畫圖；全螢幕卡片軌道高度變動只更新容量，避免因切頁清單高度變動重建整個看板。彈窗、暫時側欄、一般模式展開及卡片焦點暫停輪播。全螢幕箭頭沿用 `line-detail-dialog` 查看完整原因，不能將列增高。
 
@@ -87,3 +87,10 @@
 ## 回報告警時間相容
 
 `monitoring.unified.reporting.redAfterMinutes` 是時段結束後的總分鐘數，須大於等於 `graceMinutes`。計算層只比較 `endAt + redAfterMinutes`，不再把寬限加第二次。`alertConfig` 在讀取／保存時將舊 `redMinutes`（額外等待）轉為 `graceMinutes + redMinutes` 並刪舊鍵；以 own-property 判斷新格式，確保重複正規化不累加。舊欄缺省的額外等待仍為 30，避免更動既有門檻。新設定預設寬限 10／總共 40；升紅燈使用嚴格超過。UI 即時顯示共同起點及舊設定換算提示。`reporting-time.test.mjs` 與實際 API／瀏覽器驗證涵蓋 CD303 的 30／45、舊 30＋45＝75、跨日、45／75 分鐘時段及已提交零產出解除。
+
+
+## 分頁動畫
+
+`monitor-carousel.js` 專責 600ms 的 Transform／Opacity 動畫。穩定的 `monitor-card-viewport` 只含目前資料層與至多一層 inert／aria-hidden 的舊頁快照；快照移除所有 ID，不參與事件、資料更新或輔助閱讀。前後頁各自計算最終列高，以水平交接避免對文字做 scale 或在不同最小高度間插值造成互相擠壓。一般模式另外過渡外框高度，全螢幕外框高度不變。完成、快速再次切頁、切篩選或啟用 reduced motion 時會清除動畫及快照；不新增計時器。
+
+`MonitorPaging.motionRevision` 只在手動或自動換頁時增加，`direction` 在自動回第一頁仍為 forward。`isMonitorPageTurn` 同時比對範圍、容量、語言與顯示模式，只有真正的同範圍頁次切換會播放動畫。刷新不重設頁碼、停留或動畫。新預設間隔集中在 `monitor.js` 的 `defaultPageRotateSeconds`（12），前後端共用；已存自訂值不遷移覆蓋。

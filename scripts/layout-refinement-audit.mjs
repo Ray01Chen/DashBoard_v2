@@ -201,5 +201,7 @@ export async function auditLayoutRefinement({
   record(
     'Reporting turns red after the saved 45-minute threshold and clears after a submitted zero; saved zero-second rotation remains disabled across live refreshes',
   );
+  // Drain any timer-triggered route before disposing its response context.
+  await page.unrouteAll({ behavior: 'wait' });
   await session.close();
 }

@@ -16,6 +16,7 @@ import {
   unitFor,
   stationHasOutput,
 } from './production-models.js';
+export const defaultPageRotateSeconds = 12;
 export const lampColors = ['yellow', 'red', 'blue', 'purple'];
 export function linesForGroup(config, groupId, extra = []) {
   const group = config.monitoring.groups.find((g) => g.id === groupId);
@@ -90,7 +91,7 @@ export function defaultMonitoring(config) {
     uiVersion: 2,
     ruleControlsVersion: 1,
     refreshSeconds: 10,
-    pageRotateSeconds: 20,
+    pageRotateSeconds: defaultPageRotateSeconds,
     alertMode: 'all',
     rules: [
       {

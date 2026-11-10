@@ -1,3 +1,4 @@
+import { replaceMonitorPage, isMonitorPageTurn } from './monitor-carousel.js';
 import { naturalOrder, byProduction } from './list-order.js';
 import {
   monitorNumber,
@@ -9,7 +10,7 @@ import {
 import { productionStatusText, updateAlertDisplay, updateAlertList } from './alert-display.js';
 import { alertConfig } from './alerts.js';
 import { scheduleCatalog } from './production-schedules.js';
-import { buildLineMonitor, boardPage } from './monitor.js';
+import { buildLineMonitor, boardPage, defaultPageRotateSeconds } from './monitor.js';
 import { productionIdentityMarkup } from './production-models.js';
 
 /** Aggregate by stable interval ID, including intervals retired after a report was saved. */
@@ -169,7 +170,7 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
   ctx.paging?.update(
     lines.map((line) => line.key || line.line),
     [date, shift, groupId, ctx.alertFilter],
-    config.monitoring.pageRotateSeconds ?? 20,
+    config.monitoring.pageRotateSeconds ?? defaultPageRotateSeconds,
     ctx.now,
     ctx.boardSize,
   );
@@ -184,9 +185,20 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
     ctx.alertFilter,
     grouped.length,
   ]);
-  const changed = cardViews.get(cards) !== viewKey;
+  const previous = cardViews.get(cards);
+  const view = {
+    key: viewKey,
+    revision: ctx.paging?.motionRevision,
+    page: page.page,
+    signature: ctx.paging?.signature,
+    size: ctx.boardSize,
+    board: ctx.board,
+    metric: ctx.metricScope,
+    language: ctx.language,
+  };
+  const changed = previous?.key !== viewKey;
   if (changed) {
-    cards.innerHTML =
+    const markup =
       cardLines
         .map((line) =>
           monitorCard(
@@ -197,20 +209,37 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
         )
         .join('') ||
       `<div class="empty-cell">${esc(t(grouped.length ? 'noMatchingLines' : 'emptyGroup'))}</div>`;
-    cardViews.set(cards, viewKey);
+    replaceMonitorPage(cards, markup, {
+      animate: isMonitorPageTurn(previous, view),
+      direction: ctx.paging?.direction || 1,
+    });
   }
+  cardViews.set(cards, view);
   for (const [index, line] of cardLines.entries()) {
     updateOverviewMetrics(cards.children[index], line, ctx);
     updateMonitorCard(cards.children[index], line, ctx);
-    if (chart || changed) {
-      const plot = cards.children[index]?.querySelector('.line-trend');
-      if (plot)
-        renderTrend(
-          plot,
-          line.series.map((value) => ({ ...value, slot: value })),
-          ctx,
-          true,
-        );
+  }
+  // Batch text writes before measuring plots; hidden dashboards need no plot work.
+  for (const [index, line] of cardLines.entries()) {
+    const plot = cards.children[index]?.querySelector('.line-trend');
+    const geometry = plot?.querySelector('svg')?.viewBox.baseVal;
+    // Fewer fullscreen rows share more height. Re-measure only plots whose
+    // actual geometry changed; quiet refreshes keep all other plot nodes.
+    if (
+      plot?.clientWidth > 0 &&
+      plot.clientHeight > 0 &&
+      (chart ||
+        changed ||
+        !geometry ||
+        Math.abs(geometry.width - plot.clientWidth) > 1 ||
+        Math.abs(geometry.height - plot.clientHeight) > 1)
+    ) {
+      renderTrend(
+        plot,
+        line.series.map((value) => ({ ...value, slot: value })),
+        ctx,
+        true,
+      );
     }
   }
   updateMonitorPager(page, ctx);
@@ -408,7 +437,7 @@ function alertControls({ draft, t, esc }) {
     '</p><label>' +
     esc(t('pageRotateSeconds')) +
     '<input id="page-rotate-seconds" type="number" min="0" max="3600" step="1" value="' +
-    (m.pageRotateSeconds ?? 20) +
+    (m.pageRotateSeconds ?? defaultPageRotateSeconds) +
     '"></label><p>' +
     esc(t('pageRotateHelp')) +
     '</p><p>' +

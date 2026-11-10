@@ -103,3 +103,22 @@ test('explicit pause survives refresh and filters; resume grants a full interval
   assert.equal(state.tick(209999), false);
   assert.equal(state.tick(210000), true);
 });
+
+test('only page navigation creates motion; forward wrap keeps the next direction', () => {
+  const state = new MonitorPaging();
+  state.update(keys, 'scope', 12, 0);
+  state.select(1, 100);
+  assert.equal(state.motionRevision, 1);
+  assert.equal(state.direction, 1);
+  state.update(keys, 'scope', 12, 200);
+  assert.equal(state.motionRevision, 1);
+  state.select(0, 300);
+  assert.equal(state.direction, -1);
+  state.select(2, 400);
+  state.tick(12400);
+  assert.equal(state.page, 0);
+  assert.equal(state.direction, 1);
+  const revision = state.motionRevision;
+  state.update(keys.slice(0, 7), 'new-filter', 12, 12500);
+  assert.equal(state.motionRevision, revision);
+});

@@ -1,3 +1,4 @@
+import { cancelMonitorPageMotion } from './monitor-carousel.js';
 /** Monitoring presentation only. Alert evaluation and report values stay in
  * their existing modules; temporary expansion/filter state never enters CONFIG. */
 import { localeTags } from './i18n.js';
@@ -203,6 +204,7 @@ export function handleMonitorAction(event, ctx) {
   }
   const toggle = event.target.closest('[data-line-expand]');
   if (!toggle) return false;
+  cancelMonitorPageMotion(card.parentElement);
   event.preventDefault();
   const id = ctx.date + (line.key || line.line),
     open = !expanded.has(id);

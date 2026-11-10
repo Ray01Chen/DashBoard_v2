@@ -144,6 +144,15 @@ export async function auditCompactBoard({
         row = parseFloat(style.getPropertyValue('--monitor-row-height'));
       return {
         capacity: Math.min(7, Math.max(1, Math.floor((list.clientHeight + gap) / (row + gap)))),
+        filled:
+          Math.abs(list.lastElementChild.getBoundingClientRect().bottom - box.bottom) <= 1,
+        uniform: [...list.children].every(
+          (card) =>
+            Math.abs(
+              card.getBoundingClientRect().height -
+                list.firstElementChild.getBoundingClientRect().height,
+            ) <= 1,
+        ),
         vertical: document.documentElement.scrollHeight > innerHeight + 1,
         horizontal: document.documentElement.scrollWidth > innerWidth + 1,
         cards: [...list.querySelectorAll('.line-card')].map((card) => {
@@ -183,6 +192,8 @@ export async function auditCompactBoard({
     );
     if (fullscreen) {
       assert.equal(report.vertical, false, JSON.stringify(report));
+      assert.equal(report.filled, true, JSON.stringify(report));
+      assert.equal(report.uniform, true, JSON.stringify(report));
       assert.ok(
         report.cards.every((card) => card.inside),
         JSON.stringify(report),
@@ -191,7 +202,7 @@ export async function auditCompactBoard({
     return fullscreen ? report.capacity : 7;
   }
   const matrix = [];
-  for (const count of [1, 5, 7, 8, 15, 21]) {
+  for (const count of [1, 3, 5, 7, 8, 15, 21]) {
     const saved = await setLines(count);
     if (count === 7) {
       for (const [index, line] of lastLines.entries()) {
@@ -248,9 +259,24 @@ export async function auditCompactBoard({
           assert.equal(await page.locator('[data-page-next]').isDisabled(), true);
           if (full && width === 1920 && count >= 7) assert.equal(capacity, 7);
           matrix.push({ count, language, full, width, height, capacity });
+          if (
+            screenshots &&
+            full &&
+            [1, 3, 5].includes(count) &&
+            language === 'zh' &&
+            width === 1920
+          ) {
+            while (!(await page.locator('[data-page-prev]').isDisabled()))
+              await page.locator('[data-page-prev]').click();
+            await page.waitForFunction(() => !document.querySelector('.is-page-moving'));
+            await page.screenshot({
+              path: path.join(root, `docs/images/fullscreen-adaptive-${count}.png`),
+            });
+          }
           if (screenshots && full && count === 7 && language === 'zh') {
             while (!(await page.locator('[data-page-prev]').isDisabled()))
               await page.locator('[data-page-prev]').click();
+            await page.waitForFunction(() => !document.querySelector('.is-page-moving'));
             await page.mouse.move(0, 0);
             await page.screenshot({
               path: path.join(root, `docs/images/fullscreen-${width}.png`),
@@ -262,7 +288,7 @@ export async function auditCompactBoard({
     }
   }
   record(
-    '108 real-browser cases cover 1/5/7/8/15/21 lines, three languages, ordinary/fullscreen and 1920×1080/1600×900/1366×768; adaptive pages preserve every line in order with no fullscreen scrolling',
+    '126 real-browser cases cover 1/3/5/7/8/15/21 lines, three languages, ordinary/fullscreen and 1920×1080/1600×900/1366×768; adaptive pages preserve every line in order with no fullscreen scrolling',
   );
   // Test all saved themes using the real options, with both display modes.
   await page.setViewportSize({ width: 1920, height: 1080 });
@@ -384,6 +410,114 @@ export async function auditCompactBoard({
   record(
     'All five themes retain compact cards; auto/manual paging, explicit pause/resume, full manual dwell, stable dashboard nodes, filters, live refresh, optional charts and fullscreen alert details work without page scrolling',
   );
+  await page.locator('.board-display-options summary').click();
+  await page.locator('#board-show-trend').uncheck();
+  await page.locator('#board-show-share').uncheck();
+  await page.locator('.board-display-options summary').click();
+  await page.locator('[data-group=""]').click();
+  await page.waitForFunction(() => !document.querySelector('.is-page-moving'));
+  const viewport = page.locator('#monitor-card-viewport');
+  let apiCalls = 0;
+  const countRequests = (request) => {
+    if (new URL(request.url()).pathname.startsWith('/api/')) apiCalls++;
+  };
+  page.on('request', countRequests);
+  await page.locator('[data-page-next]').click();
+  assert.equal(await viewport.getAttribute('data-page-direction'), 'next');
+  assert.equal(await viewport.locator('.carousel-snapshot').count(), 1);
+  assert.equal(
+    await viewport
+      .locator('.carousel-snapshot')
+      .evaluate((node) => node.inert && node.getAttribute('aria-hidden') === 'true'),
+    true,
+  );
+  const motion = await page.locator('#line-cards').evaluate((node) => {
+    const animation = node.getAnimations()[0];
+    window.__pageMotion = animation;
+    return {
+      duration: animation.effect.getTiming().duration,
+      frames: animation.effect.getKeyframes().map((frame) => frame.transform),
+    };
+  });
+  assert.equal(motion.duration, 600);
+  assert.match(motion.frames[0], /100%/);
+  await page.waitForTimeout(180);
+  assert.equal(
+    await page.locator('#line-cards').evaluate((node) => {
+      const opacity = +getComputedStyle(node).opacity;
+      return opacity > 0 && opacity < 1;
+    }),
+    true,
+  );
+  assert.equal(apiCalls, 0, 'A page flip never requests production data');
+  // A real refresh during a slide must update values without replacing/replaying it.
+  await page.locator('#refresh-now').click();
+  await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
+  assert.equal(
+    await page
+      .locator('#line-cards')
+      .evaluate(
+        (node) =>
+          !node.getAnimations().length || node.getAnimations()[0] === window.__pageMotion,
+      ),
+    true,
+  );
+  await page.waitForFunction(() => !document.querySelector('.is-page-moving'));
+  assert.equal(await viewport.locator('.carousel-snapshot').count(), 0);
+  await page.locator('[data-page-prev]').click();
+  assert.equal(await viewport.getAttribute('data-page-direction'), 'previous');
+  await page.waitForFunction(() => !document.querySelector('.is-page-moving'));
+  await page.locator('[data-page-next]').click();
+  await page.locator('[data-page-next]').click();
+  assert.equal(
+    await viewport.locator('.carousel-snapshot').count(),
+    1,
+    'Rapid input cancels and replaces one motion layer',
+  );
+  await page.waitForFunction(() => !document.querySelector('.is-page-moving'));
+  // This is the final page: the next automatic wrap is still a leftward slide.
+  await viewport.evaluate((node) => {
+    window.__wrapDirections = [];
+    window.__wrapObserver = new MutationObserver(() => {
+      if (node.dataset.pageDirection) window.__wrapDirections.push(node.dataset.pageDirection);
+    });
+    window.__wrapObserver.observe(node, {
+      attributes: true,
+      attributeFilter: ['data-page-direction'],
+    });
+  });
+  await page.locator('[data-board-rotation]').click();
+  await page.clock.runFor(6000);
+  assert.equal(await page.evaluate(() => window.__wrapDirections.includes('next')), true);
+  await page.evaluate(() => window.__wrapObserver.disconnect());
+  assert.deepEqual(await displayed(), lastLines.slice(0, 7));
+  await page.locator('[data-board-rotation]').click();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.waitForFunction(() => !document.querySelector('.is-page-moving'));
+  await page.locator('[data-page-next]').click();
+  assert.equal(await viewport.locator('.carousel-snapshot').count(), 0);
+  assert.equal(
+    await page.locator('#line-cards').evaluate((node) => node.getAnimations().length),
+    0,
+  );
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.locator('[data-page-prev]').click();
+  await page.locator('[data-group="compact-second"]').click();
+  assert.equal(
+    await viewport.locator('.carousel-snapshot').count(),
+    0,
+    'Filtering cancels obsolete page motion',
+  );
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight),
+    true,
+  );
+  page.off('request', countRequests);
+  record(
+    '600ms directional slide/fade uses one inert snapshot, cleans up after rapid input, wraps forward, honors reduced motion, never fetches on page flips, and does not replay during data refresh',
+  );
+  // Drain any timer-triggered route before disposing its response context.
+  await page.unrouteAll({ behavior: 'wait' });
   await session.close();
   return matrix;
 }

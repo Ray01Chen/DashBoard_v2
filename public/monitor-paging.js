@@ -10,6 +10,8 @@ export function fitMonitorPage(height, rowHeight, gap = 6) {
 export class MonitorPaging {
   constructor() {
     this.page = 0;
+    this.motionRevision = 0;
+    this.direction = 1;
     this.size = pageSize;
     this.paused = false;
     this.pages = 1;
@@ -41,7 +43,12 @@ export class MonitorPaging {
     return this.page;
   }
   select(page, now) {
-    this.page = Math.max(0, Math.min(this.pages - 1, page));
+    const next = Math.max(0, Math.min(this.pages - 1, page));
+    if (next !== this.page) {
+      this.direction = next > this.page ? 1 : -1;
+      this.motionRevision++;
+      this.page = next;
+    }
     this.nextAt = now + (this.interval || 0) * 1000;
     return this.page;
   }
@@ -57,6 +64,8 @@ export class MonitorPaging {
     }
     if (!this.interval || this.pages < 2 || now < this.nextAt) return false;
     this.page = (this.page + 1) % this.pages;
+    this.direction = 1; // Wrapping from the last page is still a forward slide.
+    this.motionRevision++;
     this.nextAt = now + this.interval * 1000;
     return true;
   }

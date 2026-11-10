@@ -77,6 +77,7 @@ test('production API and SQLite persistence', async (t) => {
     await t.test('workbook metadata and static content', async () => {
       const config = await (await client(base + '/api/config')).json();
       assert.equal(config.rows.length, 77);
+      assert.equal(config.monitoring.pageRotateSeconds, 12);
       assert.equal(new Set(config.rows.map((r) => r.line)).size, 12);
       assert.equal(config.slots.length, 5);
       assert.equal(

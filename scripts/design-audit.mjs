@@ -467,5 +467,6 @@ export async function auditDesign({
     'All five themes and three languages retain shared readable surfaces across overview, entry, schedules, targets, alerts and guide at desktop and phone widths; primary and secondary text contrast meets 4.5:1',
   );
   await auditLayoutStress({ page, context, baseURL, readConfig, record });
+  await page.unrouteAll({ behavior: 'wait' });
   await design.close();
 }

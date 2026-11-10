@@ -15,7 +15,12 @@ import path from 'node:path';
 import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import { translate, locales } from './public/i18n.js';
 import { createAuth } from './auth.mjs';
-import { defaultMonitoring, lampColors, migrateRuleControls } from './public/monitor.js';
+import {
+  defaultMonitoring,
+  defaultPageRotateSeconds,
+  lampColors,
+  migrateRuleControls,
+} from './public/monitor.js';
 import {
   upgradeProductionDefaults,
   validateProductionDefaults,
@@ -588,7 +593,7 @@ function validateConfig(data) {
   Object.assign(next.monitoring, {
     uiVersion: 2,
     refreshSeconds: monitoring.refreshSeconds,
-    pageRotateSeconds: monitoring.pageRotateSeconds ?? 20,
+    pageRotateSeconds: monitoring.pageRotateSeconds ?? defaultPageRotateSeconds,
     alertMode: monitoring.alertMode,
   });
   migrateRuleControls(next.monitoring);
@@ -856,6 +861,7 @@ const files = {
       'line-details',
       'production-overview',
       'seven-line-board',
+      'fullscreen-adaptive-5',
       'line-schedules',
       'line-selection',
       'schedule-timeline',
@@ -874,6 +880,7 @@ const files = {
   '/monitor.js': ['monitor.js', 'text/javascript'],
   '/list-order.js': ['list-order.js', 'text/javascript'],
   '/line-picker.js': ['line-picker.js', 'text/javascript'],
+  '/monitor-carousel.js': ['monitor-carousel.js', 'text/javascript'],
   '/monitor-paging.js': ['monitor-paging.js', 'text/javascript'],
   '/monitor-ui.js': ['monitor-ui.js', 'text/javascript'],
   '/design-system.css': ['design-system.css', 'text/css'],

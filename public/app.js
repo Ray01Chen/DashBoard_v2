@@ -1,3 +1,4 @@
+import { cancelMonitorPageMotion } from './monitor-carousel.js';
 import { MonitorPaging, pageSize, fitMonitorPage } from './monitor-paging.js';
 import { naturalOrder, byProduction } from './list-order.js';
 import { linePickerMarkup, linePickerGroups, updateLinePicker } from './line-picker.js';
@@ -2354,6 +2355,7 @@ $('#line-cards').onclick = (e) => {
   const button = e.target.closest('[data-monitor-line]');
   if (button) {
     if (document.body.classList.contains('fullscreen-board')) {
+      cancelMonitorPageMotion($('#line-cards'));
       showLineDetail($('#line-detail-dialog'), {
         ...monitorContext(),
         line: button.dataset.monitorLine,
@@ -2574,6 +2576,7 @@ const trendObserver = new ResizeObserver((entries) => {
 trendObserver.observe($('#group-trend'));
 trendObserver.observe($('#line-cards'));
 window.addEventListener('resize', () => {
+  cancelMonitorPageMotion($('#line-cards'));
   closeNavigation();
   if (
     state.config &&
@@ -2598,6 +2601,7 @@ $('#board-pagination').onclick = (e) => {
 };
 
 async function leaveFullscreen() {
+  cancelMonitorPageMotion($('#line-cards'));
   document.body.classList.remove('fullscreen-board');
   closeNavigation();
   hideTrendTooltip();
@@ -2609,6 +2613,8 @@ async function leaveFullscreen() {
   }
 }
 $('#enter-fullscreen').onclick = () => {
+  // Release any ordinary-mode height animation before measuring full capacity.
+  cancelMonitorPageMotion($('#line-cards'));
   document.body.classList.add('fullscreen-board');
   closeNavigation();
   renderChart();
@@ -2621,6 +2627,7 @@ $('#exit-fullscreen').onclick = leaveFullscreen;
 $('#back-overview').onclick = () => setView('overview');
 document.addEventListener('fullscreenchange', () => {
   if (!document.fullscreenElement) {
+    cancelMonitorPageMotion($('#line-cards'));
     document.body.classList.remove('fullscreen-board');
     closeNavigation();
     if (state.config) renderChart();

@@ -89,7 +89,7 @@ const guides = {
           'The left sidebar groups Production, Review & analysis, and Settings & help. Collapse it to icons; desktop collapse is remembered. Small screens and fullscreen use a temporary drawer. Both views order scope filters, group totals, alert filters, line cards and charts consistently. Desktop cards keep identity, signal/status, four metrics, trend, current/next slot and a short alert reason on one horizontal row. Long models use ellipsis and a full tooltip; open details for the complete identity. Large values use localized compact notation with exact values on hover and in details. Ordinary mode keeps inline expansion; the fullscreen arrow opens the existing details dialog without making a card taller.',
           'Overview defaults to Whole day. Use Interval / Daily beside the title or in the fullscreen header; your choice persists after refresh. Interval shows the active target, actual and gap. Daily shows the complete two-shift target, reported actual and gap, regardless of the shift filter. Missing values stay —. Large per-line curves adapt to their containers. Alerts and output share retain their cumulative rules. Whole day / Day / Night is available above both Overview and Production details. Each line/model uses its selected output station; group totals never double-count every station.',
           'Normal line clicks open details. Full screen clicks open a station-detail dialog; X or Esc returns to the same group/page. Its header follows the active colour theme and keeps line, model, owner and the six interval/daily/cumulative metrics together. Each station labels Day and Night personnel separately.',
-          'The group trend scrolls horizontally for dense schedules; hover or Tab for values. Display options toggle trend/share separately. Ordinary pages show at most seven units. Fullscreen fits up to seven complete readable rows in the available height and reduces page size on shorter screens or with optional charts; the page never scrolls vertically. Previous/next and page counts retain line order. Alerts & refresh sets rotation seconds (20 by default; 0 disables). Pause pages / Resume pages controls rotation locally. Manual navigation and resume restart a full interval. Dialogs, drawers, expanded cards, focus inside a card and hidden tabs pause rotation temporarily. Filters recalculate pages; switching pages retains dashboard/chart/filter nodes.',
+          'The group trend scrolls horizontally for dense schedules; hover or Tab for values. Display options toggle trend/share separately. Ordinary pages show at most seven units. Fullscreen fits up to seven complete readable rows in the available height and reduces page size on shorter screens or with optional charts; the page never scrolls vertically. Current rows evenly share the remaining height; fonts stay unchanged and trends have a height cap. Previous/next and page counts retain line order. Alerts & refresh sets rotation seconds (12 by default; 0 disables). Pause pages / Resume pages controls rotation locally. Manual navigation and resume restart a full interval. Dialogs, drawers, expanded cards, focus inside a card and hidden tabs pause rotation temporarily. Filters recalculate pages; switching pages retains dashboard/chart/filter nodes. Navigation uses a 600ms slide/fade (next left, previous right). Reduced motion switches directly; data refresh never replays navigation. Saved custom intervals are retained.',
         ],
       },
       {
@@ -203,7 +203,7 @@ const guides = {
           '左側導覽依生產、查詢與分析、設定與說明分組，可收合成圖示並保留桌面選擇；手機及全螢幕使用暫時側欄。一般與全螢幕都依篩選、分組總覽、告警、產線卡片及圖表排列。桌面卡片以單列橫向呈現機種、燈號與狀態、四項數值、曲線、目前／下一時段及告警短摘要。長機種省略顯示，停留或開明細可看完整名稱；大型數字使用本地化短數值，停留及明細保留精確值。一般模式可展開卡片；全螢幕按箭頭開明細視窗，卡片不增高。',
           '總覽預設「全天」。標題旁或全螢幕頂部可切「時段／每日」，重新整理保留選擇；時段顯示目前目標、實績、差額，每日顯示雙班完整目標、已填實績及差額，不受早晚班篩選影響。各產線大曲線隨容器調整；缺值顯示 —，警示與占比維持累計規則。生產總覽與生產細節上方都可切換全天／早班／晚班。每組產線／Model 仍只使用所選來源站，避免重複計產量。',
           '全螢幕明細頂部沿用目前主題配色，集中產線、機種、負責人及六項時段／全日／累計數字；各站人員分早班、晚班標示。X 或 Esc 關閉後保留分組與頁次。',
-          '密集時段可在分組趨勢圖內左右捲動，停留或 Tab 查看數值；顯示選項分別控制趨勢與占比。一般每頁最多七組，全螢幕依實際可用高度顯示最多七組，螢幕較矮或開啟額外圖表時自動減少，整頁不需垂直捲動。上一頁／下一頁及頁數保留產線排序。管理員在「警示與刷新」設自動切換秒數（預設 20，0 停用）並儲存；使用「暫停換頁／恢復換頁」控制目前瀏覽器的輪播。手動換頁及恢復後重新等待完整間隔；彈窗、側欄、一般模式展開卡片、卡片內焦點或背景分頁會暫停。篩選後重算頁數，換頁不重建分組、篩選及其他圖表。',
+          '密集時段可在分組趨勢圖內左右捲動，停留或 Tab 查看數值；顯示選項分別控制趨勢與占比。一般每頁最多七組，全螢幕依實際可用高度顯示最多七組，螢幕較矮或開啟額外圖表時自動減少，當頁卡片均分剩餘高度，字體維持不變、曲線有上限，整頁不需垂直捲動。上一頁／下一頁及頁數保留產線排序。管理員在「警示與刷新」設自動切換秒數（預設 12，0 停用）並儲存；使用「暫停換頁／恢復換頁」控制目前瀏覽器的輪播。手動換頁及恢復後重新等待完整間隔；彈窗、側欄、一般模式展開卡片、卡片內焦點或背景分頁會暫停。篩選後重算頁數，換頁不重建分組、篩選及其他圖表；向左／向右滑動淡入淡出約 600ms，減少動態效果時直接切換，刷新不重播動畫。已存自訂間隔會保留。',
         ],
       },
       {
@@ -318,7 +318,7 @@ const guides = {
           'แถบซ้ายจัดกลุ่มการผลิต การวิเคราะห์ การตั้งค่าและคู่มือ ย่อเป็นไอคอนและจดจำสถานะบนเดสก์ท็อป จอเล็กและเต็มจอใช้แถบชั่วคราว ทั้งสองโหมดเรียงตัวกรอง สรุปกลุ่ม แจ้งเตือน การ์ดและกราฟ การ์ดเดสก์ท็อปแถวเดียวแสดงรุ่น สัญญาณ/สถานะ ตัวเลขสี่ค่า กราฟ ช่วงปัจจุบัน/ถัดไปและเหตุผลย่อ รุ่นยาวย่อด้วยจุด ชี้เมาส์หรือเปิดรายละเอียดเพื่ออ่านครบ ตัวเลขใหญ่ใช้รูปย่อและดูค่าเต็มได้ ปกติขยายในหน้า เต็มจอเปิดหน้าต่างรายละเอียดโดยไม่เพิ่มความสูงการ์ด',
           'ภาพรวมเริ่มต้นที่ทั้งวัน สลับช่วงเวลา/รายวันข้างชื่อหน้าหรือด้านบนเต็มจอ จำตัวเลือกหลังรีเฟรช ช่วงเวลาแสดงเป้า ผลจริงและผลต่างปัจจุบัน รายวันแสดงเป้าเต็มวัน ผลจริงและผลต่างรวมสองกะโดยไม่ขึ้นกับตัวกรองกะ กราฟแต่ละสายขยายตามพื้นที่ ไม่มีข้อมูลแสดง — การแจ้งเตือนและสัดส่วนยังใช้ข้อมูลสะสม ทั้งหน้าภาพรวมและรายละเอียดเลือกทั้งวัน/กะเช้า/กะกลางคืนได้ แต่ละสาย/Model ยังใช้สถานีแหล่งผลผลิตเดียวเพื่อไม่ให้นับซ้ำ',
           'หน้าต่างเต็มหน้าจอใช้สีตามธีมและรวมสาย Model ผู้รับผิดชอบ และหกค่าของช่วงปัจจุบัน รายวัน และสะสมไว้ด้านบน การ์ดแต่ละสถานีแยกบุคลากรกะเช้าและกะกลางคืน X หรือ Esc กลับกลุ่ม/หน้าเดิม',
-          'กราฟรวมเลื่อนแนวนอนได้ ชี้เมาส์หรือ Tab ดูค่า เปิดแนวโน้มและสัดส่วนแยกกัน ปกติไม่เกินเจ็ดคู่ต่อหน้า เต็มจอคำนวณจากความสูงจริง สูงพอแสดงเจ็ด จอเตี้ยหรือเปิดกราฟเพิ่มจะลดจำนวนโดยไม่เลื่อนทั้งหน้า ปุ่มก่อน/ถัดไปและเลขหน้ารักษาลำดับ ตั้งวินาทีเปลี่ยนหน้าในแจ้งเตือนและรีเฟรช ค่าเริ่มต้น 20, 0 ปิด ปุ่มหยุด/เปลี่ยนหน้าต่อใช้เฉพาะเบราว์เซอร์นี้ เปลี่ยนหน้าด้วยมือหรือทำต่อเริ่มรอเต็มช่วงใหม่ หยุดชั่วคราวเมื่อเปิดหน้าต่าง แถบข้าง ขยายการ์ด โฟกัสในการ์ดหรือซ่อนแท็บ ตัวกรองคำนวณหน้าใหม่ เปลี่ยนหน้าไม่สร้างกระดาน กราฟหรือตัวกรองใหม่',
+          'กราฟรวมเลื่อนแนวนอนได้ ชี้เมาส์หรือ Tab ดูค่า เปิดแนวโน้มและสัดส่วนแยกกัน ปกติไม่เกินเจ็ดคู่ต่อหน้า เต็มจอคำนวณจากความสูงจริง สูงพอแสดงเจ็ด จอเตี้ยหรือเปิดกราฟเพิ่มจะลดจำนวนโดยไม่เลื่อนทั้งหน้า การ์ดแบ่งความสูงที่เหลือเท่ากัน ไม่เพิ่มขนาดตัวอักษรและจำกัดความสูงกราฟ ปุ่มก่อน/ถัดไปและเลขหน้ารักษาลำดับ ตั้งวินาทีเปลี่ยนหน้าในแจ้งเตือนและรีเฟรช ค่าเริ่มต้น 12, 0 ปิด ปุ่มหยุด/เปลี่ยนหน้าต่อใช้เฉพาะเบราว์เซอร์นี้ เปลี่ยนหน้าด้วยมือหรือทำต่อเริ่มรอเต็มช่วงใหม่ หยุดชั่วคราวเมื่อเปิดหน้าต่าง แถบข้าง ขยายการ์ด โฟกัสในการ์ดหรือซ่อนแท็บ ตัวกรองคำนวณหน้าใหม่ เปลี่ยนหน้าไม่สร้างกระดาน กราฟหรือตัวกรองใหม่ เลื่อนพร้อมจาง 600ms ถัดไปเลื่อนซ้าย ย้อนกลับเลื่อนขวา ลดการเคลื่อนไหวจะเปลี่ยนทันที รีเฟรชไม่เล่นซ้ำ ค่าช่วงเวลาที่บันทึกแล้วคงเดิม',
         ],
       },
       {
@@ -367,7 +367,13 @@ const exampleScreens = [
     'no-output-station',
   ],
   ['excel-preview'],
-  ['production-overview', 'seven-line-board', 'group-trend-dense', 'line-details'],
+  [
+    'production-overview',
+    'seven-line-board',
+    'fullscreen-adaptive-5',
+    'group-trend-dense',
+    'line-details',
+  ],
   ['unified-alerts'],
   [],
 ];
@@ -396,6 +402,8 @@ const exampleLabels = {
       'line-details':
         'Theme-aware fullscreen details with owner, totals and day/night personnel',
       'production-overview': 'Production overview with DELTA branding and theme controls',
+      'fullscreen-adaptive-5':
+        'Five fullscreen rows share the remaining height without enlarging text',
       'seven-line-board': 'Compact fullscreen cards, adaptive paging and Interval/Daily switch',
       'group-trend-dense': 'Dense whole-day trend: scroll horizontally to view every interval',
     },
@@ -423,6 +431,7 @@ const exampleLabels = {
       'excel-preview': 'Excel 匯入預覽',
       'line-details': '跟隨主題的全螢幕明細與各站早晚班人員',
       'production-overview': '台達品牌與主題配色的生產總覽',
+      'fullscreen-adaptive-5': '五條產線均分全螢幕剩餘高度，字級維持不變',
       'seven-line-board': '緊湊全螢幕卡片、自動分頁與時段／每日切換',
       'group-trend-dense': '全天多時段趨勢：左右捲動查看所有時段',
     },
@@ -450,6 +459,7 @@ const exampleLabels = {
       'excel-preview': 'ตัวอย่างนำเข้า Excel',
       'line-details': 'รายละเอียดเต็มจอตามธีม พร้อมยอดรวมและบุคลากรแยกกะ',
       'production-overview': 'ภาพรวมการผลิตพร้อมสัญลักษณ์ DELTA และธีมสี',
+      'fullscreen-adaptive-5': 'ห้าสายแบ่งความสูงเต็มจอโดยไม่ขยายตัวอักษร',
       'seven-line-board': 'การ์ดเต็มจอแบ่งหน้า พร้อมสลับช่วงเวลา/รายวัน',
       'group-trend-dense': 'กราฟทั้งวันหลายช่วงเวลา เลื่อนแนวนอนเพื่อดูทุกช่วง',
     },
