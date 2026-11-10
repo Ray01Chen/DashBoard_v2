@@ -3,6 +3,14 @@ export const locales = ['zh', 'en', 'th'];
 export const localeTags = { zh: 'zh-TW', en: 'en-GB', th: 'th-TH-u-ca-gregory' };
 export const messages = {
   zh: {
+    boardDisplayStorageFailed: '無法保存顯示偏好；目前畫面仍會套用。',
+    boardDisplaySections: '顯示區塊',
+    boardShowAlerts: '告警摘要與狀態篩選',
+    boardShowFilters: '篩選列（日期、班別、樓層與顯示模式）',
+    boardShowHeader: '頁面標題與全域控制',
+    boardShowCarousel: '輪播控制',
+    boardDisplaySaved: '此瀏覽器自動保存，僅套用全螢幕。',
+    boardDisplayReset: '還原顯示預設',
     pausePageRotation: '暫停換頁',
     resumePageRotation: '恢復換頁',
     alertHelp_reporting:
@@ -546,6 +554,15 @@ export const messages = {
     selectedPeopleCount: '選擇人員 · 已選 {count} 位',
   },
   en: {
+    boardDisplayStorageFailed:
+      'Display preferences could not be saved; they still apply to this view.',
+    boardDisplaySections: 'Visible sections',
+    boardShowAlerts: 'Alert summary and status filters',
+    boardShowFilters: 'Filters: date, shift, floor and display mode',
+    boardShowHeader: 'Page title and global controls',
+    boardShowCarousel: 'Carousel controls',
+    boardDisplaySaved: 'Saved in this browser; applies to fullscreen only.',
+    boardDisplayReset: 'Restore display defaults',
     pausePageRotation: 'Pause pages',
     resumePageRotation: 'Resume pages',
     reportingLegacyHint:
@@ -1136,6 +1153,14 @@ export const messages = {
     selectedPeopleCount: 'Select people · {count} selected',
   },
   th: {
+    boardDisplayStorageFailed: 'บันทึกการแสดงผลไม่ได้ แต่ยังใช้กับหน้านี้ได้',
+    boardDisplaySections: 'ส่วนที่แสดง',
+    boardShowAlerts: 'สรุปแจ้งเตือนและตัวกรองสถานะ',
+    boardShowFilters: 'ตัวกรองวันที่ กะ ชั้น และโหมดแสดงผล',
+    boardShowHeader: 'ชื่อหน้าและส่วนควบคุมหลัก',
+    boardShowCarousel: 'ตัวควบคุมเปลี่ยนหน้า',
+    boardDisplaySaved: 'บันทึกในเบราว์เซอร์นี้ ใช้เฉพาะเต็มหน้าจอ',
+    boardDisplayReset: 'คืนค่าแสดงผลเริ่มต้น',
     pausePageRotation: 'หยุดเปลี่ยนหน้า',
     resumePageRotation: 'เปลี่ยนหน้าต่อ',
     reportingLegacyHint:

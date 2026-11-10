@@ -19,11 +19,11 @@ const filterLabels = new WeakMap();
 let rendered = new Map();
 export const severityFilters = ['all', 'red', 'yellow', 'green', 'noData', 'disabled'];
 
-/** Compact only unusually large values; exact values remain in the native
- * title and details. This keeps one row readable without clipping digits. */
-export function monitorNumber(value, ctx) {
+/** Localized compact candidate; the card fitter first tries the exact value.
+ * Full precision remains in native titles and production details. */
+export function monitorNumber(value, ctx, { forceCompact = false } = {}) {
   const exact = ctx.number(value);
-  if (!Number.isFinite(value) || exact.length <= 5) return exact;
+  if (!Number.isFinite(value) || (!forceCompact && exact.length <= 5)) return exact;
   const locale = localeTags[ctx.language] || localeTags.en;
   const compact = new Intl.NumberFormat(locale, {
     notation: 'compact',
@@ -35,6 +35,61 @@ export function monitorNumber(value, ctx) {
         notation: 'scientific',
         maximumFractionDigits: 1,
       }).format(value);
+}
+// Keep exact values separate from the fitted text. Geometry is measured in
+// batches and cached so quiet polling does not repeatedly reformat stable data.
+const numericViews = new WeakMap();
+export function setMonitorNumber(node, value, ctx, prefix = '', suffix = '') {
+  const valid = Number.isFinite(value);
+  const full = valid ? prefix + ctx.number(value) + suffix : ctx.number(value);
+  const previous = numericViews.get(node);
+  if (previous?.full === full && previous.value === value && previous.language === ctx.language)
+    return;
+  node.title = full;
+  node.textContent = full;
+  numericViews.set(node, { value, prefix, suffix, valid, full, language: ctx.language });
+}
+export function fitMonitorNumbers(cards, ctx) {
+  const entries = [...cards.querySelectorAll('.line-card-values b')]
+    .map((node) => {
+      const view = numericViews.get(node),
+        width = node.clientWidth;
+      if (!view || width <= 0) return null;
+      const style = getComputedStyle(node);
+      const key = `${view.full}|${width}|${style.font}|${style.fontSize}|${style.fontFamily}|${style.fontWeight}|${style.fontVariantNumeric}`;
+      if (view.fittedKey === key) return null;
+      return { node, view, width, key };
+    })
+    .filter(Boolean);
+  entries.forEach(({ node, view }) => {
+    if (node.textContent !== view.full) node.textContent = view.full;
+  });
+  const textWidth = (node) => {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    return range.getBoundingClientRect().width;
+  };
+  // Read all ranges before writing the next candidates: at most four layout
+  // passes, rather than forcing a reflow separately for each numeric field.
+  for (let pass = 0; pass < 4; pass++) {
+    const overflowing = entries.filter(
+      (item) => item.view.valid && textWidth(item.node) > item.width - 1,
+    );
+    if (!overflowing.length) break;
+    for (const { node, view } of overflowing) {
+      const number =
+        pass === 0
+          ? monitorNumber(view.value, ctx, { forceCompact: true })
+          : new Intl.NumberFormat(localeTags[ctx.language] || localeTags.en, {
+              notation: pass === 1 ? 'compact' : 'scientific',
+              maximumFractionDigits: pass === 2 ? 1 : 0,
+            }).format(view.value);
+      node.textContent = view.prefix + number + view.suffix;
+    }
+  }
+  entries.forEach(({ view, key }) => {
+    view.fittedKey = key;
+  });
 }
 export function achievement(actual, target) {
   return actual == null || !(target > 0) ? null : (actual / target) * 100;
@@ -80,7 +135,8 @@ function achievementView(line, ctx) {
   );
   const policy = alertConfig(ctx.config.monitoring).performance;
   return {
-    text: value == null ? '—' : monitorNumber(Number(value.toFixed(1)), ctx) + '%',
+    value: value == null ? null : Number(value.toFixed(1)),
+    text: value == null ? '—' : ctx.number(Number(value.toFixed(1))) + '%',
     full: value == null ? '—' : ctx.number(Number(value.toFixed(1))) + '%',
     tone:
       value == null
@@ -92,16 +148,6 @@ function achievementView(line, ctx) {
             : 'negative',
   };
 }
-function wideMetrics(line, ctx) {
-  const fields =
-    ctx.metricScope === 'day'
-      ? ['dailyTarget', 'dailyActual', 'dailyGap']
-      : ['currentTarget', 'currentActual', 'currentGap'];
-  return (
-    fields.some((key) => ctx.number(line[key]).length > 4) ||
-    achievementView(line, ctx).text.length > 6
-  );
-}
 export function rememberMonitorLines(lines) {
   rendered = new Map(lines.map((line) => [line.key || line.line, line]));
 }
@@ -112,7 +158,7 @@ export function monitorCard(line, ctx, metrics) {
     reason = reasonView(line, ctx),
     rate = achievementView(line, ctx);
   const open = !ctx.board && expanded.has(ctx.date + key);
-  return `<article class="line-card alarm-${line.status}${line.blink ? ' blinking-frame' : ''}${open ? ' is-expanded' : ''}${wideMetrics(line, ctx) ? ' has-wide-metrics' : ''}" data-monitor-line="${esc(key)}" role="group" aria-label="${esc(productionLabel(line))}">
+  return `<article class="line-card alarm-${line.status}${line.blink ? ' blinking-frame' : ''}${open ? ' is-expanded' : ''}" data-monitor-line="${esc(key)}" role="group" aria-label="${esc(productionLabel(line))}">
     <span class="line-card-top"><button type="button" class="line-identity-open" title="${esc(t('details'))}">${productionIdentityMarkup(line, esc)}</button><span class="line-source">${esc(t('sourceLabel', { name: line.sourceLabel === 'all' ? t('allStations') : line.sourceLabel || t('noSource') }))}</span></span>
     <span class="line-health"><span class="line-severity"><span class="signal-lamp lamp-${line.status}" role="img" aria-label="${esc(t('alertState_' + line.unified.severity))}"></span><span class="severity-badge severity-${line.unified.severity}">${esc(t('alertState_' + line.unified.severity))}</span></span><span class="production-state state-${period.state}">${esc(t(period.state === 'completed' ? 'slotCompleted' : period.state))}</span><small class="health-period">${esc(range(period.slot))}</small></span>
     <span class="line-card-values">${metrics}<span class="achievement-metric"><small title="${esc(t('achievementRate'))}">${esc(t('achievementRate'))}</small><b class="${rate.tone}" data-achievement title="${esc(rate.full)}">${esc(rate.text)}</b></span></span>
@@ -133,8 +179,7 @@ export function updateMonitorCard(card, line, ctx) {
     'line-card alarm-' +
     line.status +
     (line.blink ? ' blinking-frame' : '') +
-    (open ? ' is-expanded' : '') +
-    (wideMetrics(line, ctx) ? ' has-wide-metrics' : '');
+    (open ? ' is-expanded' : '');
   if (card.className !== classes) card.className = classes;
   const lamp = card.querySelector('.signal-lamp');
   const lampClass = 'signal-lamp lamp-' + line.status;
@@ -150,11 +195,12 @@ export function updateMonitorCard(card, line, ctx) {
   const state = card.querySelector('.production-state');
   state.className = 'production-state state-' + period.state;
   state.textContent = t(period.state === 'completed' ? 'slotCompleted' : period.state);
+  state.title = state.textContent;
   card.querySelector('.health-period').textContent = range(period.slot);
-  card.querySelector('[data-achievement]').textContent = rate.text;
-  card.querySelector('[data-achievement]').title = rate.full;
+  setMonitorNumber(card.querySelector('[data-achievement]'), rate.value, ctx, '', '%');
   card.querySelector('[data-achievement]').className = rate.tone;
   card.querySelector('[data-slot-label]').textContent = t(period.label);
+  card.querySelector('[data-slot-label]').title = t(period.label);
   const time = card.querySelector('[data-slot-range]');
   time.className = 'time-pill state-' + period.state;
   time.textContent = range(period.slot);

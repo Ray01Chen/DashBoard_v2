@@ -1,3 +1,4 @@
+import { boardDisplayPreferences } from './board-display.js';
 import { cancelMonitorPageMotion } from './monitor-carousel.js';
 import { MonitorPaging, pageSize, fitMonitorPage } from './monitor-paging.js';
 import { naturalOrder, byProduction } from './list-order.js';
@@ -170,6 +171,14 @@ const state = {
   lastTime: null,
 };
 const monitorPaging = new MonitorPaging();
+let savedBoardDisplay;
+try {
+  savedBoardDisplay = JSON.parse(stored('bp-board-display'));
+} catch {}
+let boardDisplay = boardDisplayPreferences(savedBoardDisplay, {
+  trend: stored('bp-board-trend') === 'true',
+  share: stored('bp-board-share') === 'true',
+});
 const canManage = () => state.user?.role === 'admin';
 const t = (key, params) => translate(state.language, key, params);
 const number = (v) =>
@@ -2182,6 +2191,13 @@ $('#navigation-scrim').onclick = () => {
   $('#toggle-navigation').focus();
 };
 document.addEventListener('keydown', (event) => {
+  const displayMenu = $('.board-display-options');
+  if (event.key === 'Escape' && displayMenu.open && !$('dialog[open]')) {
+    displayMenu.open = false;
+    displayMenu.querySelector('summary').focus();
+    event.stopImmediatePropagation();
+    return;
+  }
   if (
     event.key === 'Escape' &&
     document.body.classList.contains('navigation-open') &&
@@ -2514,11 +2530,13 @@ function updateCurrentInterval() {
   if (el) el.textContent = t('currentInterval') + ': ' + text;
 }
 function applyBoardDisplay() {
-  const board = document.body.classList.contains('fullscreen-board'),
-    trend = stored('bp-board-trend') === 'true',
-    share = stored('bp-board-share') === 'true';
-  $('#board-show-trend').checked = trend;
-  $('#board-show-share').checked = share;
+  const board = document.body.classList.contains('fullscreen-board');
+  const { trend, share } = boardDisplay;
+  for (const [key, visible] of Object.entries(boardDisplay)) {
+    document.body.setAttribute('data-board-' + key, String(visible));
+    const checkbox = $(`[data-board-display="${key}"]`);
+    if (checkbox) checkbox.checked = visible;
+  }
   $('.group-trend-panel').hidden = board && !trend;
   $('.share-panel').hidden = board && !share;
   $('.dashboard-top-charts').hidden = board && !trend && !share;
@@ -2527,20 +2545,33 @@ function applyBoardDisplay() {
     trend && share ? 'both' : trend ? 'trend' : share ? 'share' : 'none';
   document.body.classList.toggle('board-with-charts', board && (trend || share));
 }
+function saveBoardDisplay() {
+  cancelMonitorPageMotion($('#line-cards'));
+  const serialized = JSON.stringify(boardDisplay);
+  stored('bp-board-display', serialized);
+  if (stored('bp-board-display') !== serialized) toast(t('boardDisplayStorageFailed'));
+  renderChart();
+}
+$('.board-display-options').addEventListener('change', (event) => {
+  const checkbox = event.target.closest('[data-board-display]');
+  if (!checkbox) return;
+  boardDisplay[checkbox.dataset.boardDisplay] = checkbox.checked;
+  saveBoardDisplay();
+});
+$('[data-board-display-reset]').onclick = () => {
+  boardDisplay = boardDisplayPreferences();
+  saveBoardDisplay();
+};
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('.board-display-options')) $('.board-display-options').open = false;
+});
+
 for (const button of document.querySelectorAll('[data-metric-scope]')) {
   button.onclick = () => {
     stored('bp-metric-scope', button.dataset.metricScope);
     renderChart();
   };
 }
-$('#board-show-trend').onchange = (e) => {
-  stored('bp-board-trend', String(e.target.checked));
-  renderChart();
-};
-$('#board-show-share').onchange = (e) => {
-  stored('bp-board-share', String(e.target.checked));
-  renderChart();
-};
 let chartWidth = 0;
 const chartObserver = new ResizeObserver((entries) => {
   const width = Math.round(entries[0].contentRect.width);

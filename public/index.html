@@ -191,16 +191,52 @@
                 </div>
                 <details class="board-display-options">
                   <summary data-i18n="displayOptions"></summary>
-                  <div>
+                  <div class="board-display-panel">
+                    <strong data-i18n="boardDisplaySections"></strong>
                     <label
-                      ><input type="checkbox" id="board-show-trend" /><span
-                        data-i18n="groupTrend"
-                      ></span></label
-                    ><label
-                      ><input type="checkbox" id="board-show-share" /><span
-                        data-i18n="outputShare"
+                      ><input type="checkbox" data-board-display="group" /><span
+                        data-i18n="groupTotals"
                       ></span
                     ></label>
+                    <label
+                      ><input type="checkbox" data-board-display="alerts" /><span
+                        data-i18n="boardShowAlerts"
+                      ></span
+                    ></label>
+                    <label
+                      ><input type="checkbox" data-board-display="filters" /><span
+                        data-i18n="boardShowFilters"
+                      ></span
+                    ></label>
+                    <label
+                      ><input type="checkbox" data-board-display="header" /><span
+                        data-i18n="boardShowHeader"
+                      ></span
+                    ></label>
+                    <label
+                      ><input type="checkbox" data-board-display="carousel" /><span
+                        data-i18n="boardShowCarousel"
+                      ></span
+                    ></label>
+                    <hr />
+                    <label
+                      ><input
+                        type="checkbox"
+                        id="board-show-trend"
+                        data-board-display="trend" /><span data-i18n="groupTrend"></span></label
+                    ><label
+                      ><input
+                        type="checkbox"
+                        id="board-show-share"
+                        data-board-display="share" /><span data-i18n="outputShare"></span
+                    ></label>
+                    <p data-i18n="boardDisplaySaved"></p>
+                    <button
+                      type="button"
+                      class="button"
+                      data-board-display-reset
+                      data-i18n="boardDisplayReset"
+                    ></button>
                   </div>
                 </details>
                 <button class="button" id="exit-fullscreen">

@@ -978,6 +978,8 @@ body.navigation-open #sidebar {
   display: flex;
   flex-direction: column;
   --monitor-row-height: 92px;
+  --monitor-card-columns: minmax(118px, 0.9fr) minmax(126px, 0.95fr) minmax(248px, 1.4fr)
+    minmax(130px, 1.5fr) minmax(136px, 1fr) minmax(150px, 1.4fr) 24px;
   gap: 6px;
   height: auto;
   max-height: none;
@@ -990,9 +992,7 @@ body.navigation-open #sidebar {
   --card-tone: var(--neutral);
   --card-tint: var(--surface);
   display: grid;
-  grid-template-columns:
-    minmax(118px, 0.9fr) minmax(126px, 0.95fr) minmax(248px, 1.4fr)
-    minmax(130px, 1.5fr) minmax(136px, 1fr) minmax(150px, 1.4fr) 24px;
+  grid-template-columns: var(--monitor-card-columns);
   grid-template-areas: 'identity health metrics trend slot reason expand';
   grid-template-rows: auto;
   align-items: center;
@@ -1043,6 +1043,7 @@ body.navigation-open #sidebar {
 }
 #line-dashboard :is(#line-cards, .carousel-snapshot) .production-identity {
   display: grid;
+  grid-template-rows: 24px 32px;
   gap: 2px;
   min-width: 0;
 }
@@ -1077,7 +1078,7 @@ body.navigation-open #sidebar {
   margin: 0;
   color: var(--muted);
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 16px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1085,6 +1086,7 @@ body.navigation-open #sidebar {
 #line-dashboard :is(#line-cards, .carousel-snapshot) .line-health {
   grid-area: health;
   display: grid;
+  grid-template-rows: 24px 24px 17px;
   gap: 4px;
   justify-items: start;
   min-width: 0;
@@ -1097,29 +1099,29 @@ body.navigation-open #sidebar {
 }
 #line-dashboard :is(#line-cards, .carousel-snapshot) .signal-lamp {
   display: inline-block;
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
-  flex: 0 0 18px;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  flex: 0 0 14px;
   border: 0;
   border-radius: 50%;
-  margin: 0 5px;
+  margin: 0 4px;
 }
 #line-dashboard :is(#line-cards, .carousel-snapshot) .lamp-red {
   background: var(--critical);
-  box-shadow: 0 0 0 5px #fce0e7;
+  box-shadow: 0 0 0 4px #fce0e7;
 }
 #line-dashboard :is(#line-cards, .carousel-snapshot) .lamp-yellow {
   background: var(--warning-line);
-  box-shadow: 0 0 0 5px #fff0c8;
+  box-shadow: 0 0 0 4px #fff0c8;
 }
 #line-dashboard :is(#line-cards, .carousel-snapshot) .lamp-green {
   background: var(--success);
-  box-shadow: 0 0 0 5px #daefdf;
+  box-shadow: 0 0 0 4px #daefdf;
 }
 #line-dashboard :is(#line-cards, .carousel-snapshot) .lamp-neutral {
   background: var(--neutral);
-  box-shadow: 0 0 0 5px #eaf0f6;
+  box-shadow: 0 0 0 4px #eaf0f6;
 }
 .severity-badge,
 .production-state {
@@ -1192,7 +1194,8 @@ body.navigation-open #sidebar {
 #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values {
   grid-area: metrics;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 0.9fr)) minmax(0, 1.3fr);
+  text-align: right;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 1.3fr);
   align-self: center;
   gap: 6px;
   margin: 0;
@@ -1204,7 +1207,8 @@ body.navigation-open #sidebar {
   display: grid;
   min-width: 0;
   width: auto;
-  gap: 5px;
+  grid-template-rows: 16px 25px;
+  gap: 2px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -1221,7 +1225,11 @@ body.navigation-open #sidebar {
 #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values b {
   color: var(--ink);
   font-size: 22px;
+  font-variant-numeric: tabular-nums lining-nums;
   font-weight: 700;
+  min-width: 0;
+  width: 100%;
+  text-align: right;
   line-height: 1.1;
   margin: 0;
   white-space: nowrap;
@@ -1268,6 +1276,7 @@ body.navigation-open #sidebar {
 #line-dashboard :is(#line-cards, .carousel-snapshot) .line-slot {
   grid-area: slot;
   display: grid;
+  grid-template-rows: 18px 25px 18px;
   justify-items: start;
   align-items: center;
   gap: 4px;
@@ -1299,8 +1308,9 @@ body.navigation-open #sidebar {
 }
 #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-status {
   grid-area: reason;
-  display: flex;
-  flex-direction: column;
+  height: 64px;
+  display: grid;
+  grid-template-rows: 36px 24px;
   gap: 4px;
   padding: 0 0 0 10px;
   border: 0;
@@ -1313,6 +1323,7 @@ body.navigation-open #sidebar {
   line-height: 1.35;
 }
 #line-dashboard :is(#line-cards, .carousel-snapshot) [data-card-reason] {
+  align-self: start;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -1424,25 +1435,23 @@ body.navigation-open #sidebar {
   margin: 0;
   font-weight: 650;
 }
-/* Unusually large values borrow width from the flexible chart/reason tracks,
- * preserving every displayed digit and the same readable numeric font. */
-@container monitoring (min-width: 1066px) {
-  #line-dashboard :is(#line-cards, .carousel-snapshot) .has-wide-metrics {
-    grid-template-columns:
-      minmax(118px, 0.9fr) minmax(126px, 0.95fr)
-      minmax(max-content, 1.4fr) minmax(130px, 1.5fr)
-      minmax(136px, 1fr) minmax(150px, 1.4fr) 24px;
+/* Numeric layout is decided for the entire card list, never by one row's
+ * values. The original trend track is retained; narrow numeric tracks get two
+ * rows and a shared minimum height instead of borrowing chart width. */
+@container monitoring (min-width: 1066px) and (max-width: 1779px) {
+  #line-dashboard :is(#line-cards, .carousel-snapshot) {
+    --monitor-row-height: 106px;
   }
-  #line-dashboard :is(#line-cards, .carousel-snapshot) .has-wide-metrics .line-card-values {
-    grid-template-columns: repeat(3, minmax(max-content, 0.9fr)) minmax(max-content, 1.3fr);
+  #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @container monitoring (max-width: 1065px) {
   #line-dashboard :is(#line-cards, .carousel-snapshot) {
     --monitor-row-height: 176px;
+    --monitor-card-columns: 130px 136px minmax(0, 1fr) 24px;
   }
   #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card {
-    grid-template-columns: 130px 136px minmax(0, 1fr) 24px;
     grid-template-areas: 'identity health metrics expand' 'slot reason trend expand';
   }
   #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values {
@@ -1467,9 +1476,9 @@ body.navigation-open #sidebar {
 @container monitoring (max-width: 620px) {
   #line-dashboard :is(#line-cards, .carousel-snapshot) {
     --monitor-row-height: 350px;
+    --monitor-card-columns: minmax(0, 1fr) minmax(0, 1fr) 24px;
   }
   #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 24px;
     grid-template-areas: 'identity health expand' 'metrics metrics metrics' 'trend trend trend' 'slot slot slot' 'reason reason reason';
   }
   #line-dashboard :is(#line-cards, .carousel-snapshot) .line-trend {
@@ -1482,6 +1491,38 @@ body.navigation-open #sidebar {
   #line-dashboard :is(#line-cards, .carousel-snapshot) .line-slot .next-slot {
     width: 100%;
   }
+}
+
+@container monitoring (min-width: 621px) and (max-width: 665px) {
+  #line-dashboard :is(#line-cards, .carousel-snapshot) {
+    --monitor-row-height: 186px;
+  }
+  #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container monitoring (max-width: 351px) {
+  #line-dashboard :is(#line-cards, .carousel-snapshot) {
+    --monitor-row-height: 390px;
+  }
+  #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+#line-dashboard :is(#line-cards, .carousel-snapshot) :is(.severity-badge, .production-state) {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#line-dashboard :is(#line-cards, .carousel-snapshot) [data-slot-label] {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#line-dashboard :is(#line-cards, .carousel-snapshot) .time-pill {
+  white-space: nowrap;
 }
 
 /* Fullscreen is a viewport-sized grid. The flexible cards track is measured by
@@ -1763,5 +1804,61 @@ body.fullscreen-board .page-footer {
 @container monitoring (min-width: 1066px) {
   body.fullscreen-board #line-dashboard :is(#line-cards, .carousel-snapshot) .line-trend {
     height: clamp(62px, 50%, 104px);
+  }
+}
+
+body .board-display-panel {
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  max-height: min(70dvh, 440px);
+  overflow: auto;
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--ui-border);
+  box-shadow: var(--ui-shadow);
+  font-size: 13px;
+}
+body .board-display-panel label {
+  align-items: flex-start;
+}
+body .board-display-panel input {
+  flex: none;
+  margin-top: 3px;
+}
+body .board-display-panel hr {
+  border: 0;
+  border-top: 1px solid var(--ui-border);
+  margin: 8px 0;
+}
+body .board-display-panel p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 8px 0;
+}
+body.fullscreen-board[data-board-header='false'] .topbar {
+  display: none;
+}
+body.fullscreen-board[data-board-header='false'] .app-shell {
+  padding-top: 0;
+}
+body.fullscreen-board[data-board-filters='false']
+  :is(.filter-bar, #group-tabs, .metric-scope-buttons),
+body.fullscreen-board[data-board-group='false'] #line-dashboard #group-summary,
+body.fullscreen-board[data-board-alerts='false'] .monitor-summary {
+  display: none;
+}
+body.fullscreen-board[data-board-carousel='false'] #line-dashboard {
+  grid-template-rows: auto auto auto minmax(0, 1fr) 0 auto;
+}
+body.fullscreen-board[data-board-carousel='false'] #line-dashboard #board-pagination {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  body .board-display-panel {
+    position: fixed;
+    top: auto;
+    right: 12px;
+    margin-top: 8px;
   }
 }

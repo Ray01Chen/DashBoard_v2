@@ -1,7 +1,8 @@
 import { replaceMonitorPage, isMonitorPageTurn } from './monitor-carousel.js';
 import { naturalOrder, byProduction } from './list-order.js';
 import {
-  monitorNumber,
+  setMonitorNumber,
+  fitMonitorNumbers,
   monitorCard,
   updateMonitorCard,
   rememberMonitorLines,
@@ -49,7 +50,7 @@ const isGap = (key) => ['currentGap', 'dailyGap', 'cumulativeGap'].includes(key)
 
 export function overviewMetricsMarkup(
   metrics,
-  { t, esc, number, language, compactMetrics = false },
+  { t, esc, number, compactMetrics = false },
   keys = detailMetricKeys,
 ) {
   return keys
@@ -64,7 +65,7 @@ export function overviewMetricsMarkup(
               ? 'positive'
               : ''
           : '';
-      return `<span class="production-metric" data-metric="${key}" title="${esc(t(key + 'Help'))}"><small>${esc(t(compactMetrics ? { currentTarget: 'target', dailyTarget: 'target', currentActual: 'actual', dailyActual: 'actual', currentGap: 'gap', dailyGap: 'gap' }[key] || key : key))}</small><b class="${tone}" title="${esc(number(value))}">${difference && value > 0 ? '+' : ''}${compactMetrics ? monitorNumber(value, { number, language }) : number(value)}</b></span>`;
+      return `<span class="production-metric" data-metric="${key}" title="${esc(t(key + 'Help'))}"><small>${esc(t(compactMetrics ? { currentTarget: 'target', dailyTarget: 'target', currentActual: 'actual', dailyActual: 'actual', currentGap: 'gap', dailyGap: 'gap' }[key] || key : key))}</small><b class="${tone}" title="${esc(number(value))}">${difference && value > 0 ? '+' : ''}${number(value)}</b></span>`;
     })
     .join('');
 }
@@ -77,10 +78,12 @@ function updateOverviewMetrics(element, metrics, ctx) {
     const value = metrics[key];
     const output = element.querySelector(`[data-metric="${key}"] b`);
     if (!output) continue;
-    output.textContent =
-      (isGap(key) && value > 0 ? '+' : '') +
-      (element.classList.contains('line-card') ? monitorNumber(value, ctx) : number(value));
-    output.title = number(value);
+    const prefix = isGap(key) && value > 0 ? '+' : '';
+    if (element.classList.contains('line-card')) setMonitorNumber(output, value, ctx, prefix);
+    else {
+      output.textContent = prefix + number(value);
+      output.title = prefix + number(value);
+    }
     output.className =
       isGap(key) && value != null ? (value < 0 ? 'negative' : value > 0 ? 'positive' : '') : '';
   }
@@ -219,6 +222,7 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
     updateOverviewMetrics(cards.children[index], line, ctx);
     updateMonitorCard(cards.children[index], line, ctx);
   }
+  fitMonitorNumbers(cards, ctx);
   // Batch text writes before measuring plots; hidden dashboards need no plot work.
   for (const [index, line] of cardLines.entries()) {
     const plot = cards.children[index]?.querySelector('.line-trend');

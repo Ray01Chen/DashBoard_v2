@@ -142,7 +142,8 @@ export async function auditLayoutRefinement({
   await page.waitForFunction(
     () => getComputedStyle(document.querySelector('.app-shell')).marginLeft === '0px',
   );
-  assert.deepEqual(await ids(), lines.slice(7));
+  assert.ok((await ids()).includes(lines[7]));
+  const fullscreenFirst = (await ids())[0];
   const before = await page.locator('#line-cards').boundingBox();
   await page.locator('#toggle-navigation').click();
   assert.equal(await page.locator('#sidebar').getAttribute('aria-hidden'), 'false');
@@ -154,7 +155,7 @@ export async function auditLayoutRefinement({
     true,
   );
   await page.locator('#exit-fullscreen').click();
-  assert.deepEqual(await ids(), lines.slice(7));
+  assert.ok((await ids()).includes(fullscreenFirst));
   await page.locator('[data-group="small"]').click();
   assert.equal(await page.locator('#line-cards .line-card').count(), 3);
   assert.equal(await page.locator('#board-pagination').isVisible(), false);
@@ -162,7 +163,7 @@ export async function auditLayoutRefinement({
   assert.equal(await page.locator('#line-cards .line-card').count(), 7);
   assert.equal(await page.locator('#board-pagination').isVisible(), false);
   record(
-    'Ten naturally ordered lines paginate 7+3 in ordinary/fullscreen views; auto rotation, a full manual dwell, preserved page on mode switch, filter recalculation and a non-resizing fullscreen drawer work',
+    'Ten naturally ordered lines paginate 7+3 in ordinary mode and fit complete rows in fullscreen; auto rotation, a full manual dwell, preserved page on mode switch, filter recalculation and a non-resizing fullscreen drawer work',
   );
 
   await page.locator('[data-group="small"]').click();

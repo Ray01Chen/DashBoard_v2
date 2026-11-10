@@ -1,3 +1,4 @@
+import { auditOverviewRefinement } from './overview-refinement-audit.mjs';
 import { auditCompactBoard } from './compact-board-audit.mjs';
 import { auditLayoutRefinement } from './layout-refinement-audit.mjs';
 import { auditNavigation } from './navigation-audit.mjs';
@@ -3147,6 +3148,16 @@ try {
     errors,
   });
   await auditCompactBoard({
+    browser,
+    context,
+    baseURL,
+    readConfig,
+    record,
+    errors,
+    root,
+    screenshots,
+  });
+  await auditOverviewRefinement({
     browser,
     context,
     baseURL,

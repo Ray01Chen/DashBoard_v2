@@ -37,7 +37,7 @@
 
 ## 寫法與驗證
 
-`monitor-paging.js` 共用一般／全螢幕狀態機，`pageSize` 上限為 7；`fitMonitorPage` 以卡片軌道實際高度、CSS `--monitor-row-height` 及間距計算完整列數。全螢幕使用視窗高度 Grid，為控制區、分組、篩選、分頁與選用圖表保留空間，較矮時減少每頁筆數；當頁實際卡片以 flex 均分高度，但容量始終使用不變的 CSS 最小列高計算，避免 7／7／1 切頁後產生容量回饋循環。字級保持不變，主曲線最高 104px；頁面禁止垂直捲動。桌面維持單列橫向，窄容器才改堆疊。長名稱提供 Tooltip／完整明細；`monitorNumber` 只壓縮極大數值，原精度仍在 title 與明細中，不修改計算。
+`monitor-paging.js` 共用一般／全螢幕狀態機，`pageSize` 上限為 7；`fitMonitorPage` 以卡片軌道實際高度、CSS `--monitor-row-height` 及間距計算完整列數。全螢幕使用視窗高度 Grid，為控制區、分組、篩選、分頁與選用圖表保留空間，較矮時減少每頁筆數；當頁實際卡片以 flex 均分高度，但容量始終使用不變的 CSS 最小列高計算，避免 7／7／1 切頁後產生容量回饋循環。字級保持不變，主曲線最高 104px；頁面禁止垂直捲動。桌面維持單列橫向，窄容器才改堆疊。長名稱提供 Tooltip／完整明細；`setMonitorNumber` 保留精確值，`fitMonitorNumbers` 依 DOM Range 實測可用寬度，再批次嘗試本地化短格式；完整值仍在 title 與明細中，不修改計算。寬度、字型、語言與數值快取於 WeakMap，避免每秒重排穩定資料。
 
 `monitoring.pageRotateSeconds` 沿用原保存方式；暫停是瀏覽器內狀態，恢復及手動切頁重新給完整停留。篩選重設頁次，容量變動保留原首條產線所在頁。輪播走 quiet render，只更換卡片清單；Pager、分組、篩選及其他圖表節點保留。ResizeObserver 只在寬度影響曲線時重畫圖；全螢幕卡片軌道高度變動只更新容量，避免因切頁清單高度變動重建整個看板。彈窗、暫時側欄、一般模式展開及卡片焦點暫停輪播。全螢幕箭頭沿用 `line-detail-dialog` 查看完整原因，不能將列增高。
 
@@ -80,7 +80,7 @@
 - `list-order.js` 提供 locale-aware `Intl.Collator` 自然排序，排序副本並尊重數字型 `displayOrder`／`sequence`／`configOrder`／`order`。目錄、人員、群組畫面以原始索引或 ID 綁定編輯，不能用排序後位置更新 CONFIG。`byProduction` 只排列產線／Model 群組，同組站點先經 `orderedStationRows`，不改流程。時段及明確業務序列不套一般字母排序。
 - `line-picker.js` 由目前草稿的線體、既有分組產生搜尋面板；搜尋及勾選只更新 UI，不寫設定。群組可包含重疊線體，選取以 Set 去重；全選／取消作用於全部線體，搜尋不丟掉隱藏選擇。套用與保存仍走原有確認、版本檢查及 API。
 - 所有原路由及權限保留於分組 Sidebar；桌面 `bp-collapsed` 儲存圖示模式。`overlayNavigation` 於小螢幕或全螢幕開 Drawer，關閉時 inert 排除鍵盤焦點；Escape／遮罩關閉並返回按鈕，Tab 在 Drawer 內循環，不寫桌面收合偏好。
-- `design-system.css` 共用同一份資訊順序及 Grid 元件；桌面使用緊湊橫列，行動寬度才調整排列；來源及下一時段保留。大型數字透過本地化格式及彈性欄寬呈現，停留與明細保留精確值；額外圖表排在卡片之後，不再以短螢幕字級縮小維持版面。
+- `design-system.css` 共用同一份資訊順序及 Grid 元件；桌面使用緊湊橫列，行動寬度才調整排列；來源及下一時段保留。卡片從清單繼承同一份 `--monitor-card-columns`；不得按單條資料新增可變欄寬。數值用四欄或一致的 2×2 Grid，22px 與 tabular-nums 不因資料變長而縮小；曲線 track 不借給數值欄。停留與明細保留精確值；額外圖表排在卡片之後，不再以短螢幕字級縮小維持版面。
 - `alertReasonText` 的 `compact` 只選用本地化摘要鍵；完整原因及原始計算精度保留。整體嚴重程度、輪播及資料來源仍由既有告警模組管理。
 
 
@@ -94,3 +94,9 @@
 `monitor-carousel.js` 專責 600ms 的 Transform／Opacity 動畫。穩定的 `monitor-card-viewport` 只含目前資料層與至多一層 inert／aria-hidden 的舊頁快照；快照移除所有 ID，不參與事件、資料更新或輔助閱讀。前後頁各自計算最終列高，以水平交接避免對文字做 scale 或在不同最小高度間插值造成互相擠壓。一般模式另外過渡外框高度，全螢幕外框高度不變。完成、快速再次切頁、切篩選或啟用 reduced motion 時會清除動畫及快照；不新增計時器。
 
 `MonitorPaging.motionRevision` 只在手動或自動換頁時增加，`direction` 在自動回第一頁仍為 forward。`isMonitorPageTurn` 同時比對範圍、容量、語言與顯示模式，只有真正的同範圍頁次切換會播放動畫。刷新不重設頁碼、停留或動畫。新預設間隔集中在 `monitor.js` 的 `defaultPageRotateSeconds`（12），前後端共用；已存自訂值不遷移覆蓋。
+
+## 全螢幕顯示偏好
+
+`board-display.js` 集中預設及白名單正規化。`bp-board-display` 僅保存布林顯示偏好，讀取時忽略非法／未知欄位並相容舊 `bp-board-trend`／`bp-board-share`；不寫 CONFIG 或 API。`applyBoardDisplay` 以 body data attributes 控制全螢幕區塊，一般模式不受影響；既有 ResizeObserver 重算剩餘高度和分頁容量。顯示選單與離開全螢幕始終位於保留的 actions 區。Esc 優先關閉顯示選單，避免使用鍵盤調整時意外退出看板。
+
+`overview-refinement-audit.mjs` 使用獨立日期與真實 API，對比小數值／六位數的圖表位置尺寸、每張卡片各欄座標、22px 數字實測邊界、三語與不同解析度／縮放；另確認顯示設定保存、重設及沒有生產設定寫入。選單圖與大數字圖由此測試產生。

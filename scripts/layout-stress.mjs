@@ -98,6 +98,14 @@ export async function auditLayoutStress({ page, context, baseURL, readConfig, re
           [390, 844],
         ]) {
           await page.setViewportSize({ width, height });
+          // Responsive formatting measures the final shared grid. Let browser
+          // resize events and ResizeObserver complete before reading its frame.
+          await page.evaluate(
+            () =>
+              new Promise((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve)),
+              ),
+          );
           const card = page.locator('#line-cards .line-card').first();
           const metrics = await card.locator('.line-card-values').evaluate((values) => {
             const box = values.getBoundingClientRect();
