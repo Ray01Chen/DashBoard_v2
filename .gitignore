@@ -12,6 +12,7 @@ node_modules/
 *.sqlite*
 *.db
 *.db-*
+*.db.*
 backups/
 *.bak
 *.backup

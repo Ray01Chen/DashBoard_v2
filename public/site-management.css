@@ -1,0 +1,121 @@
+.site-selector {
+  max-width: min(330px, 32vw);
+}
+.site-selector select {
+  min-width: 0;
+  max-width: 220px;
+}
+.access-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+.access-layout .panel {
+  min-width: 0;
+  padding: 16px;
+}
+.access-table {
+  overflow: auto;
+}
+.access-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.access-table :is(th, td) {
+  padding: 10px;
+  border-bottom: 1px solid var(--ui-border);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.access-table th {
+  color: var(--muted);
+  font-size: 12px;
+}
+.access-editor form {
+  display: grid;
+  gap: 12px;
+}
+.access-editor form + form {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ui-border);
+}
+.access-editor h2 {
+  font-size: 17px;
+  margin: 0 0 4px;
+}
+.access-editor form > label:not(.access-check),
+.access-filter {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.access-editor :is(input:not([type='checkbox']), select) {
+  width: 100%;
+  min-width: 0;
+}
+.access-check,
+.access-grants label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.access-check input,
+.access-grants input {
+  width: auto;
+  flex: none;
+  accent-color: var(--primary);
+}
+.access-grants {
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+.access-grants legend {
+  padding: 0 4px;
+}
+.access-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.access-membership {
+  display: block;
+  margin-bottom: 4px;
+}
+.access-filter {
+  max-width: 330px;
+  margin-bottom: 12px;
+}
+@media (max-width: 1050px) {
+  .access-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .site-selector > span {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .site-selector {
+    max-width: 42vw;
+  }
+  .site-selector select {
+    max-width: 100%;
+  }
+  .access-layout .panel {
+    padding: 10px;
+  }
+}
+
+.board-site-label {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}

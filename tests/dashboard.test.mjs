@@ -211,25 +211,18 @@ test('output shares use actual output of the selected lines and preserve missing
   assert.equal(sum([30, 70, null]), 100);
 });
 
-test('legacy accounts migrate once with new passwords, correct roles and revoked sessions', () => {
+test('authentication initialization preserves existing account names, hashes, roles and sessions', () => {
   const db = new DatabaseSync(':memory:');
-  let auth = createAuth(db);
+  createAuth(db);
   db.prepare("UPDATE users SET username='admin' WHERE username='manager'").run();
   db.prepare("UPDATE users SET username='operator' WHERE username='member'").run();
   db.prepare("INSERT INTO sessions VALUES('old-token','admin',?)").run(Date.now() + 100000);
-  auth = createAuth(db);
-  const req = { socket: { remoteAddress: '127.0.0.1' }, headers: {} };
-  assert.equal(db.prepare('SELECT count(*) AS n FROM sessions').get().n, 0);
-  assert.equal(auth.login(req, 'manager', 'manager').user.role, 'admin');
-  assert.equal(auth.login(req, 'member', 'member').user.role, 'operator');
-  assert.equal(auth.login(req, 'admin', 'manager').status, 401);
-  assert.equal(auth.login(req, 'operator', 'member').status, 401);
-  const hashes = db.prepare('SELECT password_hash FROM users ORDER BY username').all();
+  const accounts = db.prepare('SELECT * FROM users ORDER BY username').all(),
+    sessions = db.prepare('SELECT * FROM sessions').all();
   createAuth(db);
-  assert.deepEqual(
-    db.prepare('SELECT password_hash FROM users ORDER BY username').all(),
-    hashes,
-  );
+  createAuth(db);
+  assert.deepEqual(db.prepare('SELECT * FROM users ORDER BY username').all(), accounts);
+  assert.deepEqual(db.prepare('SELECT * FROM sessions').all(), sessions);
   db.close();
 });
 

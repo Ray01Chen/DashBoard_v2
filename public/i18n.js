@@ -1,8 +1,10 @@
+import { siteMessages } from './site-messages.js';
 /** Shared interface, API validation, and export labels. Keep keys aligned across languages. */
 export const locales = ['zh', 'en', 'th'];
 export const localeTags = { zh: 'zh-TW', en: 'en-GB', th: 'th-TH-u-ca-gregory' };
 export const messages = {
   zh: {
+    ...siteMessages.zh,
     boardDisplayStorageFailed: '無法保存顯示偏好；目前畫面仍會套用。',
     boardDisplaySections: '顯示區塊',
     boardShowAlerts: '告警摘要與狀態篩選',
@@ -189,7 +191,7 @@ export const messages = {
     username: '帳號',
     password: '密碼',
     loginTitle: '登入生產管理中心',
-    loginDesc: '使用管理員或填報員帳號，進入你的生產工作台。',
+    loginDesc: '登入後選擇已授權的廠區，系統會記住上次有效選擇。',
     loginSubmit: '登入工作台',
     loggingIn: '登入中…',
     admin: '管理員',
@@ -200,7 +202,7 @@ export const messages = {
     errForbidden: '此帳號沒有執行此操作的權限。',
     logoutTitle: '登出目前帳號？',
     logoutDesc: '目前仍有未儲存的內容，登出會放棄這些變更。',
-    loginFoot: '管理員可管理設定；填報員可查看與填寫日報。',
+    loginFoot: '操作權限依帳號及目前廠區的授權決定。',
     timeSettings: '時間段設定',
     enterRecord: '填寫生產紀錄',
     autoMappingHint: '產線、站點與職務由所選紀錄自動帶入。對應關係請至系統設定調整。',
@@ -398,7 +400,7 @@ export const messages = {
     appearance: '語言與外觀',
     saveSettings: '儲存設定',
     settingsSaved: '設定已儲存，所有裝置重新整理後即可使用',
-    settingsShared: '儲存設定後套用至所有使用者；語言與配色偏好可個別切換。',
+    settingsShared: '儲存設定後套用至目前廠區的使用者；語言與配色偏好可個別切換。',
     catalogsTitle: '建立基礎資料',
     catalogsDesc:
       '建立產線、Model、職務與站點，下拉新增各線使用的機種配對，再設定班別時間。改名同步目前設定，移除可在本頁確認影響並停用相關配置。',
@@ -481,7 +483,7 @@ export const messages = {
     refreshNow: '立即刷新',
     refreshEvery: '自動刷新 · {seconds} 秒',
     refreshSeconds: '刷新間隔（秒）',
-    refreshDesc: '可設定 1–3,600 秒，儲存後套用至所有使用者。',
+    refreshDesc: '可設定 1–3,600 秒，儲存後套用至目前廠區。',
     activeAlertTypes: '啟用的警示類型',
     bothAlertTypes: '產量未達標＋產量未增加',
     groupTrend: '分組總產量趨勢',
@@ -527,9 +529,9 @@ export const messages = {
     targetsDesc: '每組啟用的產線＋Model 各設一個預設日目標，依兩班生產分鐘分配到時段。',
     setupBlockedReason: '請先完成：{steps}。可先儲存草稿，完成後再發布設定。',
     setupNextReady: '本步驟已具備後續設定所需資料。',
-    setupLastStep: '完成後按「儲存設定」，套用給所有使用者。',
+    setupLastStep: '完成後按「儲存設定」，套用至目前廠區。',
     saveSettingsDraft: '儲存草稿',
-    settingsDraftHint: '儲存設定會發布給所有人；儲存草稿僅保留在此瀏覽器與帳號，供稍後繼續。',
+    settingsDraftHint: '儲存設定會發布至目前廠區；草稿僅保留在此瀏覽器、帳號與廠區。',
     settingsDraftConflict:
       '已還原較舊版本的草稿。共享設定已有更新，發布時會檢查版本，避免覆蓋他人修改。',
     settingsDraftSaved: '草稿已保留在此瀏覽器，尚未發布。',
@@ -554,6 +556,7 @@ export const messages = {
     selectedPeopleCount: '選擇人員 · 已選 {count} 位',
   },
   en: {
+    ...siteMessages.en,
     boardDisplayStorageFailed:
       'Display preferences could not be saved; they still apply to this view.',
     boardDisplaySections: 'Visible sections',
@@ -754,7 +757,8 @@ export const messages = {
     username: 'Username',
     password: 'Password',
     loginTitle: 'Sign in to Production Center',
-    loginDesc: 'Use your administrator or operator account to open your production workspace.',
+    loginDesc:
+      'Sign in, then choose an authorized site. Your last valid selection is remembered.',
     loginSubmit: 'Sign in to workspace',
     loggingIn: 'Signing in…',
     admin: 'Administrator',
@@ -765,7 +769,7 @@ export const messages = {
     errForbidden: 'This account does not have permission for this action.',
     logoutTitle: 'Sign out of this account?',
     logoutDesc: 'You have unsaved changes. Signing out will discard them.',
-    loginFoot: 'Administrators manage settings. Operators view and enter production data.',
+    loginFoot: 'Access follows your account and current site grants.',
     timeSettings: 'Time settings',
     enterRecord: 'Enter production data',
     autoMappingHint:
@@ -977,7 +981,7 @@ export const messages = {
     saveSettings: 'Save settings',
     settingsSaved: 'Settings saved. Refresh other devices to apply them.',
     settingsShared:
-      'Saved settings apply to all users. Language and theme can be personalized.',
+      'Saved settings apply to the current site. Language and theme can be personalized.',
     catalogsTitle: 'Build your master lists',
     catalogsDesc:
       'Maintain Lines, Models, Jobs and Stations, add the line/model pairs using dropdowns, then define shift times. Renames update current settings; removal reviews and retires dependencies here.',
@@ -1068,7 +1072,7 @@ export const messages = {
     refreshNow: 'Refresh now',
     refreshEvery: 'Auto refresh · {seconds}s',
     refreshSeconds: 'Refresh interval (seconds)',
-    refreshDesc: 'Choose 1–3,600 seconds. Changes apply to everyone after saving.',
+    refreshDesc: 'Choose 1–3,600 seconds. Changes apply to the current site after saving.',
     activeAlertTypes: 'Active alert types',
     bothAlertTypes: 'Output shortfall + no output increase',
     groupTrend: 'Group output trend',
@@ -1122,10 +1126,10 @@ export const messages = {
     setupBlockedReason:
       'Complete these first: {steps}. Save a draft to continue later, then publish the settings.',
     setupNextReady: 'The data needed for the next step is ready.',
-    setupLastStep: 'Save settings when ready to apply them for everyone.',
+    setupLastStep: 'Save settings when ready to apply them to the current site.',
     saveSettingsDraft: 'Save draft',
     settingsDraftHint:
-      'Save settings publishes for everyone. Save draft keeps unfinished work in this browser for your account.',
+      'Save settings publishes to the current site. Drafts stay in this browser for this account and site.',
     settingsDraftConflict:
       'An older draft was restored. Shared settings have changed; publishing checks the version to protect other changes.',
     settingsDraftSaved: 'Draft saved in this browser. It has not been published.',
@@ -1153,6 +1157,7 @@ export const messages = {
     selectedPeopleCount: 'Select people · {count} selected',
   },
   th: {
+    ...siteMessages.th,
     boardDisplayStorageFailed: 'บันทึกการแสดงผลไม่ได้ แต่ยังใช้กับหน้านี้ได้',
     boardDisplaySections: 'ส่วนที่แสดง',
     boardShowAlerts: 'สรุปแจ้งเตือนและตัวกรองสถานะ',
@@ -1349,7 +1354,7 @@ export const messages = {
     username: 'ชื่อผู้ใช้',
     password: 'รหัสผ่าน',
     loginTitle: 'เข้าสู่ศูนย์จัดการการผลิต',
-    loginDesc: 'ใช้บัญชีผู้ดูแลระบบหรือผู้บันทึกข้อมูลเพื่อเข้าสู่พื้นที่ทำงานการผลิต',
+    loginDesc: 'เข้าสู่ระบบแล้วเลือกโรงงานที่ได้รับอนุญาต ระบบจดจำโรงงานล่าสุดที่ใช้ได้',
     loginSubmit: 'เข้าสู่พื้นที่ทำงาน',
     loggingIn: 'กำลังเข้าสู่ระบบ…',
     admin: 'ผู้ดูแลระบบ',
@@ -1360,7 +1365,7 @@ export const messages = {
     errForbidden: 'บัญชีนี้ไม่มีสิทธิ์ดำเนินการนี้',
     logoutTitle: 'ออกจากบัญชีนี้หรือไม่?',
     logoutDesc: 'ยังมีข้อมูลที่ไม่ได้บันทึก การออกจากระบบจะละทิ้งการเปลี่ยนแปลงเหล่านี้',
-    loginFoot: 'ผู้ดูแลระบบจัดการการตั้งค่า ผู้บันทึกข้อมูลดูและกรอกรายงานการผลิต',
+    loginFoot: 'สิทธิ์ขึ้นอยู่กับบัญชีและโรงงานปัจจุบัน',
     timeSettings: 'ตั้งค่าช่วงเวลา',
     enterRecord: 'กรอกข้อมูลการผลิต',
     autoMappingHint:
@@ -1563,7 +1568,7 @@ export const messages = {
     appearance: 'ภาษาและรูปแบบ',
     saveSettings: 'บันทึกการตั้งค่า',
     settingsSaved: 'บันทึกการตั้งค่าแล้ว รีเฟรชอุปกรณ์อื่นเพื่อใช้งานการตั้งค่าใหม่',
-    settingsShared: 'การตั้งค่าที่บันทึกใช้กับทุกคน ภาษาและธีมเลือกส่วนตัวได้',
+    settingsShared: 'การตั้งค่าที่บันทึกใช้กับโรงงานปัจจุบัน ภาษาและธีมเลือกส่วนตัวได้',
     catalogsTitle: 'สร้างรายการข้อมูลหลัก',
     catalogsDesc:
       'ดูแล Lines, Models, Jobs, Stations เพิ่มคู่สาย/Model จากรายการแล้วตั้งเวลากะ เปลี่ยนชื่อเพื่ออัปเดตการตั้งค่า ลบเพื่อดูผลกระทบและปิดรายการที่เกี่ยวข้องในหน้านี้',
@@ -1651,7 +1656,7 @@ export const messages = {
     refreshNow: 'รีเฟรชทันที',
     refreshEvery: 'รีเฟรชอัตโนมัติ · {seconds} วินาที',
     refreshSeconds: 'ช่วงเวลารีเฟรช (วินาที)',
-    refreshDesc: 'ตั้งค่าได้ 1–3,600 วินาที บันทึกแล้วมีผลกับผู้ใช้ทุกคน',
+    refreshDesc: 'ตั้งค่าได้ 1–3,600 วินาที บันทึกแล้วใช้กับโรงงานปัจจุบัน',
     activeAlertTypes: 'ประเภทการแจ้งเตือนที่เปิดใช้',
     bothAlertTypes: 'ผลผลิตต่ำกว่าเป้าหมาย + ผลผลิตไม่เพิ่ม',
     groupTrend: 'แนวโน้มผลผลิตรวมของกลุ่ม',
@@ -1702,10 +1707,10 @@ export const messages = {
     setupBlockedReason:
       'ทำขั้นตอนเหล่านี้ก่อน: {steps} บันทึกร่างไว้ทำต่อภายหลัง แล้วจึงเผยแพร่การตั้งค่า',
     setupNextReady: 'ข้อมูลที่จำเป็นสำหรับขั้นตอนถัดไปพร้อมแล้ว',
-    setupLastStep: 'กดบันทึกการตั้งค่าเมื่อพร้อมใช้กับทุกคน',
+    setupLastStep: 'กดบันทึกการตั้งค่าเมื่อพร้อมใช้กับโรงงานปัจจุบัน',
     saveSettingsDraft: 'บันทึกร่าง',
     settingsDraftHint:
-      'บันทึกการตั้งค่าใช้กับทุกคน บันทึกร่างเก็บงานที่ยังไม่เสร็จในเบราว์เซอร์นี้สำหรับบัญชีของคุณ',
+      'บันทึกการตั้งค่าใช้กับโรงงานปัจจุบัน ร่างเก็บในเบราว์เซอร์นี้แยกตามบัญชีและโรงงาน',
     settingsDraftConflict:
       'กู้คืนร่างรุ่นเก่า การตั้งค่าร่วมเปลี่ยนแล้ว ระบบตรวจรุ่นก่อนเผยแพร่เพื่อป้องกันการทับข้อมูล',
     settingsDraftSaved: 'เก็บร่างในเบราว์เซอร์นี้แล้ว ยังไม่ได้เผยแพร่',

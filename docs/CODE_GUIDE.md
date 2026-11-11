@@ -1,5 +1,16 @@
 # 程式維護導覽
 
+## 多廠區與 RBAC 入口
+
+Phase 1 的 schema、API、Migration、權限與部署回復規則集中在 [MULTI_SITE](./MULTI_SITE.md)。先讀 `site-migration.mjs` → `site-access.mjs` → `auth.mjs` → `site-management.mjs` → `server.mjs`；前端由 `site-management.js` 與 app.js 整合。
+
+新增業務 API 必須先經 Session 授權及廠區綁定，再用 `siteQuery` 將 SQL 顯式綁定 `:site_id`，不可從 Payload 選資料範圍。交易內重新驗權防止 await 期間撤權。設定保存在 AsyncLocalStorage 請求範圍，不能再建程序共用的 config。`site_settings` 是唯一正式設定來源；legacy `app_settings` 只相容預設廠區。
+
+`users.system_role` 是全域角色，`user_sites.role` 是各廠角色；legacy role 不得作為新功能授權依據。System Admin 的全域管理 API 與一般廠區業務 API 分開。不同角色／同帳號多廠／失效 Session 及匯入 Token 隔離測試在 `tests/multi-site.test.mjs`，真實 UI 在 `scripts/site-management-audit.mjs`。
+
+登入帳號 UUID 與 site ID 已可作未來個人清單 `user_id + site_id + list_id` 的範圍鍵；不要把個人排序塞入共用廠區設定。本階段不建立排序或進階報表。
+
+
 ## 從哪裡開始讀
 
 先從 [README](../README.md) 啟動專案並完成一次設定、填報、總覽操作，再依功能往下追：

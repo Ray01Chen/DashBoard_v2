@@ -496,8 +496,8 @@ test('role-specific help omits manager setup from members and supports all three
   for (const language of ['en', 'zh', 'th']) {
     const manager = helpMarkup({ role: 'admin', language });
     const member = helpMarkup({ role: 'operator', language });
-    assert.equal((manager.match(/class="panel help-topic"/g) || []).length, 8);
-    assert.equal((member.match(/class="panel help-topic"/g) || []).length, 5);
+    assert.equal((manager.match(/class="panel help-topic"/g) || []).length, 9);
+    assert.equal((member.match(/class="panel help-topic"/g) || []).length, 6);
     assert.equal(helpMarkup({ role: 'manager', language }), manager);
     assert.equal(helpMarkup({ role: 'member', language }), member);
     assert.ok(manager.length > member.length);

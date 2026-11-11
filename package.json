@@ -16,7 +16,10 @@
     "format:check": "prettier --check .",
     "syntax:check": "node scripts/syntax-check.mjs",
     "repository:check": "node scripts/repository-audit.mjs",
-    "check": "npm run repository:check && npm run lint && npm run format:check && npm run syntax:check && npm test"
+    "check": "npm run repository:check && npm run lint && npm run format:check && npm run syntax:check && npm test",
+    "db:backup": "node scripts/database-maintenance.mjs backup",
+    "db:verify": "node scripts/database-maintenance.mjs verify",
+    "db:restore": "node scripts/database-maintenance.mjs restore"
   },
   "devDependencies": {
     "eslint": "10.14.0",

@@ -1,3 +1,4 @@
+import { siteMessages } from './site-messages.js';
 /** Role-specific setup and reporting instructions, kept aligned with the controls. */
 const guides = {
   en: {
@@ -488,7 +489,7 @@ function escapeHtml(value) {
  * Return a guide for internal roles (`admin` / `operator`) or account roles
  * (`manager` / `member`). All prose is escaped before insertion into the page.
  */
-export function helpMarkup({ role, language, esc = escapeHtml } = {}) {
+export function helpMarkup({ role, systemRole, language, esc = escapeHtml } = {}) {
   const requestedLanguage = language || globalThis.document?.documentElement.lang || 'en';
   const locale = requestedLanguage.startsWith('zh')
     ? 'zh'
@@ -510,6 +511,22 @@ export function helpMarkup({ role, language, esc = escapeHtml } = {}) {
           .join('')}</div>`
       : '';
   };
+  const access = siteMessages[locale];
+  const accessInstructions =
+    systemRole === 'system_admin'
+      ? access.accessHelpSystem
+      : manager
+        ? access.accessHelpSiteAdmin
+        : '';
+  const accessScreens =
+    systemRole === 'system_admin'
+      ? [
+          ['site-management', access.sites],
+          ['user-site-access', access.accessMemberships],
+          ['login-site-selection', access.accessSelectSite],
+        ]
+      : [['login-site-selection', access.accessSelectSite]];
+  const accessGuide = `<details class="panel help-topic"><summary>${esc(access.accessHelpTitle)}</summary><div><p>${esc(access.accessHelpCommon)}</p>${accessInstructions ? `<p>${esc(accessInstructions)}</p>` : ''}<p>${esc(access.accessHelpUser)}</p><div class="help-screens">${accessScreens.map(([name, caption], index) => `<details class="help-example"><summary><span>${index + 1}</span>${esc(caption)}</summary><figure><a href="/guide-images/${name}.png" target="_blank" rel="noopener"><img src="/guide-images/${name}.png" alt="${esc(caption)}" loading="lazy"></a><figcaption>${esc(caption)}</figcaption></figure></details>`).join('')}</div></div></details>`;
   return `<div class="help-intro"><span class="help-role">${esc(manager ? guide.manager : guide.member)}</span><p>${esc(manager ? guide.managerIntro : guide.memberIntro)}</p></div>
     <section class="panel help-quick-start"><h2>${esc(guide.quickTitle)}</h2><ol>${steps.map((step) => `<li>${esc(step)}</li>`).join('')}</ol></section>
     <div class="help-topics">${guide.sections
@@ -519,5 +536,5 @@ export function helpMarkup({ role, language, esc = escapeHtml } = {}) {
         ({ section, index }, visibleIndex) =>
           `<details class="panel help-topic" ${visibleIndex === 0 ? 'open' : ''}><summary>${esc(section.title)}</summary><div>${section.paragraphs.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('')}${screenMarkup(index)}</div></details>`,
       )
-      .join('')}</div>`;
+      .join('')}${accessGuide}</div>`;
 }

@@ -1,3 +1,4 @@
+import { auditSiteManagement } from './site-management-audit.mjs';
 import { auditOverviewRefinement } from './overview-refinement-audit.mjs';
 import { auditCompactBoard } from './compact-board-audit.mjs';
 import { auditLayoutRefinement } from './layout-refinement-audit.mjs';
@@ -2781,7 +2782,7 @@ try {
   );
   await navigate('help');
   assert.match(await page.locator('#help-content').innerText(), /station/i);
-  assert.equal(await page.locator('#help-content .help-topic').count(), 8);
+  assert.equal(await page.locator('#help-content .help-topic').count(), 9);
   for (const path of await page
     .locator('#help-content img')
     .evaluateAll((images) => images.map((image) => image.getAttribute('src')))) {
@@ -2823,7 +2824,7 @@ try {
   await member.waitForURL(baseURL + '/overview');
   assert.equal(new URL(member.url()).pathname, '/overview');
   await navigate('help', member);
-  assert.equal(await member.locator('#help-content .help-topic').count(), 5);
+  assert.equal(await member.locator('#help-content .help-topic').count(), 6);
   assert.equal(
     await member.locator('#help-content img[src="/guide-images/setup-order.png"]').count(),
     0,
@@ -3167,6 +3168,7 @@ try {
     root,
     screenshots,
   });
+  await auditSiteManagement({ browser, baseURL, root, screenshots, record, errors });
   assert.deepEqual(errors, []);
   record('No uncaught browser errors');
   console.log(

@@ -1,5 +1,12 @@
 # BP9 Production Center guide
 
+## Login and site access
+
+Choose an authorized active site after signing in; a valid last choice is reused. Remember me lasts 30 days; normal sessions last up to 8 hours. Current site in the header switches sites after pending reports are resolved and reloads the workspace. Older tabs must reload if another tab changed the site. Revoked access and disabled sites are rejected immediately.
+
+Settings, catalogs, targets, personnel and reports belong to the selected site. System Admins manage sites and global accounts, Site Admins manage the current site and its normal users, and Users need explicit feature grants. New users default to view-only. See the [Phase 1 reference and deployment guide](./MULTI_SITE.md) for the schema, APIs and rollback procedure.
+
+
 Open your deployed Production Center. A manager account manages shared settings; a member account enters production, imports and reviews reports. The in-app User guide follows the logged-in role. Language choices are Chinese / English / Thai in every interface language.
 
 The main page is **Production Overview**. The collapsible left sidebar groups Production, Review & analysis, and Settings & help. Desktop collapse is remembered; hover icons for names. Small screens and fullscreen use a temporary drawer from the header menu. Escape or the backdrop closes it. Language, theme and account stay in the header. Both views use filters → Group Overview → alert filters → line cards → detailed charts. Desktop cards use one horizontal row for identity, signal/status, four metrics, trend, current/next slot and alert summary. Long names have ellipsis with complete text on hover and in details; metrics use shared grid columns and tabular numbers. Full numbers are shown when they fit; only overflowing values use localized compact notation, with exact tooltips and details. All rows keep identical column positions and trend sizes. Intermediate widths switch every card to a two-row metric grid without shrinking fonts or charts. Ordinary mode retains inline expansion; the fullscreen arrow opens the existing detail dialog without growing a row. [Overview screenshot](./images/production-overview.png).

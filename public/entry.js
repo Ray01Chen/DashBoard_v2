@@ -1914,10 +1914,10 @@ export function createEntryController({
           Object.values(contexts).some((ctx) =>
             rowsFor(ctx).some((row) => stationHasOutput(row, context.config)),
           );
-        return `<div><strong>${esc(text(shift === 'all' ? 'wholeDay' : shift))}</strong><button type="button" class="button" data-entry-action="template" data-import-shift="${shift}" ${!ready || importState.busy ? 'disabled' : ''}>${esc(text('template'))}</button><button type="button" class="button" data-entry-action="open-import" data-import-shift="${shift}" ${!ready || importState.busy ? 'disabled' : ''}>${esc(text('importExcel'))}</button></div>`;
+        return `<div><strong>${esc(text(shift === 'all' ? 'wholeDay' : shift))}</strong><button type="button" class="button" data-entry-action="template" ${context.canManage || !context.permissions || context.permissions.includes('data.export') ? '' : 'hidden'} data-import-shift="${shift}" ${!ready || importState.busy ? 'disabled' : ''}>${esc(text('template'))}</button><button type="button" class="button" data-entry-action="open-import" ${context.canManage || !context.permissions || context.permissions.includes('data.import') ? '' : 'hidden'} data-import-shift="${shift}" ${!ready || importState.busy ? 'disabled' : ''}>${esc(text('importExcel'))}</button></div>`;
       })
       .join('')}</div></details>`;
-    return `<div class="entry-sheet-tools"><div class="entry-sheet-primary">${bulkLaunch(currentUnit)}<div class="entry-sheet-identity">${unit ? productionIdentityMarkup(unit, esc, { singleLine: true }) : `<strong>${esc(line || text('allLines'))}</strong><span>${esc(model || text('allModels'))}</span>`}${historical ? `<small class="entry-history-badge" title="${esc(text('historicalScheduleHint'))}">${esc(text('historicalSchedule'))}</small>` : ''}</div></div><div class="entry-sheet-actions">${shiftPicker(context)}<button type="button" class="button" data-entry-action="current-slot">${esc(text('currentSlot'))}</button>${excel}${unit ? `<button type="button" class="button entry-restore-defaults" data-entry-action="restore-defaults" data-restore-defaults="${esc(productionKey(unit))}">${esc(text('restoreDefaults'))}</button>` : ''}<button type="button" class="button" data-entry-action="save-all">${esc(text('saveNow'))}</button><span data-entry-overall role="status"></span></div></div>`;
+    return `<div class="entry-sheet-tools"><div class="entry-sheet-primary">${bulkLaunch(currentUnit)}<div class="entry-sheet-identity">${unit ? productionIdentityMarkup(unit, esc, { singleLine: true }) : `<strong>${esc(line || text('allLines'))}</strong><span>${esc(model || text('allModels'))}</span>`}${historical ? `<small class="entry-history-badge" title="${esc(text('historicalScheduleHint'))}">${esc(text('historicalSchedule'))}</small>` : ''}</div></div><div class="entry-sheet-actions">${shiftPicker(context)}<button type="button" class="button" data-entry-action="current-slot">${esc(text('currentSlot'))}</button>${context.canManage || !context.permissions || context.permissions.some((permission) => ['data.import', 'data.export'].includes(permission)) ? excel : ''}${unit ? `<button type="button" class="button entry-restore-defaults" data-entry-action="restore-defaults" data-restore-defaults="${esc(productionKey(unit))}">${esc(text('restoreDefaults'))}</button>` : ''}<button type="button" class="button" data-entry-action="save-all">${esc(text('saveNow'))}</button><span data-entry-overall role="status"></span></div></div>`;
   }
 
   /** One row per station across the full production day. The line daily preset
@@ -2461,7 +2461,8 @@ export function createEntryController({
   async function downloadTemplate(shift) {
     if (!['day', 'night', 'all'].includes(shift)) return;
     if (importState.busy) return setBanner(text('importBusy'));
-    const context = { date: getContext().date, shift };
+    const { date, siteId, siteVersion } = getContext();
+    const context = { date, shift, siteId, siteVersion };
     if (!(await queue.flush()) || invalid.size) return setBanner(text('unsavedImport'));
     try {
       const query = new URLSearchParams({
@@ -2471,6 +2472,12 @@ export function createEntryController({
       });
       const response = await fetch(`/api/import/template?${query}`, {
         credentials: 'same-origin',
+        headers: context.siteId
+          ? {
+              'X-Site-ID': String(context.siteId),
+              'X-Site-Version': String(context.siteVersion),
+            }
+          : {},
       });
       if (!response.ok) {
         if (response.status === 401) await api('/api/auth/me');

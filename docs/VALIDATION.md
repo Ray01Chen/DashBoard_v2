@@ -1,3 +1,30 @@
+# 2026-11-11 Phase 1 多廠區、RBAC 與資料隔離
+
+完整操作、schema／API、部署與回復程序見 [MULTI_SITE.md](./MULTI_SITE.md)。本階段沿用 Node.js HTTP、SQLite、scrypt 與既有 Session，不新增服務或 ORM，不改告警／產量計算。
+
+| 驗證 | 結果 |
+| --- | --- |
+| `npm run check` | Git 規則、ESLint、Prettier、73 個 JavaScript 檔語法與 267 項測試通過；新增 11 項多廠區／Migration／Session／回復／串流安全測試 |
+| Chromium 完整回歸 | 68 組流程；原填報、Excel、告警、歷史、設定、圖表及輪播回歸，加上三組真實廠區／角色 UI 流程 |
+| System Admin | 管理廠區、使用者、啟停與全域角色；新建 System Admin 即可查看所有廠區，權限不依賴 legacy role；不能停用或降級最後一位有效 System Admin |
+| Site Admin | 僅管理所選廠區的普通使用者及設定；不能建立廠區、指派管理員、變更全域帳號或管理未授權廠區。未知／外廠使用者 ID 在讀取目標前拒絕，避免 ID 枚舉 |
+| User／跨廠角色 | 同帳號在 A 是 Site Admin、B 是 User；選廠後角色、選單與資料一致。新帳號預設唯讀，填報、匯入、匯出須明確授權 |
+| API 隔離 | URL／Payload／Header 篡改、外廠 row ID、畸形 site_id、未知權限、匯出及範本均拒絕；並行讀 A／B 不串資料；匯入 Token 同時綁使用者與廠區 |
+| 撤權及停用 | 現有 Session 即時失去被撤廠區／功能；停用廠區不刪生產歷史，重新啟用原記錄仍在；其他廠區授權不受影響 |
+| In-flight 安全 | 已授權請求 Body 尚未收完時撤權，提交拒絕且設定／版本不變。沒有 Header 的請求若在串流期間切換 Session 廠區，也拒絕且不改寫新廠區 |
+| Session | 一般 Cookie 無持久 Max-Age、最長 8 小時；Remember Me 為 30 天。HttpOnly／SameSite=Strict、TLS Secure、登出、最後廠區及無效選擇重選均通過。Token 只以雜湊存資料庫 |
+| Migration 非空 fixture | 原生產 JSON、0／NULL、站點 ID、帳號名稱、雜湊及筆數一致；角色只提升指定 bootstrap；admin/operator 舊帳號保留名稱；非空欄位及 FK 有效；再次執行不變動 |
+| Migration 失敗／回復 | 失敗回滾，原表及資料保留；online backup 包含 WAL；無 `--offline` 不回復，明確停機回復會先保留目的庫救援備份，再恢復原內容 |
+| 工作區實際副本 | 以 read-only 開啟目前資料庫，online backup 到臨時副本再遷移。來源 0 筆生產、0 筆版本／活動／稽核／預覽、1 筆設定，內容與帳密保持一致，FK 違規 0；原工作區未遷移 |
+| UI／i18n／主題 | Site／User 管理兩頁三語 × 五主題 × 桌面／手機；實際建立、改名、指派角色、選廠區、記住我與重登入、跨分頁舊版本拒絕、停用及保留歷史通過 |
+| 截圖／教學 | 新增 site-management、user-site-access、login-site-selection 的實際 UI 圖，更新既有圖及中英文件／站內中英泰角色教學 |
+
+正式部署資料庫尚未升級；上線需停止舊 worker，使用新程式的自動備份／Migration 後執行 db:verify。回退必須同時使用舊程式與升級前資料庫，不能把舊版未隔離 SQL 指向多廠區資料庫。測試使用獨立資料庫，未覆寫正式資料。僅驗證 Chromium；未驗證 Firefox／Safari、外部 TLS 代理或正式部署資料庫。本階段不含其他時區、SSO、個人排序或進階跨廠報表；沒有 Type Check／Build 指令。
+
+以下為歷史版本紀錄。
+
+---
+
 # 2026-11-11 專案檔案、Git 與 Coding Style 整理
 
 | 檢查 | 結果 |

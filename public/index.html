@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="/workflow.css" />
     <link rel="stylesheet" href="/workforce.css" />
     <link rel="stylesheet" href="/design-system.css" />
+    <link rel="stylesheet" href="/site-management.css" />
     <script type="module" src="/app.js"></script>
   </head>
   <body>
@@ -40,7 +41,7 @@
       <div class="workspace">
         <span class="plant-avatar">BP</span
         ><span class="workspace-copy"
-          ><strong data-i18n="plantCenter">BP9 生產中心</strong
+          ><strong id="current-site-name">BP9 生產中心</strong
           ><small data-i18n="plantOperations">廠區營運</small></span
         ><span class="online-dot"></span>
       </div>
@@ -55,7 +56,12 @@
           <span data-icon="grid"></span
           ><span class="nav-label" data-i18n="overview">生產總覽</span>
         </a>
-        <a href="/entry" class="nav-item" data-view="entry" data-i18n-title="entry"
+        <a
+          href="/entry"
+          class="nav-item"
+          data-view="entry"
+          data-permission="production.write"
+          data-i18n-title="entry"
           ><span data-icon="edit"></span><span class="nav-label" data-i18n="entry"></span
         ></a>
         <p class="nav-caption" data-i18n="reviewNavigation"></p>
@@ -70,6 +76,22 @@
           data-admin-only
           data-i18n-title="settings"
           ><span data-icon="settings"></span><span class="nav-label" data-i18n="settings"></span
+        ></a>
+        <a
+          href="/administration/sites"
+          class="nav-item"
+          data-view="sites"
+          data-system-only
+          data-i18n-title="sites"
+          ><span data-icon="grid"></span><span class="nav-label" data-i18n="sites"></span
+        ></a>
+        <a
+          href="/administration/users"
+          class="nav-item"
+          data-view="users"
+          data-admin-only
+          data-i18n-title="users"
+          ><span data-icon="clipboard"></span><span class="nav-label" data-i18n="users"></span
         ></a>
         <a href="/guide" class="nav-item" data-view="help" data-i18n-title="help"
           ><span data-icon="info"></span><span class="nav-label" data-i18n="help"></span
@@ -123,6 +145,9 @@
           ><label class="header-select theme-select"
             ><span data-icon="palette"></span
             ><select id="theme-select" data-i18n-aria="theme"></select></label
+          ><label class="header-select site-selector"
+            ><span data-i18n="accessCurrentSite"></span
+            ><select id="site-select" data-i18n-aria="accessCurrentSite"></select></label
           ><span class="current-user" id="current-user"></span
           ><span class="user-avatar">BP</span
           ><button
@@ -147,6 +172,7 @@
             <p id="page-description"></p>
           </div>
         </section>
+        <section id="administration-content" class="access-management" hidden></section>
         <div id="report-content">
           <section class="filter-bar" data-i18n-aria="reportDate">
             <div class="filter-group">
@@ -177,6 +203,7 @@
                 ><strong id="board-context"></strong>
               </div>
               <div class="board-actions">
+                <span id="board-site-name" class="board-site-label"></span>
                 <div class="metric-scope-buttons" role="group" data-i18n-aria="metricScope">
                   <button
                     data-metric-scope="interval"
@@ -623,7 +650,24 @@
             autocomplete="current-password"
             maxlength="200"
             required /></label
-        ><button
+        ><label class="access-check" id="login-remember-field"
+          ><input type="checkbox" id="login-remember" /><span
+            data-i18n="accessRememberMe"
+          ></span
+        ></label>
+        <label id="login-site-field" hidden
+          ><span data-i18n="accessSelectSite"></span
+          ><select id="login-site"></select
+        ></label>
+        <p id="login-no-sites" data-i18n="accessNoSites" hidden></p>
+        <button
+          class="button"
+          type="button"
+          id="login-other-account"
+          data-i18n="accessOtherAccount"
+          hidden
+        ></button>
+        <button
           class="button primary"
           id="login-submit"
           type="submit"

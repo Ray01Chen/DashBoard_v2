@@ -6,6 +6,8 @@ export const pagePaths = {
   details: '/details',
   entry: '/entry',
   help: '/guide',
+  sites: '/administration/sites',
+  users: '/administration/users',
 };
 export const settingsPaths = {
   structure: '/settings/master-data',

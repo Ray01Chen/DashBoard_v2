@@ -1,3 +1,4 @@
+import { createSiteManagementUI } from './site-management.js';
 import { boardDisplayPreferences } from './board-display.js';
 import { cancelMonitorPageMotion } from './monitor-carousel.js';
 import { MonitorPaging, pageSize, fitMonitorPage } from './monitor-paging.js';
@@ -180,6 +181,12 @@ let boardDisplay = boardDisplayPreferences(savedBoardDisplay, {
   share: stored('bp-board-share') === 'true',
 });
 const canManage = () => state.user?.role === 'admin';
+const canUse = (permission) =>
+  !!state.user?.site && (canManage() || !!state.user.permissions?.includes(permission));
+const isAdministration = (view) => ['sites', 'users'].includes(view);
+let administration,
+  workspaceIdentity,
+  switchingSite = false;
 const t = (key, params) => translate(state.language, key, params);
 const number = (v) =>
   v == null ? '—' : new Intl.NumberFormat(localeTags[state.language]).format(v);
@@ -214,7 +221,8 @@ history.replaceState({ ...history.state, pageIndex }, '', location.href);
 /** Retain real page addresses without reloading a shared settings draft. Only
  * a successful guarded transition creates history; rerenders never add pages. */
 function syncPageAddress(replace = false) {
-  if (!state.user || !state.config || handlingPageHistory) return;
+  if (!state.user || (!state.config && !isAdministration(state.view)) || handlingPageHistory)
+    return;
   const path = pagePath(state.view, state.settingsTab);
   if (!path || location.pathname === path) return;
   if (!replace) pageIndex++;
@@ -263,6 +271,7 @@ async function api(url, options = {}) {
       headers: {
         'Content-Type': 'application/json',
         'Accept-Language': state.language,
+        ...siteHeaders(),
         ...request.headers,
       },
     });
@@ -281,12 +290,44 @@ async function api(url, options = {}) {
   }
   return data;
 }
+function siteHeaders() {
+  return state.user?.site
+    ? {
+        'X-Site-ID': String(state.user.site.id),
+        'X-Site-Version': String(state.user.siteVersion),
+      }
+    : {};
+}
+function applyFeatureAccess() {
+  $$('[data-permission]').forEach((node) => (node.hidden = !canUse(node.dataset.permission)));
+  $('#export').hidden = state.view === 'entry' || !canUse('data.export');
+}
 function applyAccess() {
   $$('[data-admin-only]').forEach((el) => (el.hidden = !canManage()));
+  $('[data-view="settings"]').hidden = !canManage() || !state.user?.site;
+  $('.template-note').hidden = !canManage() || !state.user?.site;
   $('#current-user').textContent = state.user
-    ? `${state.user.username} · ${t(state.user.role)}`
+    ? `${state.user.username} · ${t('role_' + (state.user.systemRole === 'system_admin' ? 'system_admin' : state.user.siteRole || 'user'))}`
     : '';
   $('#logout').hidden = !state.user;
+  $$('[data-system-only]').forEach(
+    (node) => (node.hidden = state.user?.systemRole !== 'system_admin'),
+  );
+  $('#current-site-name').textContent = state.user?.site?.site_name || 'BP PULSE';
+  $('#board-site-name').textContent = state.user?.site?.site_name || '';
+  $('#board-site-name').title = state.user?.site?.site_name || '';
+  $('#site-select').innerHTML =
+    (state.user?.site ? '' : `<option value="">${esc(t('accessSelectSite'))}</option>`) +
+    naturalOrder(state.user?.sites || [], state.language, (site) => site.site_code)
+      .map(
+        (site) =>
+          `<option value="${site.id}">${esc(site.site_code + ' · ' + site.site_name)}</option>`,
+      )
+      .join('');
+  $('#site-select').value = String(state.user?.site?.id || '');
+  $('#site-select').title = state.user?.site?.site_name || '';
+  $('#site-select').disabled = !state.user;
+  applyFeatureAccess();
 }
 function showLogin(expired = false) {
   state.user = null;
@@ -294,13 +335,63 @@ function showLogin(expired = false) {
   applyAccess();
   $('#login-error').hidden = !expired;
   if (expired) showError('#login-error', { code: 'errAuth' });
+  prepareSiteLogin();
   if (!$('#login-dialog').open) $('#login-dialog').showModal();
 }
+function prepareSiteLogin() {
+  const choosing = !!state.user?.needsSiteSelection;
+  for (const field of ['login-username', 'login-password'])
+    $('#' + field).closest('label').hidden = choosing;
+  $('#login-remember-field').hidden = choosing;
+  $('#login-site-field').hidden = !choosing;
+  $('#login-other-account').hidden = !choosing;
+  $('#login-no-sites').hidden = !choosing || !!state.user.sites.length;
+  $('#login-site').innerHTML =
+    `<option value="">${esc(t('accessSelectSite'))}</option>` +
+    naturalOrder(state.user?.sites || [], state.language, (site) => site.site_code)
+      .map(
+        (site) =>
+          `<option value="${site.id}">${esc(site.site_code + ' · ' + site.site_name)}</option>`,
+      )
+      .join('');
+  $('#login-submit').hidden = choosing && !state.user.sites.length;
+  $('#login-submit').textContent = t(choosing ? 'accessChooseSite' : 'loginSubmit');
+}
 async function initializeWorkspace(user) {
+  const identity = user.id + ':' + (user.site?.id || '');
+  if (workspaceIdentity && workspaceIdentity !== identity) {
+    location.reload();
+    return false;
+  }
   state.user = user;
+  if (!user.site && user.systemRole !== 'system_admin') {
+    document.body.classList.remove('authenticated');
+    prepareSiteLogin();
+    if (!$('#login-dialog').open) $('#login-dialog').showModal();
+    return false;
+  }
+  if (!user.site && user.sites.length) {
+    document.body.classList.remove('authenticated');
+    prepareSiteLogin();
+    if (!$('#login-dialog').open) $('#login-dialog').showModal();
+    return false;
+  }
+  workspaceIdentity = identity;
   const requestedPage = resolvePage(location.pathname) || { view: 'overview' };
   state.view = requestedPage.view;
   state.settingsTab = requestedPage.tab || 'structure';
+  if (state.view === 'sites' && user.systemRole !== 'system_admin') state.view = 'overview';
+  if (state.view === 'users' && !canManage()) state.view = 'overview';
+  if (state.view === 'entry' && !canUse('production.write')) state.view = 'overview';
+  if (!user.site) {
+    state.view = 'sites';
+    document.body.classList.add('authenticated');
+    applyAccess();
+    updateHeadings();
+    await administration.render('sites');
+    syncPageAddress(true);
+    return true;
+  }
   if (!canManage() && state.view === 'settings') {
     state.view = 'overview';
     state.draft = null;
@@ -331,9 +422,11 @@ async function initializeWorkspace(user) {
   applyAccess();
   updateHeadings();
   populateLineFilters();
-  await loadRecords();
+  if (isAdministration(state.view)) await administration.render(state.view);
+  else await loadRecords();
   if (state.view === 'settings') renderSettings();
   syncPageAddress(true);
+  return true;
 }
 function showError(selector, error) {
   const el = $(selector);
@@ -435,6 +528,8 @@ function applyLanguage(language, persist = false) {
   updateConnection();
   updateHeadings();
   applyAccess();
+  if ($('#login-dialog').open && state.user?.needsSiteSelection) prepareSiteLogin();
+  if (isAdministration(state.view) && !state.config) administration?.render(state.view);
   if (state.config) {
     populateLineFilters();
     render();
@@ -456,18 +551,19 @@ function updateConnection() {
 function updateHeadings() {
   const view = state.view;
   document.body.dataset.page = view;
-  document.title = `BP9 · ${t(view)}`;
+  document.title = `${state.user?.site?.site_code || 'BP PULSE'} · ${t(view)}`;
   $('#breadcrumb').textContent = t(view);
   $('#page-title').textContent = t(view);
   $('#page-description').textContent = t(`${view}Desc`);
   $('#table-heading').textContent = t('tableTitle');
   $('#table-description').textContent = t('tableDesc');
-  $('#report-content').hidden = ['settings', 'help'].includes(view);
+  $('#report-content').hidden = ['settings', 'help', 'sites', 'users'].includes(view);
+  $('#administration-content').hidden = !isAdministration(view);
   // Entry shows both shifts or explicit interval buttons. A second shift picker
   // in the report toolbar would imply that it filters the whole-day sheet.
   $('.filter-bar .segmented').hidden = view === 'entry';
   syncReportScopeButtons();
-  $('#export').hidden = view === 'entry';
+  $('#export').hidden = view === 'entry' || !canUse('data.export');
   $('#help-content').hidden = view !== 'help';
   $('#settings-content').hidden = view !== 'settings';
   $('#overview-panels').hidden = view !== 'overview';
@@ -734,13 +830,20 @@ async function loadRecords(background = false) {
   }
 }
 function render() {
+  if (isAdministration(state.view)) {
+    administration?.render(state.view);
+    return;
+  }
+  administration?.hide();
   if (!state.config) return;
   $('#line-dashboard').hidden = state.view !== 'overview';
   $('#entry-content').hidden = state.view !== 'entry';
   if (state.view === 'entry') entryController?.render();
+  applyFeatureAccess();
   if (state.view === 'help')
     $('#help-content').innerHTML = helpMarkup({
       role: state.user.role,
+      systemRole: state.user.systemRole,
       language: state.language,
       t,
       esc,
@@ -1024,14 +1127,20 @@ function settingsNeedProtection() {
   return settingsDirty() && !localSettingsDraftSaved();
 }
 function settingsDraftKey() {
-  return `bp-settings-draft:${state.user.username}`;
+  return `bp-settings-draft:${state.user.id}:${state.user.site.id}`;
 }
 function beginSettingsDraft() {
   state.draft = structuredClone(state.config);
   settingsSnapshot = JSON.stringify(state.draft);
   localDraftSnapshot = '';
   try {
-    const saved = JSON.parse(stored(settingsDraftKey()) || 'null');
+    const saved = JSON.parse(
+      stored(settingsDraftKey()) ||
+        (state.user.site.id === 1
+          ? stored(`bp-settings-draft:${state.user.username}`)
+          : null) ||
+        'null',
+    );
     const draft = saved?.draft;
     // Check the browser-storage envelope before using it as a renderable draft.
     if (
@@ -1063,7 +1172,17 @@ function beginSettingsDraft() {
   state.mappingBatch = [{ job: '', station: '' }];
 }
 async function setView(view, options = {}) {
-  if (!state.config || !state.user || !pagePath(view)) return false;
+  if ((!state.config && !isAdministration(view)) || !state.user || !pagePath(view))
+    return false;
+  if (administration?.isBusy() || switchingSite) return false;
+  if (
+    (view === 'sites' && state.user.systemRole !== 'system_admin') ||
+    (view === 'users' && !canManage()) ||
+    (view === 'entry' && !canUse('production.write'))
+  ) {
+    toast(t('errForbidden'));
+    return false;
+  }
   if (!(await entryController?.canLeave())) {
     toast(t('resolveEntryChanges'));
     return false;
@@ -1093,7 +1212,8 @@ async function setView(view, options = {}) {
   }
   if (options.history !== false) syncPageAddress();
   updateHeadings();
-  if (view === 'settings') renderSettings();
+  if (isAdministration(view)) await administration.render(view);
+  else if (view === 'settings') renderSettings();
   else if (
     view !== 'help' &&
     (state.loadedScope !== `${state.date}|${reportScope()}` ||
@@ -2432,7 +2552,9 @@ $('#export').onclick = async () => {
     const suffix = `${state.line ? `&line=${encodeURIComponent(state.line)}` : ''}${state.view === 'details' && state.detailGroupId ? `&group=${encodeURIComponent(state.detailGroupId)}` : ''}`;
     const responses = await Promise.all(
       (scope === 'all' ? ['day', 'night'] : [scope]).map((shift) =>
-        fetch(`/api/export?date=${state.date}&shift=${shift}&lang=${state.language}${suffix}`),
+        fetch(`/api/export?date=${state.date}&shift=${shift}&lang=${state.language}${suffix}`, {
+          headers: siteHeaders(),
+        }),
       ),
     );
     if (responses.some((response) => response.status === 401)) {
@@ -2718,6 +2840,9 @@ entryController = createEntryController({
     loading: state.loading,
     language: state.language,
     canManage: canManage(),
+    siteId: state.user?.site?.id,
+    siteVersion: state.user?.siteVersion,
+    permissions: state.user?.permissions,
   }),
   onSaved: (saved, meta) => {
     if (meta?.key && !meta.key.startsWith(state.date + '|' + state.shift + '|')) return;
@@ -2755,30 +2880,108 @@ applyTheme(state.theme);
 applyLanguage(state.language);
 $('#login-dialog').addEventListener('cancel', (e) => e.preventDefault());
 $('#login-language').onchange = () => applyLanguage($('#login-language').value, true);
-$('#login-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
+administration = createSiteManagementUI({
+  mount: $('#administration-content'),
+  api,
+  getUser: () => state.user,
+  t,
+  esc,
+  toast,
+  onNavigate: (view) => setView(view),
+  onAccessChange: async () => {
+    const { user } = await api('/api/auth/me');
+    state.user = user;
+    applyAccess();
+  },
+  confirm: (key) =>
+    confirmText(t(key), t('accessRevokeConfirm'), t('accessRevoke'), t('accessCancel')),
+});
+$('#site-select').onchange = async (event) => {
+  const chosen = event.target.value,
+    previous = String(state.user?.site?.id || '');
+  if (!chosen || chosen === previous) return;
+  event.target.value = previous;
+  if (switchingSite) return;
+  switchingSite = true;
+  event.target.disabled = true;
+  const main = $('#main'),
+    sidebar = $('#sidebar'),
+    controls = $('.topbar-right');
+  const inert = [main.inert, sidebar.inert, controls.inert];
+  let navigating = false;
+  try {
+    if (settingsSaving || administration.isBusy() || !(await entryController?.canLeave()))
+      return;
+    if (
+      settingsNeedProtection() &&
+      !(await confirmText(
+        t('accessSelectSite'),
+        t('accessSwitchConfirm'),
+        t('accessChooseSite'),
+        t('accessCancel'),
+      ))
+    )
+      return;
+    main.inert = true;
+    sidebar.inert = true;
+    controls.inert = true;
+    await api('/api/auth/site', {
+      method: 'POST',
+      body: JSON.stringify({ siteId: Number(chosen) }),
+    });
+    navigating = true;
+    // Reload clears every queue, preview and cache. Until then keep the old
+    // site label so the visible old dataset is never labelled as the new site.
+    location.reload();
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    if (!navigating) {
+      switchingSite = false;
+      event.target.disabled = false;
+      [main.inert, sidebar.inert, controls.inert] = inert;
+    }
+  }
+};
+$('#login-other-account').onclick = async () => {
+  try {
+    await api('/api/auth/logout', { method: 'POST', body: '{}', allowAnonymous: true });
+    location.reload();
+  } catch (error) {
+    showError('#login-error', error);
+  }
+};
+$('#login-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
   const button = $('#login-submit');
   if (button.disabled) return;
   $('#login-error').hidden = true;
   button.disabled = true;
   button.textContent = t('loggingIn');
   try {
-    const { user } = await api('/api/auth/login', {
+    const choosing = !!state.user?.needsSiteSelection;
+    if (choosing && !$('#login-site').value)
+      throw Object.assign(new Error(t('accessSelectSite')), { code: 'accessSelectSite' });
+    const { user } = await api(choosing ? '/api/auth/site' : '/api/auth/login', {
       method: 'POST',
       allowAnonymous: true,
-      body: JSON.stringify({
-        username: $('#login-username').value.trim(),
-        password: $('#login-password').value,
-      }),
+      body: JSON.stringify(
+        choosing
+          ? { siteId: Number($('#login-site').value) }
+          : {
+              username: $('#login-username').value.trim(),
+              password: $('#login-password').value,
+              rememberMe: $('#login-remember').checked,
+            },
+      ),
     });
     $('#login-password').value = '';
-    await initializeWorkspace(user);
-    $('#login-dialog').close();
+    if (await initializeWorkspace(user)) $('#login-dialog').close();
   } catch (error) {
     showError('#login-error', error);
   } finally {
     button.disabled = false;
-    button.textContent = t('loginSubmit');
+    button.textContent = t(state.user?.needsSiteSelection ? 'accessChooseSite' : 'loginSubmit');
   }
 });
 $('#logout').onclick = async () => {
