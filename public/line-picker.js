@@ -1,23 +1,32 @@
 /** A bounded, searchable selector. Selection is UI state, not a CONFIG edit;
  * only the existing Apply action copies schedules into the settings draft. */
-import { naturalOrder } from './list-order.js';
+import { listOrder } from './list-order.js';
 
 export function linePickerGroups(config, language) {
   const available = new Set(config.lines);
-  const groups = naturalOrder(config.monitoring?.groups || [], language, (group) => group.name)
+  const groups = listOrder(
+    config.monitoring?.groups || [],
+    language,
+    (group) => group.name,
+    'groups',
+  )
     .map((group) => ({
       id: 'group:' + group.id,
       name: group.name,
-      lines: naturalOrder(
+      lines: listOrder(
         [...new Set(group.lines.filter((line) => available.has(line)))],
         language,
+        undefined,
+        'lines',
       ),
     }))
     .filter((group) => group.lines.length);
   const assigned = new Set(groups.flatMap((group) => group.lines));
-  const remaining = naturalOrder(
+  const remaining = listOrder(
     config.lines.filter((line) => !assigned.has(line)),
     language,
+    undefined,
+    'lines',
   );
   if (remaining.length) groups.push({ id: 'ungrouped', name: null, lines: remaining });
   return groups;

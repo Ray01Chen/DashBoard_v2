@@ -106,7 +106,8 @@ const guides = {
       {
         title: 'Accounts, language and data',
         paragraphs: [
-          'Catalogs and ordinary option lists use language-aware natural order, such as CD2 before CD10. Sorting changes presentation only. Configured station order, shift/overnight interval sequence and explicit display order retain priority; selected IDs and saved history do not move.',
+          'Open List order in the header (or fullscreen controls). Choose a list and drag its handle or use the arrow buttons. The order saves automatically to your account and current site, survives login, and new items appear last. Other users, CONFIG station sequence and chronological slots are unchanged. If saving fails, retry or reload; do not leave before Order saved.',
+          'To edit output on Production Overview, hover a line and choose Edit on the left (always visible on touch). Select production date, shift, output station and slot. Enter Slot actual and issue quick text / notes, then Save or Cancel. Only that station and slot change; blank Actual is unreported, zero is valid. Fullscreen uses the same draft and pauses page rotation. A conflict or network error keeps your input; cancel and reopen to load the latest revision.',
           'Managers configure shared presets and assignments. Members enter each station’s targets/actuals and issue notes, import and review reports; shared Settings are unavailable to members.',
           'Use the language control for English, Chinese or Thai and the theme control for your preferred colour. These browser preferences do not change another user’s view.',
           'Line/model headings omit the Model prefix. A name is split at its first hyphen: ECD16010094 appears on the first model line and (ORV3-PSU-3KW-AutoLine) on the second. Names without a hyphen use one line. The stored name and Excel identifiers are unchanged.',
@@ -220,7 +221,8 @@ const guides = {
       {
         title: '帳號、語言及資料保存',
         paragraphs: [
-          '一般目錄與選項依目前語言自然排序，例如 CD2 在 CD10 前；排序只改畫面。站點依配置順序，時段保留班別與跨日的設定序列，明確顯示順序優先，不改選取 ID 或歷史紀錄。',
+          '在頁首或全螢幕控制列開啟「清單排序」，選擇清單後拖曳把手，或使用上下按鈕。順序自動存入你的帳號與目前廠區，重新登入仍保留；新增項目排最後，不影響其他人。站點配置與時段先後仍依業務設定。若儲存失敗可重試或重新載入，看到「順序已儲存」後再離開。',
+          '生產總覽可直接編輯：滑入線體後點左側「編輯」（觸控會常駐顯示），選生產日期、班別、產出站點與時段，再改實績、異常快捷文字／說明，按儲存或取消。只改該站該時段；實績空白是未回報，0 是有效回報。全螢幕沿用相同草稿，編輯時暫停換頁。版本衝突或連線失敗會保留輸入；可取消後重新開啟取得最新資料。',
           'manager 管理共用預設及人員配置；member 可填每站當日目標／實績及異常、匯入與查詢，但不能修改共享 Settings。',
           '右上角可選英文、中文、泰文及配色。個人瀏覽器的偏好不會改變其他使用者的畫面。',
           '產線標題不再加 Model 字樣。型號以第一個 - 分成兩行，例如第一行 ECD16010094，第二行 (ORV3-PSU-3KW-AutoLine)；沒有 - 就顯示一行。只是顯示格式，保存名稱與 Excel 識別不變。',
@@ -336,7 +338,8 @@ const guides = {
       {
         title: 'บัญชี ภาษา และการเก็บข้อมูล',
         paragraphs: [
-          'รายการทั่วไปเรียงตามภาษาและตัวเลข เช่น CD2 ก่อน CD10 เปลี่ยนเฉพาะการแสดงผล สถานียังคงลำดับที่ตั้งไว้ ช่วงเวลาคงลำดับกะรวมข้ามคืน และใช้ลำดับแสดงผลที่กำหนดก่อน ไม่เปลี่ยนรหัสที่เลือกหรือประวัติ',
+          'เปิดลำดับรายการที่ส่วนหัวหรือแถบเต็มจอ เลือกรายการแล้วลากที่จับหรือใช้ลูกศร บันทึกอัตโนมัติเฉพาะบัญชีและโรงงานปัจจุบัน เข้าสู่ระบบใหม่ยังคงลำดับ รายการใหม่อยู่ท้าย ไม่กระทบผู้อื่น ลำดับสถานีและช่วงเวลายังเป็นไปตามการตั้งค่า หากบันทึกล้มเหลวให้ลองใหม่หรือโหลดใหม่',
+          'แก้ไขยอดจริงจากภาพรวมได้โดยชี้ที่สายแล้วกดแก้ไขด้านซ้าย (จอสัมผัสแสดงเสมอ) เลือกวันที่ กะ สถานี และช่วงเวลา กรอกยอดจริงและปัญหา แล้วบันทึกหรือยกเลิก เปลี่ยนเฉพาะสถานีและช่วงเวลาที่เลือก ช่องว่างคือยังไม่รายงาน 0 คือรายงานแล้ว เต็มจอใช้ร่างเดิมและหยุดสลับหน้า หากข้อมูลขัดแย้งหรือเครือข่ายล้มเหลวจะเก็บข้อความไว้ ยกเลิกแล้วเปิดใหม่เพื่อโหลดรุ่นล่าสุด',
           'ผู้จัดการแก้ค่าเริ่มต้น การมอบหมายและลำดับสถานี ผู้บันทึกแก้ Target, Actual และปัญหารายสถานี ใช้กรอกทั้งสายตามช่วงและนำเข้าได้ แต่แก้ Settings ร่วมไม่ได้',
           'ส่วนหัวมีภาษาอังกฤษ จีน และไทย รวมถึงสีธีม ความชอบของเบราว์เซอร์หนึ่งไม่เปลี่ยนหน้าจอของผู้อื่น',
           'ชื่อผลิตภัณฑ์ไม่แสดงคำนำหน้า Model แบ่งที่ขีดแรก บรรทัดแรกเป็นรหัส บรรทัดที่สองเป็นข้อความส่วนที่เหลือในวงเล็บ ชื่อที่ไม่มีขีดใช้บรรทัดเดียว รหัสที่บันทึกและใน Excel ไม่เปลี่ยน',
@@ -376,6 +379,7 @@ const exampleScreens = [
     'shared-grid-numbers',
     'fullscreen-display-options',
     'group-trend-dense',
+    'overview-inline-edit',
     'line-details',
   ],
   ['unified-alerts'],
@@ -383,7 +387,7 @@ const exampleScreens = [
 ];
 const exampleLabels = {
   en: {
-    note: 'Expand one operation below to see its screenshot. Examples use the English interface and DEMO data; click an image for full size.',
+    note: 'Expand one operation below to see its screenshot. Examples use the English interface and isolated demonstration data; click an image for full size.',
     captions: {
       'schedule-timeline': 'Daily timeline and per-model target preview',
       'unified-alerts': 'Enable alert policies and edit thresholds',
@@ -412,11 +416,12 @@ const exampleLabels = {
       'fullscreen-display-options':
         'Choose visible fullscreen sections and restore display defaults',
       'seven-line-board': 'Compact fullscreen cards, adaptive paging and Interval/Daily switch',
+      'overview-inline-edit': 'Edit Actual and issue directly in the production row',
       'group-trend-dense': 'Dense whole-day trend: scroll horizontally to view every interval',
     },
   },
   zh: {
-    note: '依操作名稱展開對應圖片。截圖統一使用 English 介面與 DEMO 資料；Chinese／Thai 的操作位置相同，點圖可看原尺寸。',
+    note: '依操作名稱展開對應圖片。截圖統一使用 English 介面與獨立示例資料；Chinese／Thai 的操作位置相同，點圖可看原尺寸。',
     captions: {
       'schedule-timeline': '全天時間軸與 Model 目標預覽',
       'unified-alerts': '勾選告警並調整門檻',
@@ -442,12 +447,14 @@ const exampleLabels = {
       'shared-grid-numbers': '共用欄位與六位數，曲線保持對齊及大小',
       'fullscreen-display-options': '勾選全螢幕顯示區塊與恢復預設',
       'seven-line-board': '緊湊全螢幕卡片、自動分頁與時段／每日切換',
+      'overview-inline-edit': '在線體內編輯實績與異常',
       'group-trend-dense': '全天多時段趨勢：左右捲動查看所有時段',
     },
   },
   th: {
     note: 'ขยายหัวข้อการทำงานเพื่อดูภาพ ตัวอย่างใช้เมนู English และข้อมูล DEMO ตำแหน่งปุ่มเหมือน Chinese/Thai คลิกภาพเพื่อดูขนาดเต็ม',
     captions: {
+      'overview-inline-edit': 'แก้ไขยอดจริงและปัญหาในแถวการผลิต',
       'schedule-timeline': 'ไทม์ไลน์ทั้งวันและตัวอย่างเป้าหมายรุ่น',
       'unified-alerts': 'เปิดกฎเตือนและปรับเกณฑ์',
       'setup-order': 'ลำดับตั้งค่า',

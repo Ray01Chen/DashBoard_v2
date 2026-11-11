@@ -1,14 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { naturalOrder, byProduction } from '../public/list-order.js';
+import { listOrder, byProduction } from '../public/list-order.js';
 import { linePickerGroups, linePickerMarkup } from '../public/line-picker.js';
 import { orderedStationRows } from '../public/production-models.js';
 import { translate } from '../public/i18n.js';
 import { alertReasonText } from '../public/alert-display.js';
 
-test('natural order sorts numeric segments without changing catalog arrays or stable ties', () => {
+test('default presentation retains API order without alphabetic sorting or mutation', () => {
   const input = Object.freeze(['CD10', 'CD2', 'CD1', 'cd2']);
-  assert.deepEqual(naturalOrder(input, 'en'), ['CD1', 'CD2', 'cd2', 'CD10']);
+  assert.deepEqual(listOrder(input, 'en'), ['CD10', 'CD2', 'CD1', 'cd2']);
   assert.deepEqual(input, ['CD10', 'CD2', 'CD1', 'cd2']);
 });
 test('explicit display, sequence and config order take precedence over natural labels', () => {
@@ -18,12 +18,12 @@ test('explicit display, sequence and config order take precedence over natural l
     { name: 'CD2', sequence: 1 },
   ];
   assert.deepEqual(
-    naturalOrder(input, 'en', (item) => item.name).map((item) => item.name),
+    listOrder(input, 'en', (item) => item.name).map((item) => item.name),
     ['CD10', 'CD2', 'CD1'],
   );
   for (const key of ['order', 'configOrder'])
     assert.deepEqual(
-      naturalOrder(
+      listOrder(
         [
           { name: 'A', [key]: 2 },
           { name: 'B', [key]: 1 },
@@ -34,16 +34,12 @@ test('explicit display, sequence and config order take precedence over natural l
       ['B', 'A'],
     );
 });
-test('text ordering follows each supported locale', () => {
-  const values = ['泰語2', 'ไทย10', 'Apple10', 'Apple2', 'ไทย2', '中文10', '中文2'];
-  for (const language of ['zh', 'en', 'th']) {
-    const expected = [...values].sort(
-      new Intl.Collator(language, { numeric: true, sensitivity: 'base' }).compare,
-    );
-    assert.deepEqual(naturalOrder(values, language), expected);
-  }
+test('changing language does not reorder an uncustomized list', () => {
+  const values = ['ไทย10', 'Apple2', '中文2'];
+  for (const language of ['zh', 'en', 'th'])
+    assert.deepEqual(listOrder(values, language), values);
 });
-test('line/model groups sort naturally while station IDs retain configured sequence', () => {
+test('line/model groups retain source order while station IDs retain configured sequence', () => {
   const rows = [
     { id: 'b', line: 'CD2', model: 'M2', station: 'Station10' },
     { id: 'a', line: 'CD2', model: 'M2', station: 'Station2' },
@@ -52,7 +48,7 @@ test('line/model groups sort naturally while station IDs retain configured seque
   const config = { rows };
   assert.deepEqual(
     byProduction(orderedStationRows(config, [...rows].reverse()), 'en').map((row) => row.id),
-    ['c', 'b', 'a'],
+    ['b', 'a', 'c'],
   );
   assert.deepEqual(
     config.rows.map((row) => row.id),
@@ -61,7 +57,7 @@ test('line/model groups sort naturally while station IDs retain configured seque
 });
 test('editing a sorted catalog resolves original indexes rather than display positions', () => {
   const catalog = ['CD10', 'CD2', 'CD1'];
-  const display = naturalOrder(
+  const display = listOrder(
     catalog.map((value, index) => ({ value, index })),
     'en',
     (item) => item.value,
@@ -82,8 +78,8 @@ test('line groups use current configuration, exclude retired members and include
   assert.deepEqual(
     linePickerGroups(config, 'en').map((group) => [group.id, group.lines]),
     [
-      ['group:two', ['CD2']],
       ['group:ten', ['CD10']],
+      ['group:two', ['CD2']],
       ['ungrouped', ['CD1']],
     ],
   );

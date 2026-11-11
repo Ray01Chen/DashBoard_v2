@@ -1,4 +1,4 @@
-import { naturalOrder } from './list-order.js';
+import { listOrder } from './list-order.js';
 /** Administration is isolated from production editors: no report/config writes
  * occur here, and each mutation is independently authorized by the server. */
 import { permissionCodes as grantCodes } from './site-messages.js';
@@ -140,14 +140,14 @@ export function createSiteManagementUI({
               .map((site) => ({ ...site, is_active: 1 })),
           };
       if (ticket !== revision) return;
-      sites = naturalOrder(result.sites, undefined, (site) => site.site_code);
+      sites = listOrder(result.sites, undefined, (site) => site.site_code);
       if (!system()) siteFilter = String(getUser().site?.id || '');
       if (view === 'users') {
         const result = await api(
           '/api/admin/users' + (siteFilter ? '?site_id=' + encodeURIComponent(siteFilter) : ''),
         );
         if (ticket !== revision) return;
-        users = naturalOrder(result.users, undefined, (user) => user.username);
+        users = listOrder(result.users, undefined, (user) => user.username);
       }
       draw();
     } catch (value) {

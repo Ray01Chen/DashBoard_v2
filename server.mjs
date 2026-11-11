@@ -8,6 +8,7 @@ import {
   requirePermission,
   accessError,
 } from './site-access.mjs';
+import { migratePersonalLists, listPreferences } from './personal-lists.mjs';
 import { createSiteManagement } from './site-management.mjs';
 import { alertConfig, validAlertConfig } from './public/alerts.js';
 import { normalizeSchedules } from './schedule-config.mjs';
@@ -54,10 +55,12 @@ const template = JSON.parse(readFileSync(path.join(root, 'data/template.json'), 
 const databasePath = process.env.DB_PATH || path.join(root, 'data/production.sqlite');
 mkdirSync(path.dirname(databasePath), { recursive: true });
 const db = new DatabaseSync(databasePath);
+// Install the connection-only busy handler before the first schema read: a
+// second worker may still hold the startup lock while we inspect migrations.
+db.exec('PRAGMA busy_timeout=5000');
 const migrationBackup = await backupBeforeSiteMigration(db, databasePath);
 // WAL conversion can report BUSY before SQLite's busy handler waits. Retry this
 // idempotent initialization so two fresh workers can start on the same file.
-db.exec('PRAGMA busy_timeout=5000');
 const initialSchema = `PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
 CREATE TABLE IF NOT EXISTS production_records (
  date TEXT NOT NULL,shift TEXT NOT NULL CHECK(shift IN ('day','night')),row_id INTEGER NOT NULL,
@@ -98,6 +101,7 @@ db.exec(
 db.exec(`CREATE TABLE IF NOT EXISTS import_previews(token_hash TEXT PRIMARY KEY,username TEXT NOT NULL,expires_at INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)));
 CREATE INDEX IF NOT EXISTS import_preview_expiration ON import_previews(expires_at);`);
 migrateSites(db, { plant: template.plant, backupPath: migrationBackup });
+migratePersonalLists(db);
 db.exec(
   'INSERT OR IGNORE INTO record_revisions(date,shift,row_id,version,site_id) SELECT date,shift,row_id,version,site_id FROM production_records',
 );
@@ -948,9 +952,15 @@ const files = {
       'schedule-timeline',
       'unified-alerts',
       'group-trend-dense',
+      'overview-inline-edit',
     ].map((name) => [`/guide-images/${name}.png`, [`../docs/images/${name}.png`, 'image/png']]),
   ),
   '/': ['index.html', 'text/html'],
+  '/personal-lists.js': ['personal-lists.js', 'text/javascript'],
+  '/personal-order-ui.js': ['personal-order-ui.js', 'text/javascript'],
+  '/overview-inline.js': ['overview-inline.js', 'text/javascript'],
+  '/interaction-messages.js': ['interaction-messages.js', 'text/javascript'],
+  '/overview-interactions.css': ['overview-interactions.css', 'text/css'],
   '/app.js': ['app.js', 'text/javascript'],
   '/site-management.js': ['site-management.js', 'text/javascript'],
   '/site-messages.js': ['site-messages.js', 'text/javascript'],
@@ -1036,8 +1046,9 @@ const server = http.createServer((req, res) =>
       context.user = user;
       if (await manageSites(req, res, url)) return;
       if (url.pathname.startsWith('/api/')) {
-        const permission =
-          url.pathname === '/api/config' && req.method !== 'GET'
+        const permission = url.pathname.startsWith('/api/preferences/lists')
+          ? 'production.read'
+          : url.pathname === '/api/config' && req.method !== 'GET'
             ? 'settings.manage'
             : url.pathname.startsWith('/api/import/')
               ? url.pathname.endsWith('/template')
@@ -1054,6 +1065,16 @@ const server = http.createServer((req, res) =>
         bindRequestSite(req, url, user);
         res.setHeader('X-Site-ID', String(user.site.id));
         requirePermission(user, permission);
+      }
+      const listMatch = url.pathname.match(/^\/api\/preferences\/lists(?:\/([a-z]+))?$/);
+      if (listMatch && ['GET', 'PUT'].includes(req.method)) {
+        const data = req.method === 'PUT' ? await body(req) : undefined;
+        if (req.method === 'PUT' && !listMatch[1]) fail(400, 'errPersonalList');
+        const result = transaction(() => {
+          refreshConfig();
+          return listPreferences(db, user, workspace.config, listMatch[1], data);
+        });
+        return json(res, 200, result);
       }
       if (req.method === 'GET' && url.pathname === '/api/config') {
         const result = transaction(() => {

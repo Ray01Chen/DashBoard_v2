@@ -42,7 +42,7 @@ Phase 1 的 schema、API、Migration、權限與部署回復規則集中在 [MUL
 | `public/app.js` | 頁面切換、資料載入、範圍篩選與共用確認視窗 |
 | `public/monitor.js`、`public/dashboard.js`、`public/line-detail.js` | 來源站計量、看板圖表與全螢幕明細 |
 | `public/monitor-ui.js`、`public/board-display.js`、`public/monitor-paging.js`、`public/monitor-carousel.js` | 卡片呈現、瀏覽器顯示偏好、分頁狀態與動畫 |
-| `public/list-order.js`、`public/line-picker.js` | 自然排序與可搜尋分組選線，不改設定順序 |
+| `public/list-order.js`、`public/line-picker.js` | 個人顯示順序與可搜尋分組選線，不改流程設定 |
 | `public/*-settings.js`、`public/issue-presets.js` | 設定草稿、資料清單與英文異常快捷文字 |
 | `public/i18n.js`、`public/help.js` | 共用翻譯與依角色顯示的教學 |
 
@@ -111,7 +111,7 @@ Phase 1 的 schema、API、Migration、權限與部署回復規則集中在 [MUL
 
 ## 導覽、排序與選線面板
 
-- `list-order.js` 提供 locale-aware `Intl.Collator` 自然排序，排序副本並尊重數字型 `displayOrder`／`sequence`／`configOrder`／`order`。目錄、人員、群組畫面以原始索引或 ID 綁定編輯，不能用排序後位置更新 CONFIG。`byProduction` 只排列產線／Model 群組，同組站點先經 `orderedStationRows`，不改流程。時段及明確業務序列不套一般字母排序。
+- `list-order.js` 使用資料庫載入的個人排序，沒有偏好時維持來源與明確設定順序，不再依字母或語言排序；詳見下方個人排序章節。畫面仍以原索引／穩定 ID 更新設定，不能用顯示位置當成資料索引。
 - `line-picker.js` 由目前草稿的線體、既有分組產生搜尋面板；搜尋及勾選只更新 UI，不寫設定。群組可包含重疊線體，選取以 Set 去重；全選／取消作用於全部線體，搜尋不丟掉隱藏選擇。套用與保存仍走原有確認、版本檢查及 API。
 - 所有原路由及權限保留於分組 Sidebar；桌面 `bp-collapsed` 儲存圖示模式。`overlayNavigation` 於小螢幕或全螢幕開 Drawer，關閉時 inert 排除鍵盤焦點；Escape／遮罩關閉並返回按鈕，Tab 在 Drawer 內循環，不寫桌面收合偏好。
 - `design-system.css` 共用同一份資訊順序及 Grid 元件；桌面使用緊湊橫列，行動寬度才調整排列；來源及下一時段保留。卡片從清單繼承同一份 `--monitor-card-columns`；不得按單條資料新增可變欄寬。數值用四欄或一致的 2×2 Grid，22px 與 tabular-nums 不因資料變長而縮小；曲線 track 不借給數值欄。停留與明細保留精確值；額外圖表排在卡片之後，不再以短螢幕字級縮小維持版面。
@@ -132,3 +132,11 @@ Phase 1 的 schema、API、Migration、權限與部署回復規則集中在 [MUL
 `board-display.js` 集中預設及白名單正規化。`bp-board-display` 僅保存布林顯示偏好，讀取時忽略非法／未知欄位並相容舊 `bp-board-trend`／`bp-board-share`；不寫 CONFIG 或 API。`applyBoardDisplay` 以 body data attributes 控制全螢幕區塊，一般模式不受影響；既有 ResizeObserver 重算剩餘高度和分頁容量。顯示選單與離開全螢幕始終位於保留的 actions 區。Esc 優先關閉顯示選單，避免使用鍵盤調整時意外退出看板。
 
 `overview-refinement-audit.mjs` 使用獨立日期與真實 API，對比小數值／六位數的圖表位置尺寸、每張卡片各欄座標、22px 數字實測邊界、三語與不同解析度／縮放；另確認顯示設定保存、重設及沒有生產設定寫入。選單圖與大數字圖由此測試產生。
+
+## 個人排序與總覽 Inline Editing
+
+- `personal-lists.mjs`：啟動時以 `CREATE TABLE IF NOT EXISTS` 增加 `user_list_orders`（`user_id + site_id + list_id` 複合主鍵、FK、JSON items、version、updated_at），不改既有業務表。GET `/api/preferences/lists` 回傳目前廠區的實際清單與本人的排序；PUT `/api/preferences/lists/:listId` 以版本更新本人排序。Session 廠區、當下授權與交易重驗沿用 Phase 1。
+- `public/personal-lists.js` 定義清單的穩定身份與實際資料來源；`list-order.js` 只排列畫面副本，`setPersonalOrders` 的狀態由登入／廠區載入，設定更新後重載。沒有偏好時保留來源順序，新增身份附加末尾。`personal-order-ui.js` 負責 Pointer Events、鍵盤按鈕、位移動畫及序列化自動儲存；失敗保留未儲存順序並提供重試／重載。站點流程、時間與歷史資料不套個人排序。
+- `public/overview-inline.js`：草稿固定在選定日期／班別／站點／時段及讀取時的 record/config version。沿用 `/api/entry/records/:rowId` 的 `stationEntry:true`，只提交實績與原有純文字 issue，不重建異常資料模型。`writeRecord` 既有版本驗證、RBAC、site_id、updated_by／updated_at 及 audit 保持有效。
+- `dashboard.js` 在原有卡片更新後掛接相同編輯器；安靜刷新不覆蓋草稿。全螢幕依編輯列需要的高度減少頁面容量，保留鄰列，停止自動換頁；退出全螢幕仍沿用原草稿。動畫與版面集中於 `overview-interactions.css`，使用現有主題 tokens，支援 reduced motion。
+- 測試：`tests/personal-lists.test.mjs`、`tests/multi-site.test.mjs`、`scripts/overview-interaction-audit.mjs`；後者已接入完整 browser smoke，使用獨立測試廠區／資料庫。

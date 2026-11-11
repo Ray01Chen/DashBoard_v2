@@ -23,7 +23,7 @@ Page navigation slides horizontally with a fade over 600ms: next (including wrap
 Standard layouts tested: 1920×1080 = seven rows, 1600×900 = five, 1366×768 = four; charts and wrapped controls may reduce capacity.
 [1920×1080](./images/fullscreen-1920.png) · [1600×900](./images/fullscreen-1600.png) · [1366×768](./images/fullscreen-1366.png)
 
-Catalogs and normal option lists use locale-aware natural sorting (CD2 before CD10). Explicit display order, configured station order and shift/overnight interval sequence take precedence. Sorting never rewrites saved arrays or changes selected IDs.
+Catalogs and normal option lists use personal list order, retaining source order when uncustomized. Configured station sequence and chronological shift/overnight slots remain business settings. Display order never rewrites CONFIG or changes selected IDs.
 
 To apply a schedule, expand **Choose lines**, search a line/group, select individual lines or groups, and use **Select all / Clear all** when needed. The count includes choices hidden by search. Selection alone does not change settings. Confirm Apply to update the draft, then Save settings to publish; the nearby status distinguishes unsaved and saved settings. [Line selector](./images/line-selection.png).
 
@@ -176,3 +176,11 @@ For a target of 400 across 3 day hours and 1 night hour, daily UPH is 100. Shift
 The risk expresses how much faster than the original planned pace is required; Planned UPH is not a physical machine capacity. Overall signals keep the existing whole-day scope. Missing targets or productive time show NO DATA. Historical forecasts use saved plans; if the original plan cannot be reconstructed, they also show NO DATA.
 
 ![Daily targets and automatic planned pace](./images/daily-targets.png)
+
+## Personal list order and inline production editing
+
+Open **List order** in the header or fullscreen controls. Choose a list, drag its handle or use the arrow buttons, and wait for **Order saved**. Orders are stored in SQLite per account and current site, survive login, and never change another user's view. New items go last; without a preference, source order is retained. Station configuration sequence and chronological slots remain business settings.
+
+On Production Overview, hover a line and choose **Edit** on its left; touch devices always show the entry. Edit Slot actual in place, choose date, shift, output station and slot, and select issue quick text or enter notes. **Save** changes only that station/slot using the existing report API; **Cancel** writes nothing. Blank Actual is unreported; zero is valid. Production-write permission is required.
+
+Editing pauses pagination. Fullscreen and refresh retain the draft; fullscreen reduces page capacity when needed. Errors retain input. A conflicting revision is rejected: cancel and reopen to load the latest report before applying an informed change. Sorting failures offer Retry and Reload.

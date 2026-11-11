@@ -69,15 +69,15 @@ export async function auditNavigation({
     page
       .locator(selector + ' option')
       .evaluateAll((nodes) => nodes.map((node) => node.value).filter(Boolean));
-  assert.deepEqual(await options('[data-unit-add-line]'), ['CD1', 'CD2', 'CD10']);
-  assert.deepEqual(await options('[data-unit-add-model]'), ['Model2', 'Model10']);
-  assert.deepEqual(await options('#schedule-line-select'), ['CD1', 'CD2', 'CD10']);
+  assert.deepEqual(await options('[data-unit-add-line]'), ['CD10', 'CD2', 'CD1']);
+  assert.deepEqual(await options('[data-unit-add-model]'), ['Model10', 'Model2']);
+  assert.deepEqual(await options('#schedule-line-select'), ['CD10', 'CD2', 'CD1']);
   const picker = page.locator('#schedule-line-picker');
   assert.equal(await picker.getAttribute('open'), null);
   await picker.locator('summary').click();
   assert.deepEqual(await picker.locator('.line-picker-group strong').allTextContents(), [
-    '2F',
     '10F',
+    '2F',
     'Ungrouped lines',
   ]);
   await picker.locator('[data-schedule-apply-line="CD10"]').check();
@@ -138,20 +138,20 @@ export async function auditNavigation({
       (node) => node.value === 'CD3',
     ),
   );
-  assert.deepEqual(await options('[data-unit-add-line]'), ['CD1', 'CD3', 'CD10']);
+  assert.deepEqual(await options('[data-unit-add-line]'), ['CD10', 'CD3', 'CD1']);
   assert.equal(await page.locator('[data-unit-add-line]').inputValue(), 'CD3');
   assert.match(await picker.locator('[data-picker-count]').textContent(), /1/);
   assert.equal(await picker.locator('[data-schedule-apply-line="CD3"]').isChecked(), true);
   await page.locator('#new-lines').fill('CD4');
   await page.locator('[data-action="add-catalog"][data-catalog="lines"]').click();
-  assert.deepEqual(await options('[data-unit-add-line]'), ['CD1', 'CD3', 'CD4', 'CD10']);
+  assert.deepEqual(await options('[data-unit-add-line]'), ['CD10', 'CD3', 'CD1', 'CD4']);
   const added = page
     .locator('.catalog-item')
     .filter({ has: page.locator('[data-catalog-name="lines"][value="CD4"]') });
   await added.locator('[data-action="remove-catalog"]').click();
   if (await page.locator('#confirm-dialog').isVisible())
     await page.locator('#confirm-yes').click();
-  assert.deepEqual(await options('[data-unit-add-line]'), ['CD1', 'CD3', 'CD10']);
+  assert.deepEqual(await options('[data-unit-add-line]'), ['CD10', 'CD3', 'CD1']);
   await page.locator('[data-save-settings]').first().click();
   await page.waitForFunction(
     () =>
@@ -166,9 +166,9 @@ export async function auditNavigation({
   await page.locator('[data-settings-tab="targets"]').click();
   await page.locator('[data-target-line]').selectOption('');
   assert.deepEqual(await page.locator('.target-line-name').allTextContents(), [
-    'CD1',
-    'CD3',
     'CD10',
+    'CD3',
+    'CD1',
   ]);
   await page.locator('[data-settings-tab="personnel"]').click();
   await page.locator('[data-person-job-filter]').selectOption('Job2');
@@ -176,11 +176,11 @@ export async function auditNavigation({
     await page
       .locator('[data-person-field="name"]')
       .evaluateAll((nodes) => nodes.map((node) => node.value)),
-    ['Person2', 'Person10'],
+    ['Person10', 'Person2'],
   );
   assert.equal(
     await page.locator('[data-person-field="name"]').first().getAttribute('data-person-index'),
-    '1',
+    '0',
   );
   await page.locator('[data-settings-tab="workforce"]').click();
   await page.locator('[data-mapping-line-filter]').selectOption('CD3');
@@ -193,13 +193,13 @@ export async function auditNavigation({
       .map((row) => row.id),
   );
   assert.deepEqual(await options('[data-row-field="station"]'), [
-    'Station2',
     'Station10',
     'Station2',
     'Station10',
+    'Station2',
   ]);
   record(
-    'Natural line/model/job/station/person ordering refreshes after add, rename and delete; original indexes, configured station sequence and saved array order remain intact',
+    'Source line/model/job/station/person ordering refreshes without alphabetic overrides after add, rename and delete; original indexes, configured station sequence and saved array order remain intact',
   );
 
   await page.locator('[data-view="overview"]').click();

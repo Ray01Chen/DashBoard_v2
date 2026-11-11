@@ -112,3 +112,7 @@ Linux 可用 `BP_BROWSER_PATH=/usr/bin/chromium npm run test:browser` 指定瀏�
 **不提交：**`.env`、生產資料庫及 WAL／SHM、備份與匯出、`.runtime/`、`node_modules/`、log、測試輸出、OS／編輯器／Excel 暫存檔。`.env.example` 類樣本可以提交，但只能放範例值。Git 忽略規則不會自動移除已追蹤檔案，因此另用 `repository:check` 檢查索引。
 
 一次性邀請郵件及指定日期的舊模擬指南已移除；需要查當時內容可從 Git 歷史取得。現行測試、來源範本與歷史資料相容程式仍有用途，不能因檔名像舊檔或沒有直接 import 就刪除。
+
+### 個人清單排序與總覽直接編輯
+
+頁首／全螢幕的「清單排序」以資料庫保存每個使用者、廠區與清單類型的顯示順序；不再用名稱自動覆蓋。總覽線體左側可直接編輯所選產出站點的實績與異常，沿用原填報 API、廠區 RBAC、樂觀鎖及審計欄位。操作及截圖見 [使用教學](docs/USER_GUIDE.md#個人清單排序與總覽直接編輯)，程式入口見 [CODE_GUIDE](docs/CODE_GUIDE.md#個人排序與總覽-inline-editing)。

@@ -1,0 +1,272 @@
+/* Personal list controls reuse theme tokens; the top-layer popover remains
+   reachable when the fullscreen header is hidden. */
+.personal-order-panel {
+  inset: 64px 16px auto auto;
+  width: min(410px, calc(100vw - 24px));
+  max-height: calc(100dvh - 88px);
+  margin: 0;
+  padding: 16px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--ui-shadow);
+  overflow: auto;
+}
+.personal-order-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.personal-order-panel p,
+.order-save-state {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.personal-order-panel select {
+  width: 100%;
+}
+.personal-order-items {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  max-height: 50dvh;
+  overflow: auto;
+}
+.personal-order-items li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 30px 30px;
+  gap: 6px;
+  align-items: center;
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 13px;
+}
+.personal-order-items li > span {
+  overflow-wrap: anywhere;
+}
+.personal-order-items button {
+  min-height: 30px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--surface);
+}
+.personal-order-items .order-handle {
+  cursor: grab;
+  touch-action: none;
+  font-size: 22px;
+}
+.personal-order-items .is-dragging {
+  opacity: 0.5;
+  background: var(--tint);
+}
+.personal-order-items .order-drop {
+  border-top: 3px solid var(--primary);
+  background: var(--tint);
+}
+/* Reserve the translated row's right edge without reflowing adjacent rows.
+   The left rail travels into this same 45px gutter with the row. */
+#line-dashboard #line-cards {
+  --inline-edit-height: 260px;
+}
+#line-dashboard #line-cards[data-inline-available='true'] {
+  padding-right: 45px;
+}
+#line-dashboard #line-cards[data-inline-available='true'] .line-card {
+  position: relative;
+  overflow: visible;
+  transition: transform 200ms ease-out;
+}
+@media (hover: hover) {
+  #line-cards[data-inline-available='true'] .line-card:hover,
+  #line-cards[data-inline-available='true'] .line-card:focus-within {
+    transform: translateX(45px);
+  }
+}
+#line-dashboard #line-cards .line-card[data-inline-editing] {
+  transform: translateX(45px);
+  height: auto;
+  min-height: var(--inline-edit-height);
+  cursor: default;
+}
+.line-edit-rail {
+  position: absolute;
+  left: -45px;
+  top: 0;
+  bottom: 0;
+  width: 45px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+.line-card:hover .line-edit-rail,
+.line-card:focus-within .line-edit-rail,
+[data-inline-editing] .line-edit-rail {
+  opacity: 1;
+}
+.line-edit-rail button {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 2px;
+  width: 42px;
+  min-height: 42px;
+  background: var(--surface);
+  color: var(--primary);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  cursor: pointer;
+}
+.line-edit-rail small {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.line-edit-rail .icon {
+  width: 17px;
+  height: 17px;
+}
+#line-cards [data-inline-editing] [data-inline-hidden] {
+  display: none !important;
+}
+#line-cards [data-inline-control] {
+  min-width: 0;
+  max-width: 100%;
+}
+#line-cards [data-inline-actual] {
+  width: 100%;
+  min-width: 0;
+  font-size: 16px;
+  padding: 7px 3px;
+  font-variant-numeric: tabular-nums;
+}
+.inline-selectors {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+}
+.inline-selectors label,
+.inline-issue label {
+  display: grid;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.inline-selectors :is(input, select),
+.inline-issue :is(select, textarea) {
+  width: 100%;
+  min-width: 0;
+  min-height: 30px;
+  padding: 4px;
+  font-size: 12px;
+}
+.inline-issue textarea {
+  resize: vertical;
+  max-height: 100px;
+}
+.inline-feedback {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+  margin-top: 5px;
+}
+#line-cards [data-inline-editing] .line-card-status {
+  max-height: none;
+  overflow: visible;
+}
+body.fullscreen-board #line-dashboard #line-cards:has([data-inline-editing]) {
+  overflow: hidden;
+}
+@media (hover: none) {
+  #line-dashboard #line-cards[data-inline-available='true'] .line-card {
+    transform: translateX(45px);
+  }
+  .line-edit-rail {
+    opacity: 1;
+  }
+}
+@media (max-width: 750px) {
+  #line-dashboard #line-cards .line-card[data-inline-editing] {
+    min-height: 600px;
+  }
+  body.fullscreen-board #line-dashboard #line-cards .line-card[data-inline-editing] {
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .personal-order-open {
+    font-size: 11px;
+    padding: 6px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #line-dashboard #line-cards[data-inline-available='true'] .line-card,
+  .line-edit-rail {
+    transition: none;
+  }
+}
+
+body.fullscreen-board #line-dashboard #line-cards .line-card[data-inline-editing] {
+  flex: 0 0 var(--inline-edit-height);
+}
+@container monitoring (max-width: 1065px) {
+  #line-dashboard #line-cards {
+    --inline-edit-height: 400px;
+  }
+}
+@container monitoring (max-width: 620px) {
+  #line-dashboard #line-cards {
+    --inline-edit-height: 600px;
+  }
+}
+
+/* Slot/status panels otherwise retain fixed read-only grid rows. Remove those
+   track heights while editing so labels and validation messages stay inside. */
+#line-dashboard #line-cards [data-inline-editing] .line-slot {
+  grid-template-rows: auto;
+  justify-items: stretch;
+  align-items: start;
+  height: auto;
+}
+#line-dashboard #line-cards [data-inline-editing] .line-card-status {
+  display: block;
+  height: auto;
+  max-height: none;
+}
+#line-dashboard #line-cards [data-inline-editing] .reason-controls {
+  position: static;
+}
+#line-dashboard #line-cards [data-inline-editing] [data-inline-actual] {
+  grid-column: 1;
+  grid-row: 2;
+  height: 28px;
+  min-height: 28px;
+  text-align: right;
+}
+/* The action gutter comes from secondary tracks, not from the trend plot.
+   All rows use the same tracks at each existing container breakpoint. */
+@container monitoring (min-width: 1066px) {
+  #line-dashboard #line-cards[data-inline-available='true'] {
+    --monitor-card-columns: minmax(108px, 0.9fr) minmax(118px, 0.95fr) minmax(248px, 1.4fr)
+      minmax(180px, 1.5fr) minmax(136px, 1fr) minmax(140px, 1.4fr) 24px;
+  }
+  #line-dashboard #line-cards[data-inline-available='true'] .line-card {
+    column-gap: 6px;
+  }
+}
+@container monitoring (min-width: 621px) and (max-width: 1065px) {
+  #line-dashboard #line-cards[data-inline-available='true'] {
+    --monitor-card-columns: 130px 136px minmax(180px, 1fr) 24px;
+  }
+}
+body.fullscreen-board #line-cards [data-inline-editing] textarea {
+  resize: none;
+}

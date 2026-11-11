@@ -1,5 +1,5 @@
 import { replaceMonitorPage, isMonitorPageTurn } from './monitor-carousel.js';
-import { naturalOrder, byProduction } from './list-order.js';
+import { listOrder, byProduction } from './list-order.js';
 import {
   setMonitorNumber,
   fitMonitorNumbers,
@@ -177,7 +177,18 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
     ctx.now,
     ctx.boardSize,
   );
-  const page = boardPage(lines, ctx.paging?.page ?? ctx.boardPage, ctx.boardSize),
+  // Reserve extra room for the edited row, and retain its neighbors whenever
+  // height permits. Its page follows the same stable line order, never a modal.
+  const editingIndex = ctx.inline?.active
+    ? lines.findIndex((line) => (line.key || line.line) === ctx.inline.key)
+    : -1;
+  const page = boardPage(
+      lines,
+      editingIndex >= 0
+        ? Math.floor(editingIndex / ctx.boardSize)
+        : (ctx.paging?.page ?? ctx.boardPage),
+      ctx.boardSize,
+    ),
     cardLines = page.lines;
   const viewKey = JSON.stringify([
     cardLines.map((line) => line.key || line.line),
@@ -222,6 +233,7 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
     updateOverviewMetrics(cards.children[index], line, ctx);
     updateMonitorCard(cards.children[index], line, ctx);
   }
+  ctx.inline?.sync();
   fitMonitorNumbers(cards, ctx);
   // Batch text writes before measuring plots; hidden dashboards need no plot work.
   for (const [index, line] of cardLines.entries()) {
@@ -286,7 +298,7 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
   });
   document.querySelector('#group-tabs').innerHTML =
     `<button role="tab" data-group="" class="${!group ? 'selected' : ''}" aria-selected="${!group}">${esc(t('allGroups'))}<small>${all.length}</small></button>` +
-    naturalOrder(config.monitoring.groups, ctx.language, (group) => group.name)
+    listOrder(config.monitoring.groups, ctx.language, (group) => group.name, 'groups')
       .map(
         (g) =>
           `<button role="tab" data-group="${esc(g.id)}" class="${group?.id === g.id ? 'selected' : ''}" aria-selected="${group?.id === g.id}">${esc(g.name)}<small>${g.lines.length}</small></button>`,
@@ -391,16 +403,19 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
 export function groupSettings(ctx) {
   const { draft, t, esc, icon } = ctx,
     m = draft.monitoring;
-  return `<section class="panel monitor-settings-card"><div class="panel-heading"><div><h2>${esc(t('groupsTitle'))}</h2><p>${esc(t('groupsDesc'))}</p></div><button class="button" data-action="add-group">${icon('plus')}${esc(t('addGroup'))}</button></div><div class="group-settings-grid">${naturalOrder(
+  return `<section class="panel monitor-settings-card"><div class="panel-heading"><div><h2>${esc(t('groupsTitle'))}</h2><p>${esc(t('groupsDesc'))}</p></div><button class="button" data-action="add-group">${icon('plus')}${esc(t('addGroup'))}</button></div><div class="group-settings-grid">${listOrder(
     m.groups,
     ctx.language,
     (group) => group.name,
+    'groups',
   )
     .map((g) => {
       const i = m.groups.indexOf(g);
-      return `<div class="group-settings"><div><input data-group-name="${i}" value="${esc(g.name)}" maxlength="60" aria-label="${esc(t('groupName'))}"><button class="icon-button" data-action="remove-group" data-index="${i}" aria-label="${esc(t('remove'))} ${esc(g.name)}">${icon('trash')}</button></div><details class="group-line-picker"><summary><span data-group-count="${i}">${esc(t('selectedLineCount', { count: g.lines.length }))}</span>${icon('down')}</summary><div class="group-line-options">${naturalOrder(
+      return `<div class="group-settings"><div><input data-group-name="${i}" value="${esc(g.name)}" maxlength="60" aria-label="${esc(t('groupName'))}"><button class="icon-button" data-action="remove-group" data-index="${i}" aria-label="${esc(t('remove'))} ${esc(g.name)}">${icon('trash')}</button></div><details class="group-line-picker"><summary><span data-group-count="${i}">${esc(t('selectedLineCount', { count: g.lines.length }))}</span>${icon('down')}</summary><div class="group-line-options">${listOrder(
         draft.lines,
         ctx.language,
+        undefined,
+        'lines',
       )
         .map(
           (line) =>

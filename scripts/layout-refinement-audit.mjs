@@ -202,7 +202,11 @@ export async function auditLayoutRefinement({
   record(
     'Reporting turns red after the saved 45-minute threshold and clears after a submitted zero; saved zero-second rotation remains disabled across live refreshes',
   );
-  // Drain any timer-triggered route before disposing its response context.
+  // fastForward can leave the final refresh in flight. Stop its producer and
+  // drain the network before removing handlers; otherwise fulfill can race
+  // context disposal even when unrouteAll itself uses behavior:wait.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 250));
+  await page.waitForLoadState('networkidle');
   await page.unrouteAll({ behavior: 'wait' });
   await session.close();
 }

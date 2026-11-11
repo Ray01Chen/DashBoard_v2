@@ -1,4 +1,4 @@
-import { naturalOrder } from './list-order.js';
+import { listOrder } from './list-order.js';
 /** English quick text shared by station and interval issue editors. */
 export const defaultIssuePresets = [
   { id: 'equipment', label: 'Equipment downtime', active: true },
@@ -68,10 +68,11 @@ const copy = {
 
 export function issueSettingsMarkup({ draft, language, esc }) {
   const text = copy[language] || copy.en;
-  return `<section class="panel issue-preset-settings"><div class="panel-heading"><div><h3>${esc(text.title)}</h3><p>${esc(text.description)}</p></div><button type="button" class="button" data-issue-action="add">${esc(text.add)}</button></div><div class="issue-preset-list">${naturalOrder(
+  return `<section class="panel issue-preset-settings"><div class="panel-heading"><div><h3>${esc(text.title)}</h3><p>${esc(text.description)}</p></div><button type="button" class="button" data-issue-action="add">${esc(text.add)}</button></div><div class="issue-preset-list">${listOrder(
     issuePresets(draft).map((item, index) => ({ item, index })),
     language,
     ({ item }) => item.label,
+    'issues',
   )
     .map(
       ({ item, index }) =>

@@ -1,3 +1,4 @@
+import { auditOverviewInteractions } from './overview-interaction-audit.mjs';
 import { auditSiteManagement } from './site-management-audit.mjs';
 import { auditOverviewRefinement } from './overview-refinement-audit.mjs';
 import { auditCompactBoard } from './compact-board-audit.mjs';
@@ -2562,6 +2563,19 @@ try {
     assert.equal(geometry.readable, true);
     assert.equal(geometry.scrollable, true);
     assert.equal(geometry.pageOverflow, false);
+    // CSS responds before ResizeObserver redraws the SVG. Assert the settled
+    // geometry, rather than occasionally comparing a new box to the old SVG.
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('#line-cards .line-trend')].every((plot) => {
+        const box = plot.getBoundingClientRect(),
+          view = plot.querySelector('svg')?.viewBox.baseVal;
+        return (
+          view &&
+          Math.abs(box.width - view.width) <= 1 &&
+          Math.abs(box.height - view.height) <= 1
+        );
+      }),
+    );
     const linePlots = await page.locator('#line-cards .line-trend').evaluateAll((plots) =>
       plots.map((plot) => {
         const box = plot.getBoundingClientRect(),
@@ -3169,6 +3183,7 @@ try {
     screenshots,
   });
   await auditSiteManagement({ browser, baseURL, root, screenshots, record, errors });
+  await auditOverviewInteractions({ browser, baseURL, root, screenshots, record, errors });
   assert.deepEqual(errors, []);
   record('No uncaught browser errors');
   console.log(

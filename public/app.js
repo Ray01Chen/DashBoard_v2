@@ -1,10 +1,12 @@
+import { createPersonalOrderUI } from './personal-order-ui.js';
+import { createOverviewInline } from './overview-inline.js';
 import { createSiteManagementUI } from './site-management.js';
 import { boardDisplayPreferences } from './board-display.js';
 import { cancelMonitorPageMotion } from './monitor-carousel.js';
 import { MonitorPaging, pageSize, fitMonitorPage } from './monitor-paging.js';
-import { naturalOrder, byProduction } from './list-order.js';
+import { listOrder, byProduction } from './list-order.js';
 import { linePickerMarkup, linePickerGroups, updateLinePicker } from './line-picker.js';
-import { handleMonitorAction } from './monitor-ui.js';
+import { handleMonitorAction, renderedMonitorLines } from './monitor-ui.js';
 import { schedulePreview } from './schedule-preview.js';
 import { alertConfig, validAlertConfig } from './alerts.js';
 import {
@@ -172,6 +174,24 @@ const state = {
   lastTime: null,
 };
 const monitorPaging = new MonitorPaging();
+const personalOrder = createPersonalOrderUI({
+  api,
+  t: (key) => t(key),
+  esc,
+  onChange: () => {
+    populateLineFilters();
+    render();
+  },
+});
+const overviewInline = createOverviewInline({
+  api,
+  getContext: monitorContext,
+  canEdit: () => canUse('production.write'),
+  refresh: () => loadRecords(true),
+  redraw: () => renderChart(),
+  toast,
+  confirm: (text) => confirmText(t('inlineEdit'), text, t('discard'), t('cancel')),
+});
 let savedBoardDisplay;
 try {
   savedBoardDisplay = JSON.parse(stored('bp-board-display'));
@@ -303,6 +323,7 @@ function applyFeatureAccess() {
   $('#export').hidden = state.view === 'entry' || !canUse('data.export');
 }
 function applyAccess() {
+  $$('.personal-order-open').forEach((button) => (button.hidden = !state.user?.site));
   $$('[data-admin-only]').forEach((el) => (el.hidden = !canManage()));
   $('[data-view="settings"]').hidden = !canManage() || !state.user?.site;
   $('.template-note').hidden = !canManage() || !state.user?.site;
@@ -318,7 +339,7 @@ function applyAccess() {
   $('#board-site-name').title = state.user?.site?.site_name || '';
   $('#site-select').innerHTML =
     (state.user?.site ? '' : `<option value="">${esc(t('accessSelectSite'))}</option>`) +
-    naturalOrder(state.user?.sites || [], state.language, (site) => site.site_code)
+    listOrder(state.user?.sites || [], state.language, (site) => site.site_code)
       .map(
         (site) =>
           `<option value="${site.id}">${esc(site.site_code + ' · ' + site.site_name)}</option>`,
@@ -348,7 +369,7 @@ function prepareSiteLogin() {
   $('#login-no-sites').hidden = !choosing || !!state.user.sites.length;
   $('#login-site').innerHTML =
     `<option value="">${esc(t('accessSelectSite'))}</option>` +
-    naturalOrder(state.user?.sites || [], state.language, (site) => site.site_code)
+    listOrder(state.user?.sites || [], state.language, (site) => site.site_code)
       .map(
         (site) =>
           `<option value="${site.id}">${esc(site.site_code + ' · ' + site.site_name)}</option>`,
@@ -397,6 +418,7 @@ async function initializeWorkspace(user) {
     state.draft = null;
   }
   state.config = await api('/api/config');
+  await personalOrder.load();
   if (state.view === 'settings') beginSettingsDraft();
   if (!state.scopeInitialized) {
     const date = today(),
@@ -520,7 +542,7 @@ function applyLanguage(language, persist = false) {
       (el.textContent = t(el.dataset.errorCode, JSON.parse(el.dataset.errorParams || '{}'))),
   );
   $('#toast').hidden = true;
-  $('#theme-select').innerHTML = naturalOrder(themes, state.language, (theme) => t(theme))
+  $('#theme-select').innerHTML = listOrder(themes, state.language, (theme) => t(theme))
     .map((v) => `<option value="${v}">${esc(t(v))}</option>`)
     .join('');
   $('#theme-select').value = state.theme;
@@ -688,7 +710,7 @@ function populateLineFilters() {
     '<option value="">' +
     esc(t('allGroupOptions')) +
     '</option>' +
-    naturalOrder(state.config.monitoring.groups, state.language, (group) => group.name)
+    listOrder(state.config.monitoring.groups, state.language, (group) => group.name, 'groups')
       .map((g) => '<option value="' + esc(g.id) + '">' + esc(g.name) + '</option>')
       .join('');
   $('#detail-group').value = state.detailGroupId;
@@ -796,6 +818,7 @@ async function loadRecords(background = false) {
     if (seq !== state.sequence) return;
     if (data.configVersion !== state.config.version) {
       state.config = await api('/api/config');
+      if (!personalOrder.busy) await personalOrder.load();
       if (seq !== state.sequence) return;
     }
     state.dailyReport = dailyReport;
@@ -898,6 +921,7 @@ function monitorContext() {
   };
   return {
     config,
+    inline: overviewInline,
     records: monitorRecords(),
     dailyRecords: state.dailyReport
       ? monitorRecords(
@@ -916,7 +940,14 @@ function monitorContext() {
     paging: monitorPaging,
     boardSize: board
       ? fitMonitorPage(
-          cards.clientHeight,
+          cards.clientHeight -
+            (overviewInline.active
+              ? Math.max(
+                  0,
+                  parseFloat(cardStyle.getPropertyValue('--inline-edit-height')) -
+                    parseFloat(cardStyle.getPropertyValue('--monitor-row-height')),
+                )
+              : 0),
           parseFloat(cardStyle.getPropertyValue('--monitor-row-height')),
           parseFloat(cardStyle.rowGap),
         )
@@ -1174,7 +1205,8 @@ function beginSettingsDraft() {
 async function setView(view, options = {}) {
   if ((!state.config && !isAdministration(view)) || !state.user || !pagePath(view))
     return false;
-  if (administration?.isBusy() || switchingSite) return false;
+  if (administration?.isBusy() || switchingSite || personalOrder.busy) return false;
+  if (view !== state.view && !(await overviewInline.guard())) return false;
   if (
     (view === 'sites' && state.user.systemRole !== 'system_admin') ||
     (view === 'users' && !canManage()) ||
@@ -1183,7 +1215,7 @@ async function setView(view, options = {}) {
     toast(t('errForbidden'));
     return false;
   }
-  if (!(await entryController?.canLeave())) {
+  if (!(await overviewInline.guard()) || !(await entryController?.canLeave())) {
     toast(t('resolveEntryChanges'));
     return false;
   }
@@ -1379,10 +1411,11 @@ function structureMarkup() {
       .map(
         (name) => `<section class="panel catalog-card">
       <div class="panel-heading"><h3>${esc(t(name))}</h3><span class="count-badge">${draft[name].length}</span></div>
-      <div class="catalog-items">${naturalOrder(
+      <div class="catalog-items">${listOrder(
         draft[name].map((value, index) => ({ value, index })),
         state.language,
         (item) => item.value,
+        name,
       )
         .map(
           ({ value, index }) => `<div class="catalog-item">
@@ -1437,10 +1470,11 @@ function scheduleMarkup() {
     <section class="panel schedule-template-tools">
       <label>${esc(t('savedScheduleTemplates'))}<select id="schedule-template-select">
         <option value="default">${esc(t('scheduleTemplate'))}</option>
-        ${naturalOrder(
+        ${listOrder(
           state.draft.scheduleTemplates || [],
           state.language,
           (template) => template.name,
+          'templates',
         )
           .map(
             (template) =>
@@ -1456,7 +1490,7 @@ function scheduleMarkup() {
     <section class="panel schedule-scope">
       <label>${esc(t('scheduleScope'))}<select id="schedule-line-select">
         <option value="">${esc(t('editSelectedTemplate'))}</option>
-        ${naturalOrder(state.draft.lines, state.language)
+        ${listOrder(state.draft.lines, state.language, undefined, 'lines')
           .map(
             (line) =>
               `<option value="${esc(line)}" ${state.scheduleLine === line ? 'selected' : ''}>${esc(line)}</option>`,
@@ -1520,7 +1554,7 @@ function scheduleMarkup() {
     <div class="calculation-note">${icon('info')}<span>${esc(t('scheduleProtect'))}</span></div></section>`;
 }
 function appearanceMarkup() {
-  return `<div class="settings-section-heading"><div><h2>${esc(t('appearanceTitle'))}</h2><p>${esc(t('appearanceDesc'))}</p></div></div><section class="panel appearance-card"><h3>${esc(t('defaultTheme'))}</h3><div class="theme-options">${naturalOrder(
+  return `<div class="settings-section-heading"><div><h2>${esc(t('appearanceTitle'))}</h2><p>${esc(t('appearanceDesc'))}</p></div></div><section class="panel appearance-card"><h3>${esc(t('defaultTheme'))}</h3><div class="theme-options">${listOrder(
     themes,
     state.language,
     (theme) => t(theme),
@@ -1966,9 +2000,11 @@ $('#settings-body').addEventListener('click', async (e) => {
     return;
   }
   if (action === 'apply-schedule-template') {
-    const lines = naturalOrder(
+    const lines = listOrder(
       state.scheduleApplyLines.filter((line) => draft.lines.includes(line)),
       state.language,
+      undefined,
+      'lines',
     );
     if (
       lines.length &&
@@ -2209,6 +2245,7 @@ $('.settings-tabs').addEventListener('keydown', (event) => {
   tabs[next].focus();
 });
 async function saveSettings() {
+  if (personalOrder.busy) return toast(t('orderSaving'));
   if (!canManage() || settingsSaving || !state.draft) return;
   settingsSaving = true;
   $('#settings-body').inert = true;
@@ -2221,6 +2258,7 @@ async function saveSettings() {
       body: JSON.stringify(state.draft),
     });
     state.config = next;
+    await personalOrder.load();
     state.draft = structuredClone(next);
     settingsSnapshot = JSON.stringify(state.draft);
     localDraftSnapshot = '';
@@ -2244,6 +2282,7 @@ $$('[data-save-settings]').forEach((button) => {
   button.onclick = saveSettings;
 });
 $('#reload-settings').onclick = async () => {
+  if (personalOrder.busy) return toast(t('orderSaving'));
   if (!canManage() || settingsSaving || !state.draft) return;
   if (
     settingsDirty() &&
@@ -2258,6 +2297,7 @@ $('#reload-settings').onclick = async () => {
     // must not be able to bring removed jobs/people back into shared settings.
     const latest = await api('/api/config');
     state.config = latest;
+    await personalOrder.load();
     stored(settingsDraftKey(), null);
     beginSettingsDraft();
     renderSettings();
@@ -2375,7 +2415,7 @@ $('#report-date').onchange = async () => {
     $('#report-date').value = state.date;
     return;
   }
-  if (!(await entryController?.canLeave())) {
+  if (!(await overviewInline.guard()) || !(await entryController?.canLeave())) {
     $('#report-date').value = state.date;
     return toast(t('resolveEntryChanges'));
   }
@@ -2384,7 +2424,8 @@ $('#report-date').onchange = async () => {
   loadRecords();
 };
 $('#today').onclick = async () => {
-  if (!(await entryController?.canLeave())) return toast(t('resolveEntryChanges'));
+  if (!(await overviewInline.guard()) || !(await entryController?.canLeave()))
+    return toast(t('resolveEntryChanges'));
   state.date = today();
   $('#report-date').value = state.date;
   state.page = 1;
@@ -2395,7 +2436,8 @@ $$('[data-report-scope]').forEach(
     (b.onclick = async () => {
       const scope = b.dataset.reportScope;
       if (reportScope() === scope) return;
-      if (!(await entryController?.canLeave())) return toast(t('resolveEntryChanges'));
+      if (!(await overviewInline.guard()) || !(await entryController?.canLeave()))
+        return toast(t('resolveEntryChanges'));
       if (hasWholeDayScope()) state.overviewScope = scope;
       if (scope !== 'all') state.shift = scope;
       state.page = 1;
@@ -2465,6 +2507,7 @@ $('#slot-tabs').onkeydown = (e) => {
 };
 $('#refresh').onclick = loadRecords;
 $('#group-tabs').onclick = (e) => {
+  if (overviewInline.active) return toast(t('inlineBusy'));
   const button = e.target.closest('[data-group]');
   if (button) {
     state.groupId = button.dataset.group;
@@ -2474,6 +2517,7 @@ $('#group-tabs').onclick = (e) => {
   }
 };
 $('#monitor-status-filters').onclick = (event) => {
+  if (overviewInline.active) return toast(t('inlineBusy'));
   const button = event.target.closest('[data-alert-filter]');
   if (!button) return;
   state.alertFilter = button.dataset.alertFilter;
@@ -2481,7 +2525,19 @@ $('#monitor-status-filters').onclick = (event) => {
   renderChart();
   $(`[data-alert-filter="${state.alertFilter}"]`)?.focus({ preventScroll: true });
 };
+document.addEventListener(
+  'click',
+  (event) => {
+    if (overviewInline.active && event.target.closest('.personal-order-open')) {
+      event.preventDefault();
+      toast(t('inlineBusy'));
+    }
+  },
+  true,
+);
 $('#line-cards').onclick = (e) => {
+  if (overviewInline.handle(e, renderedMonitorLines())) return;
+  if (overviewInline.active) return;
   // Fullscreen details use the existing dialog instead of making a fixed-height
   // card taller. Ordinary mode retains inline expansion.
   const fullDetail =
@@ -2516,6 +2572,8 @@ setInterval(() => {
     !$('#login-dialog').open
   ) {
     const paused =
+      overviewInline.active ||
+      personalOrder.busy ||
       document.hidden ||
       !!$('dialog[open]') ||
       !!$('#line-cards .is-expanded') ||
@@ -2598,7 +2656,12 @@ document.addEventListener('keydown', (e) => {
   }
 });
 window.addEventListener('beforeunload', (e) => {
-  if (settingsNeedProtection() || entryController?.hasPendingChanges()) {
+  if (
+    overviewInline.active ||
+    personalOrder.busy ||
+    settingsNeedProtection() ||
+    entryController?.hasPendingChanges()
+  ) {
     e.preventDefault();
     e.returnValue = '';
   }
@@ -2738,6 +2801,7 @@ window.addEventListener('resize', () => {
     renderChart();
 });
 $('#board-pagination').onclick = (e) => {
+  if (overviewInline.active) return toast(t('inlineBusy'));
   const now = Date.now() + state.serverOffset;
   if (e.target.closest('[data-board-rotation]')) {
     monitorPaging.togglePause(now);
@@ -2910,7 +2974,13 @@ $('#site-select').onchange = async (event) => {
   const inert = [main.inert, sidebar.inert, controls.inert];
   let navigating = false;
   try {
-    if (settingsSaving || administration.isBusy() || !(await entryController?.canLeave()))
+    if (
+      settingsSaving ||
+      personalOrder.busy ||
+      administration.isBusy() ||
+      !(await overviewInline.guard()) ||
+      !(await entryController?.canLeave())
+    )
       return;
     if (
       settingsNeedProtection() &&
@@ -2985,8 +3055,10 @@ $('#login-form').addEventListener('submit', async (event) => {
   }
 });
 $('#logout').onclick = async () => {
+  if (personalOrder.busy) return toast(t('orderSaving'));
   if (settingsSaving) return;
-  if (!(await entryController?.canLeave())) return toast(t('resolveEntryChanges'));
+  if (!(await overviewInline.guard()) || !(await entryController?.canLeave()))
+    return toast(t('resolveEntryChanges'));
   const dirty = settingsNeedProtection() || entryController?.hasPendingChanges();
   if (dirty && !(await confirmAction('logoutTitle', 'logoutDesc', 'logout', 'continueEditing')))
     return;

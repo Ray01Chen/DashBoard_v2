@@ -1,3 +1,25 @@
+# 2026-11-11 個人清單排序與總覽直接編輯
+
+本版沿用 Node.js HTTP、SQLite、既有多廠區 Session／RBAC 與填報 API，不變更生產、目標或告警公式。
+
+| 驗證 | 結果 |
+| --- | --- |
+| `npm run check` | ESLint、Prettier、80 個 JavaScript 語法檢查與 271 項測試通過；包含個人排序持久化／隔離、版本衝突、非法身份、來源順序、不同清單同名隔離與三語文字 |
+| Chromium | 完整 72 組流程通過；新增 4 組排序與直接編輯操作；其他流程保留原填報、Excel、告警、多廠區、圖表及輪播回歸 |
+| 個人排序 | 真實 Pointer 拖曳後以 SQLite 保存；刷新、登出重登入仍相同。不改 CONFIG；不同使用者與廠區獨立，API 參數不能改變 Session 廠區；未登入拒絕 |
+| 新增／刪除／衝突 | 沒有偏好時保留來源順序，不依語言或名稱重排；新增身份接末尾、刪除保留其他身份的相對順序；過期版本及外來／重複項目拒絕 |
+| Inline Editing | Hover 位移 45px，取消不寫入；儲存僅改所選站點／時段的 Actual 與原有 issue，更新 updatedBy／updatedAt。其他時段、Target 及日目標保持原值 |
+| 衝突及錯誤 | 另一個寫入使版本過期時 409，保留輸入；斷線後保留輸入並可手動重試。刷新不替換草稿，儲存時禁止重複提交 |
+| 全螢幕／手機 | 一般、全螢幕切換保留草稿，編輯時暫停分頁。1920×1080、1600×900、1366×768、三語及所有主題確認欄位完整、控制可見、頁面無垂直捲軸；手機觸控免 Hover，日期／晚班修改不碰原日期及其他班別 |
+| 大數字／趨勢 | 真實最大實績、極端達成率與 60 字 Model 在三語、兩種數據範圍、桌面／手機回歸；趨勢保留至少 180px 的桌面可讀寬度，數字必要時縮寫並保留完整 title |
+| 文件／截圖 | 更新中英使用教學、管理員／填報員教學、站內中英泰教學、CODE_GUIDE；新增真實瀏覽器 `overview-inline-edit.png` 並更新相關既有圖 |
+
+新增 `user_list_orders` 以 `(user_id, site_id, list_id)` 為主鍵，FK 連使用者及廠區，含 JSON items、version、updated_at。啟動採可重複執行的加表 migration，不重建或改寫生產資料表；既有業務表與資料保留。API 為 GET `/api/preferences/lists` 與 PUT `/api/preferences/lists/:listId`；生產編輯沿用 PUT `/api/entry/records/:rowId` 的 `stationEntry:true`、record/config version 與後端權限檢查。
+
+測試使用獨立 SQLite、廠區及帳號，沒有修改工作區／正式資料庫。僅實測 Chromium；Firefox／Safari、正式 TLS 部署未驗證。專案沒有 TypeScript 或 Build 指令。本次沒有新增執行期依賴。
+
+---
+
 # 2026-11-11 Phase 1 多廠區、RBAC 與資料隔離
 
 完整操作、schema／API、部署與回復程序見 [MULTI_SITE.md](./MULTI_SITE.md)。本階段沿用 Node.js HTTP、SQLite、scrypt 與既有 Session，不新增服務或 ORM，不改告警／產量計算。

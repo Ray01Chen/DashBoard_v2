@@ -57,7 +57,7 @@ export function fitMonitorNumbers(cards, ctx) {
       if (!view || width <= 0) return null;
       const style = getComputedStyle(node);
       const key = `${view.full}|${width}|${style.font}|${style.fontSize}|${style.fontFamily}|${style.fontWeight}|${style.fontVariantNumeric}`;
-      if (view.fittedKey === key) return null;
+      if (view.fittedKey === key && node.scrollWidth <= width) return null;
       return { node, view, width, key };
     })
     .filter(Boolean);
@@ -73,7 +73,9 @@ export function fitMonitorNumbers(cards, ctx) {
   // passes, rather than forcing a reflow separately for each numeric field.
   for (let pass = 0; pass < 4; pass++) {
     const overflowing = entries.filter(
-      (item) => item.view.valid && textWidth(item.node) > item.width - 1,
+      (item) =>
+        item.view.valid &&
+        (textWidth(item.node) > item.width - 1 || item.node.scrollWidth > item.width),
     );
     if (!overflowing.length) break;
     for (const { node, view } of overflowing) {
@@ -148,6 +150,7 @@ function achievementView(line, ctx) {
             : 'negative',
   };
 }
+export const renderedMonitorLines = () => [...rendered.values()];
 export function rememberMonitorLines(lines) {
   rendered = new Map(lines.map((line) => [line.key || line.line, line]));
 }

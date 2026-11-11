@@ -1,3 +1,4 @@
+import { interactionMessages } from './interaction-messages.js';
 import { siteMessages } from './site-messages.js';
 /** Shared interface, API validation, and export labels. Keep keys aligned across languages. */
 export const locales = ['zh', 'en', 'th'];
@@ -5,6 +6,7 @@ export const localeTags = { zh: 'zh-TW', en: 'en-GB', th: 'th-TH-u-ca-gregory' }
 export const messages = {
   zh: {
     ...siteMessages.zh,
+    ...interactionMessages.zh,
     boardDisplayStorageFailed: '無法保存顯示偏好；目前畫面仍會套用。',
     boardDisplaySections: '顯示區塊',
     boardShowAlerts: '告警摘要與狀態篩選',
@@ -557,6 +559,7 @@ export const messages = {
   },
   en: {
     ...siteMessages.en,
+    ...interactionMessages.en,
     boardDisplayStorageFailed:
       'Display preferences could not be saved; they still apply to this view.',
     boardDisplaySections: 'Visible sections',
@@ -1158,6 +1161,7 @@ export const messages = {
   },
   th: {
     ...siteMessages.th,
+    ...interactionMessages.th,
     boardDisplayStorageFailed: 'บันทึกการแสดงผลไม่ได้ แต่ยังใช้กับหน้านี้ได้',
     boardDisplaySections: 'ส่วนที่แสดง',
     boardShowAlerts: 'สรุปแจ้งเตือนและตัวกรองสถานะ',

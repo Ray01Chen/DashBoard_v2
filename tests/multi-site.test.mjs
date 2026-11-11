@@ -837,3 +837,109 @@ test('a header-free streaming write cannot be retargeted when its session switch
     req.destroy();
   }
 });
+
+test('personal list orders persist by user and site, reject stale/foreign keys and retain new-item order', async (t) => {
+  const { base, dbPath } = await start(t),
+    admin = await login(base);
+  let config = await configure(base, admin.cookie, 'CD10');
+  config.lines = ['CD10', 'CD2', 'CD1'];
+  config.productionUnits = config.lines.map((line) => ({ ...config.productionUnits[0], line }));
+  config = await result(await request(base, admin.cookie, 'PUT', '/api/config', config));
+  const url = '/api/preferences/lists';
+  const initial = await result(await request(base, admin.cookie, 'GET', url));
+  assert.deepEqual(initial.orders.lines.items, ['CD10', 'CD2', 'CD1']);
+  assert.equal(initial.orders.lines.version, 0);
+  const saved = await result(
+    await request(base, admin.cookie, 'PUT', url + '/lines', {
+      items: ['CD1', 'CD10', 'CD2'],
+      version: 0,
+    }),
+  );
+  assert.equal(saved.version, 1);
+  await result(
+    await request(base, admin.cookie, 'PUT', url + '/lines', {
+      items: ['CD1', 'CD2', 'CD10'],
+      version: 0,
+    }),
+    409,
+  );
+  await result(
+    await request(base, admin.cookie, 'PUT', url + '/lines', {
+      items: ['foreign', 'CD2', 'CD10'],
+      version: 1,
+    }),
+    400,
+  );
+  await result(
+    await request(base, admin.cookie, 'PUT', url + '/lines', {
+      items: ['CD1', 'CD1', 'CD10'],
+      version: 1,
+    }),
+    400,
+  );
+  const loginAgain = await login(base);
+  assert.deepEqual(
+    (await result(await request(base, loginAgain.cookie, 'GET', url))).orders.lines.items,
+    saved.items,
+  );
+  const member = await login(base, 'member');
+  const other = await result(await request(base, member.cookie, 'GET', url));
+  assert.deepEqual(other.orders.lines.items, initial.orders.lines.items);
+  await result(
+    await request(base, member.cookie, 'PUT', url + '/lines', {
+      items: ['CD2', 'CD1', 'CD10'],
+      version: 0,
+    }),
+  );
+  assert.deepEqual(
+    (await result(await request(base, admin.cookie, 'GET', url))).orders.lines.items,
+    saved.items,
+  );
+  config.lines = ['CD10', 'CD1', 'CD20'];
+  config.productionUnits = config.lines.map((line) => ({ ...config.productionUnits[0], line }));
+  config = await result(await request(base, admin.cookie, 'PUT', '/api/config', config));
+  const changed = await result(await request(base, admin.cookie, 'GET', url));
+  assert.deepEqual(changed.orders.lines.items, ['CD1', 'CD10', 'CD20']);
+  assert.deepEqual(
+    (await result(await request(base, admin.cookie, 'GET', '/api/config'))).lines,
+    config.lines,
+  );
+  const site = (
+    await result(
+      await request(base, admin.cookie, 'POST', '/api/admin/sites', {
+        site_code: 'ORDER-B',
+        site_name: 'Order B',
+      }),
+      201,
+    )
+  ).site;
+  await result(await request(base, admin.cookie, 'GET', url + '?site_id=' + site.id), 403);
+  await result(
+    await request(base, admin.cookie, 'PUT', url + '/lines', {
+      items: changed.orders.lines.items,
+      version: 1,
+      site_id: site.id,
+    }),
+    403,
+  );
+  await result(
+    await request(base, admin.cookie, 'POST', '/api/auth/site', { siteId: site.id }),
+  );
+  await configure(base, admin.cookie, 'B-ONLY');
+  assert.deepEqual(
+    (await result(await request(base, admin.cookie, 'GET', url))).orders.lines.items,
+    ['B-ONLY'],
+  );
+  await result(
+    await request(base, member.cookie, 'POST', '/api/auth/site', { siteId: site.id }),
+    403,
+  );
+  await result(await request(base, '', 'GET', url), 401);
+  const db = new DatabaseSync(dbPath, { readOnly: true });
+  try {
+    assert.equal(db.prepare('SELECT count(*) AS count FROM user_list_orders').get().count, 2);
+    assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), []);
+  } finally {
+    db.close();
+  }
+});
