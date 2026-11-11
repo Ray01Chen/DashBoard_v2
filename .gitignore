@@ -1,5 +1,35 @@
+# Local runtimes and installed dependencies
 .runtime/
-data/*.sqlite*
-data/backups/
-*.log
 node_modules/
+
+# Environment values belong on the deployment machine, not in source control.
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Production databases, journals, backups and exports (including custom DB_PATH).
+*.sqlite*
+*.db
+*.db-*
+backups/
+*.bak
+*.backup
+/exports/
+
+# Generated development and test output
+*.log
+.cache/
+coverage/
+test-results/
+playwright-report/
+
+# Editor, operating-system and Excel temporary files
+.idea/
+.vs/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+~$*

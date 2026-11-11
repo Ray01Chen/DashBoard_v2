@@ -182,7 +182,8 @@ test('conflicts require explicit review and preserve unedited latest server fiel
   remote.slots[0].issue = 'Remote issue';
   const queue = queueFor(t, async (request) => {
     calls++;
-    if (calls === 1) throw Object.assign(new Error('Changed elsewhere'), { code: 'errConflict' });
+    if (calls === 1)
+      throw Object.assign(new Error('Changed elsewhere'), { code: 'errConflict' });
     assert.equal(request.version, 8);
     assert.deepEqual(request.slots, [{ id: 'p1', actual: 75 }]);
     return { ...mergeEntryChanges(remote, request.slots), version: 9 };
@@ -367,7 +368,9 @@ test('full-day autosave keeps day and night writes independent for the same stat
   assert.equal(queue.hasPendingChanges(), true);
   assert.equal(await queue.flush(), true);
   assert.deepEqual(
-    calls.map((request) => [request.shift, request.slots[0].id, request.slots[0].actual]).sort(),
+    calls
+      .map((request) => [request.shift, request.slots[0].id, request.slots[0].actual])
+      .sort(),
     [
       ['day', 'p1', 42],
       ['night', 'n1', 64],

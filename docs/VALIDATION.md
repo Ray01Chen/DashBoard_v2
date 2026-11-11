@@ -1,3 +1,23 @@
+# 2026-11-11 專案檔案、Git 與 Coding Style 整理
+
+| 檢查 | 結果 |
+| --- | --- |
+| 正式模組 | 從 `server.mjs` 與 `public/app.js` 追蹤 imports，31 個正式 JavaScript 模組均可到達，未發現可整檔刪除的孤立模組。測試依 runner glob、瀏覽器 audit 依測試入口檢查，不以直接引用數判定廢檔 |
+| 刪除文件 | `docs/SIMULATION_2026-11-03.md` 與 `docs/TEAM_INVITATION_EMAIL.md` 沒有其他引用，屬特定環境／日期的一次性說明，且有過時的批次操作描述；移出目前版本，Git 歷史保留 |
+| 必須保留 | 31 個正式模組、tests／scripts、現行六份指南／驗證文件、教學圖片、`data/template.json`、原始解析樣本 `temp.xlsx` 與 DEMO 匯入範本均有用途 |
+| Git 檔案 | 索引共 123 個檔案，未含生產資料庫、WAL／SHM、.env、本機 runtime／依賴、備份、log 或測試產物。可用完整 Git 歷史未發現 .env／SQLite／DB 檔案提交；基本私鑰／常見 token 格式檢查未命中，但不代表完整秘密稽核 |
+| 忽略規則 | 補 .env（保留 example 例外）、自訂路徑資料庫／journal、備份、匯出、工具／OS／Excel 暫存檔。`repository:check` 同時驗證 Git 索引與 ignore probes，避免只加 .gitignore 卻漏掉已追蹤檔案 |
+| 固定工具 | 新增 ESLint／Prettier／EditorConfig 與 pinned devDependencies／package-lock。`npm ci` 可重建工具；沒有新增服務執行期依賴 |
+| `npm run check` | Git 檔案、ESLint（含未宣告與未使用識別字）、Prettier、65 個 JavaScript 語法檢查與 256 項測試全部通過 |
+| 行為保留 | 7 個既有 JavaScript 檔案只有格式修改，與修改前的語法樹比較一致；entry.css 只統一格式。未改生產資料、告警公式或 API。此次不重跑完整瀏覽器矩陣，前次的 65 組流程結果保留於下方 |
+| 接手文件 | README 重整啟動、文件索引、檔案用途及 Git 規則；CODE_GUIDE 補依功能的閱讀路線、固定工具用法及已知維護負擔 |
+
+限制：靜態檢查與 imports 掃描不能證明沒有未使用的匯出／分支或動態 CSS。`app.js`、`entry.js`、`server.mjs` 仍較大，`style.css` 保留歷史疊加規則，後續應在修改相關功能時逐步整理。此次未擅自重構，也未刪除正式資料庫或本機開發環境。沒有 Type Check／Build 流程，不將未配置項目列為通過。
+
+以下為前版功能驗證紀錄。
+
+---
+
 # 2026-11-10 共用欄位與全螢幕顯示偏好
 
 修正原本依單條產線數值套用 `has-wide-metrics`、導致數值欄借用曲線空間的設計。現在清單共享固定欄位定義，各列依同一容器寬度一起切換數值排列；沒有修改生產資料、告警規則或計算公式。

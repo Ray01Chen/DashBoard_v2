@@ -3,7 +3,24 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "BP9 production reporting dashboard based on temp.xlsx",
-  "engines": { "node": ">=24.11.0" },
-  "scripts": { "start": "node server.mjs", "test": "node --test tests/*.test.mjs" }
+  "description": "BP9 production reporting and monitoring dashboard",
+  "engines": {
+    "node": ">=24.11.0"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node scripts/browser-smoke.mjs",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "syntax:check": "node scripts/syntax-check.mjs",
+    "repository:check": "node scripts/repository-audit.mjs",
+    "check": "npm run repository:check && npm run lint && npm run format:check && npm run syntax:check && npm test"
+  },
+  "devDependencies": {
+    "eslint": "10.14.0",
+    "globals": "17.14.0",
+    "prettier": "3.9.10"
+  }
 }

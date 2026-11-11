@@ -217,18 +217,21 @@ test('config persistence, validation, stable history, migration and localization
         }
       },
     );
-    await t.test('rejects empty/equal/oversized times and shifts without production', async () => {
-      for (const replacement of [
-        [{ kind: 'production', start: '', end: '10:00' }],
-        [{ kind: 'production', start: '10:00', end: '10:00' }],
-        [{ kind: 'production', start: '00:00', end: '13:00' }],
-        [{ kind: 'break', start: '08:00', end: '09:00' }],
-      ]) {
-        const draft = structuredClone(config);
-        draft.schedules.day = replacement;
-        assert.equal((await put('/api/config', draft)).status, 400);
-      }
-    });
+    await t.test(
+      'rejects empty/equal/oversized times and shifts without production',
+      async () => {
+        for (const replacement of [
+          [{ kind: 'production', start: '', end: '10:00' }],
+          [{ kind: 'production', start: '10:00', end: '10:00' }],
+          [{ kind: 'production', start: '00:00', end: '13:00' }],
+          [{ kind: 'break', start: '08:00', end: '09:00' }],
+        ]) {
+          const draft = structuredClone(config);
+          draft.schedules.day = replacement;
+          assert.equal((await put('/api/config', draft)).status, 400);
+        }
+      },
+    );
     await t.test('changes slot identity and keeps original values and names', async () => {
       const draft = structuredClone(config);
       draft.schedules.day[0].start = '07:30';
@@ -313,30 +316,33 @@ test('config persistence, validation, stable history, migration and localization
         assert.ok(csv.includes('07:30-08:00'));
       }
     });
-    await t.test('saves custom line groups, sources and multiple alert thresholds', async () => {
-      const draft = structuredClone(config);
-      draft.monitoring.groups.push({
-        id: 'custom-group',
-        name: 'Custom Group',
-        lines: ['CUSTOM-01'],
-      });
-      draft.monitoring.outputSources['CUSTOM-01'] = 'all';
-      draft.monitoring.rules.push({
-        id: 'extra-rule',
-        type: 'idle',
-        threshold: 900,
-        comparison: 'gte',
-        color: 'purple',
-        blink: false,
-        enabled: true,
-      });
-      const response = await put('/api/config', draft);
-      assert.equal(response.status, 200);
-      config = await response.json();
-      assert.equal(config.monitoring.groups.at(-1).name, 'Custom Group');
-      assert.equal(config.monitoring.outputSources['CUSTOM-01'], 'all');
-      assert.equal(config.monitoring.rules.at(-1).threshold, 900);
-    });
+    await t.test(
+      'saves custom line groups, sources and multiple alert thresholds',
+      async () => {
+        const draft = structuredClone(config);
+        draft.monitoring.groups.push({
+          id: 'custom-group',
+          name: 'Custom Group',
+          lines: ['CUSTOM-01'],
+        });
+        draft.monitoring.outputSources['CUSTOM-01'] = 'all';
+        draft.monitoring.rules.push({
+          id: 'extra-rule',
+          type: 'idle',
+          threshold: 900,
+          comparison: 'gte',
+          color: 'purple',
+          blink: false,
+          enabled: true,
+        });
+        const response = await put('/api/config', draft);
+        assert.equal(response.status, 200);
+        config = await response.json();
+        assert.equal(config.monitoring.groups.at(-1).name, 'Custom Group');
+        assert.equal(config.monitoring.outputSources['CUSTOM-01'], 'all');
+        assert.equal(config.monitoring.rules.at(-1).threshold, 900);
+      },
+    );
     await t.test('refresh interval and alert type validation and persistence', async () => {
       for (const seconds of [0, -1, 1.5, 3601, '10']) {
         const draft = structuredClone(config);
@@ -357,7 +363,9 @@ test('config persistence, validation, stable history, migration and localization
       const saved = await getConfig();
       assert.equal(saved.monitoring.refreshSeconds, 3);
       assert.equal(saved.monitoring.alertMode, 'all');
-      assert.ok(saved.monitoring.rules.filter((r) => r.type === 'gap').every((r) => !r.enabled));
+      assert.ok(
+        saved.monitoring.rules.filter((r) => r.type === 'gap').every((r) => !r.enabled),
+      );
       assert.ok(saved.monitoring.rules.filter((r) => r.type === 'idle').some((r) => r.enabled));
     });
     await t.test('rejects unknown group lines and invalid warning thresholds', async () => {
@@ -384,23 +392,26 @@ test('config persistence, validation, stable history, migration and localization
       draft.monitoring.groups[1].id = ' ' + draft.monitoring.groups[0].id + ' ';
       assert.equal((await put('/api/config', draft)).status, 400);
     });
-    await t.test('resolves a newly-added mapping as the selected line output source', async () => {
-      const draft = structuredClone(config);
-      draft.rows.push({
-        id: 'new-monitor-source',
-        plant: 'BP9',
-        line: 'CUSTOM-01',
-        job: 'LEAD',
-        station: 'HI',
-        active: true,
-      });
-      draft.monitoring.outputSources['CUSTOM-01'] = 'new-monitor-source';
-      const response = await put('/api/config', draft);
-      assert.equal(response.status, 200);
-      config = await response.json();
-      const row = config.rows.find((r) => r.line === 'CUSTOM-01' && r.station === 'HI');
-      assert.equal(config.monitoring.outputSources['CUSTOM-01'], row.id);
-    });
+    await t.test(
+      'resolves a newly-added mapping as the selected line output source',
+      async () => {
+        const draft = structuredClone(config);
+        draft.rows.push({
+          id: 'new-monitor-source',
+          plant: 'BP9',
+          line: 'CUSTOM-01',
+          job: 'LEAD',
+          station: 'HI',
+          active: true,
+        });
+        draft.monitoring.outputSources['CUSTOM-01'] = 'new-monitor-source';
+        const response = await put('/api/config', draft);
+        assert.equal(response.status, 200);
+        config = await response.json();
+        const row = config.rows.find((r) => r.line === 'CUSTOM-01' && r.station === 'HI');
+        assert.equal(config.monitoring.outputSources['CUSTOM-01'], row.id);
+      },
+    );
     await t.test(
       'deleted configuration stays deleted and preserves editable historical reports',
       async () => {

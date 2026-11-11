@@ -151,7 +151,13 @@ test('authenticated roles and concurrent writes across two server processes', as
     await t.test('40 simultaneous writes to different rows all persist', async () => {
       const responses = await Promise.all(
         Array.from({ length: 40 }, (_, i) =>
-          request(i % 2 ? a : b, i % 2 ? opA : opB, 'PUT', `/api/records/${i + 10}`, payload(i)),
+          request(
+            i % 2 ? a : b,
+            i % 2 ? opA : opB,
+            'PUT',
+            `/api/records/${i + 10}`,
+            payload(i),
+          ),
         ),
       );
       assert.ok(
@@ -182,19 +188,22 @@ test('authenticated roles and concurrent writes across two server processes', as
         assert.equal(saved.version, 1);
       },
     );
-    await t.test('simultaneous edits to the same version cannot overwrite the winner', async () => {
-      const responses = await Promise.all([
-        request(a, opA, 'PUT', '/api/records/3', payload(91, 1)),
-        request(b, opB, 'PUT', '/api/records/3', payload(92, 1)),
-      ]);
-      assert.deepEqual(responses.map((r) => r.status).sort(), [200, 409]);
-      const winner = await responses.find((r) => r.status === 200).json(),
-        saved = (await get(b, opB, '/api/records?date=2099-01-01&shift=day')).records.find(
-          (r) => r.rowId === 3,
-        );
-      assert.equal(saved.version, 2);
-      assert.equal(saved.slots[0].actual, winner.slots[0].actual);
-    });
+    await t.test(
+      'simultaneous edits to the same version cannot overwrite the winner',
+      async () => {
+        const responses = await Promise.all([
+          request(a, opA, 'PUT', '/api/records/3', payload(91, 1)),
+          request(b, opB, 'PUT', '/api/records/3', payload(92, 1)),
+        ]);
+        assert.deepEqual(responses.map((r) => r.status).sort(), [200, 409]);
+        const winner = await responses.find((r) => r.status === 200).json(),
+          saved = (await get(b, opB, '/api/records?date=2099-01-01&shift=day')).records.find(
+            (r) => r.rowId === 3,
+          );
+        assert.equal(saved.version, 2);
+        assert.equal(saved.slots[0].actual, winner.slots[0].actual);
+      },
+    );
     await t.test('simultaneous delete and update serialize with one conflict', async () => {
       const responses = await Promise.all([
         request(a, adminA, 'DELETE', '/api/records/3', {
@@ -274,26 +283,33 @@ test('authenticated roles and concurrent writes across two server processes', as
         assert.equal(other.theme, config.theme);
       },
     );
-    await t.test('stale or missing configuration version cannot save production data', async () => {
-      assert.equal(
-        (await request(a, opA, 'PUT', '/api/records/5', { ...payload(), configVersion: 1 })).status,
-        409,
-      );
-      const data = payload();
-      delete data.configVersion;
-      assert.equal((await request(b, opB, 'PUT', '/api/records/5', data)).status, 409);
-      assert.equal((await request(b, opB, 'PUT', '/api/records/5', payload(50))).status, 200);
-    });
-    await t.test('invalid writes roll back revision and production changes together', async () => {
-      const bad = payload();
-      bad.slots[0].actual = -1;
-      assert.equal((await request(a, opA, 'PUT', '/api/records/6', bad)).status, 400);
-      const snapshot = await get(a, opA, '/api/records?date=2099-01-01&shift=day');
-      assert.equal(snapshot.rowVersions[6], undefined);
-      const good = await request(b, opB, 'PUT', '/api/records/6', payload());
-      assert.equal(good.status, 200);
-      assert.equal((await good.json()).version, 1);
-    });
+    await t.test(
+      'stale or missing configuration version cannot save production data',
+      async () => {
+        assert.equal(
+          (await request(a, opA, 'PUT', '/api/records/5', { ...payload(), configVersion: 1 }))
+            .status,
+          409,
+        );
+        const data = payload();
+        delete data.configVersion;
+        assert.equal((await request(b, opB, 'PUT', '/api/records/5', data)).status, 409);
+        assert.equal((await request(b, opB, 'PUT', '/api/records/5', payload(50))).status, 200);
+      },
+    );
+    await t.test(
+      'invalid writes roll back revision and production changes together',
+      async () => {
+        const bad = payload();
+        bad.slots[0].actual = -1;
+        assert.equal((await request(a, opA, 'PUT', '/api/records/6', bad)).status, 400);
+        const snapshot = await get(a, opA, '/api/records?date=2099-01-01&shift=day');
+        assert.equal(snapshot.rowVersions[6], undefined);
+        const good = await request(b, opB, 'PUT', '/api/records/6', payload());
+        assert.equal(good.status, 200);
+        assert.equal((await good.json()).version, 1);
+      },
+    );
     await t.test(
       'a temporary external SQLite writer lock queues instead of losing a save',
       async () => {
@@ -339,13 +355,18 @@ test('authenticated roles and concurrent writes across two server processes', as
       );
       db.close();
     });
-    await t.test('logout invalidates one session without logging out another browser', async () => {
-      assert.equal((await request(a, opA, 'POST', '/api/auth/logout', {})).status, 200);
-      assert.equal((await request(a, opA, 'GET', '/api/auth/me')).status, 401);
-      assert.equal((await request(b, opB, 'GET', '/api/auth/me')).status, 200);
-    });
+    await t.test(
+      'logout invalidates one session without logging out another browser',
+      async () => {
+        assert.equal((await request(a, opA, 'POST', '/api/auth/logout', {})).status, 200);
+        assert.equal((await request(a, opA, 'GET', '/api/auth/me')).status, 401);
+        assert.equal((await request(b, opB, 'GET', '/api/auth/me')).status, 200);
+      },
+    );
     await t.test('idle activity changes only when actual output increases', async () => {
-      const created = await (await request(b, opB, 'PUT', '/api/records/8', payload(80))).json();
+      const created = await (
+        await request(b, opB, 'PUT', '/api/records/8', payload(80))
+      ).json();
       assert.ok(created.activity.lastIncreaseAt);
       await new Promise((r) => setTimeout(r, 20));
       const edited = await (
@@ -359,7 +380,9 @@ test('authenticated roles and concurrent writes across two server processes', as
         await request(b, opB, 'PUT', '/api/records/8', payload(81, 2))
       ).json();
       assert.notEqual(increased.activity.lastIncreaseAt, created.activity.lastIncreaseAt);
-      const reduced = await (await request(b, opB, 'PUT', '/api/records/8', payload(79, 3))).json();
+      const reduced = await (
+        await request(b, opB, 'PUT', '/api/records/8', payload(79, 3))
+      ).json();
       assert.equal(reduced.activity.lastIncreaseAt, increased.activity.lastIncreaseAt);
     });
     await t.test('expired cookies cannot access or write data', async () => {

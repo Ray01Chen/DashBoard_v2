@@ -1,5 +1,23 @@
 # 程式維護導覽
 
+## 從哪裡開始讀
+
+先從 [README](../README.md) 啟動專案並完成一次設定、填報、總覽操作，再依功能往下追：
+
+| 要理解的功能 | 建議閱讀順序 |
+| --- | --- |
+| 網址、頁殼及資料載入 | `public/pages.js` → `public/index.html` → `public/app.js` → `server.mjs` |
+| 生產總覽 | `public/monitor.js` → `public/dashboard.js` → `public/monitor-ui.js` → `public/line-detail.js` |
+| 告警 | `public/alerts.js` → `public/alert-display.js` → `tests/alerts.test.mjs` |
+| 填報與儲存 | `public/entry.js` → `server.mjs` 的 API／writeRecord → `production-defaults.mjs`／`line-production.mjs` |
+| 時段與計畫 UPH | `public/production-schedules.js`／`public/production-targets.js` → `schedule-config.mjs` |
+| 匯入 | `production-import.mjs` → `spreadsheet.mjs` → `tests/entry-import.test.mjs` |
+| 版面、語言與教學 | `public/index.html` → 各 CSS／`design-system.css` → `public/i18n.js`／`public/help.js` |
+
+典型資料流是 **瀏覽器操作 → 已登入 API → 驗證與版本檢查 → SQLite 交易 → 回傳資料 → 共用業務模組 → UI**。`data/template.json` 是初始化來源，`temp.xlsx` 是原始解析測試樣本，兩者都不是生產資料庫的替代品。
+
+`tests/*.test.mjs` 由 Node test runner 自動發現；`scripts/*-audit.mjs` 多由 browser-smoke 引入，不能以「沒有直接 import 某個測試檔」判斷它沒用。
+
 ## 模組責任
 
 | 模組 | 責任 |
@@ -12,6 +30,8 @@
 | `production-import.mjs`、`spreadsheet.mjs` | Excel／CSV 編解碼、預覽驗證及匯入 |
 | `public/app.js` | 頁面切換、資料載入、範圍篩選與共用確認視窗 |
 | `public/monitor.js`、`public/dashboard.js`、`public/line-detail.js` | 來源站計量、看板圖表與全螢幕明細 |
+| `public/monitor-ui.js`、`public/board-display.js`、`public/monitor-paging.js`、`public/monitor-carousel.js` | 卡片呈現、瀏覽器顯示偏好、分頁狀態與動畫 |
+| `public/list-order.js`、`public/line-picker.js` | 自然排序與可搜尋分組選線，不改設定順序 |
 | `public/*-settings.js`、`public/issue-presets.js` | 設定草稿、資料清單與英文異常快捷文字 |
 | `public/i18n.js`、`public/help.js` | 共用翻譯與依角色顯示的教學 |
 
@@ -49,12 +69,15 @@
 
 移除函式、匯出、翻譯或樣式前，搜尋呼叫處、動態鍵值、HTML 產生器及測試。通用輔助函式只有在多處需要同一語意時才抽出。
 
-共用版面集中在 `public/style.css`，主題透過既有 `--primary`、`--soft`、`--tint` 等變數傳遞，不另建立按主題分岔的版面。`public/delta-logo.svg` 為依提供畫面重繪的本地向量識別，以 SVG view 分別顯示圖標及字標，可在此集中替換品牌標準素材；品牌藍不隨主題改色。教學截圖說明改以圖片名稱作鍵，避免增刪圖片時錯配另一張圖的文字。
+基礎版面在 `public/style.css`，目前共用卡片與響應式規則集中在最後載入的 `public/design-system.css`，主題透過既有 `--primary`、`--soft`、`--tint` 等變數傳遞，不另建立按主題分岔的版面。`public/delta-logo.svg` 為依提供畫面重繪的本地向量識別，以 SVG view 分別顯示圖標及字標，可在此集中替換品牌標準素材；品牌藍不隨主題改色。教學截圖說明改以圖片名稱作鍵，避免增刪圖片時錯配另一張圖的文字。
 
 執行 `npm test`，以及 `BP_BROWSER_PATH=/usr/bin/chromium node scripts/browser-smoke.mjs --screenshots`。瀏覽器測試使用隔離資料庫；`--screenshots` 更新教學圖。瀏覽器路徑可依本機安裝調整，Playwright 設定見腳本開頭。
 
-本次另用 ESLint 檢查前端、伺服器、測試及腳本的未使用變數、不可達程式、重複參數／鍵值與固定條件。這些檢查輔助清理，功能是否必要仍須依呼叫流程與歷史資料用途判斷。
+正式工具設定在 `eslint.config.mjs`、`.prettierrc.json`、`.prettierignore` 與 `.editorconfig`，版本由 `package-lock.json` 固定。先 `npm ci`，再 `npm run check`；它包含 Git 檔案規則、ESLint、格式、語法及自動測試。ESLint 額外檢查未宣告識別字，Node 與前端分開使用對應全域變數；瀏覽器測試允許頁面 evaluate 內的 DOM 全域。格式為兩空格、單引號、96 欄、LF，由 Prettier 統一；Windows 啟動器維持四空格。
 
+`npm run format` 只處理支援的原始碼／設定與 README，操作文件、seed 資料及 SVG 保持人工維護。瀏覽器驗證使用 `npm run test:browser`，可加 `-- --screenshots` 更新截圖。服務本身沒有第三方執行期依賴，ESLint／Prettier／globals 都是 devDependencies；不要把 node_modules 或 .runtime 提交。
+
+靜態檢查不等於證明沒有未用的跨模組匯出、動態 CSS 或邏輯問題。`app.js`、`entry.js`、`server.mjs` 仍較大，`style.css` 有歷史疊加樣式；未來修改相關功能時逐步拆分或整理，不為了格式檢查大規模改動業務流程。移除前仍須追蹤呼叫、動態識別與歷史用途。
 
 教學採每項操作一張圖、依步驟展開。`screenshot` 測試輔助函式會固定寬度、關閉並還原臨時選單、重置並還原內部捲動、移開滑鼠，再以同源 CSS 排除畫面外的固定導覽。不可為截圖關掉 CSP，也不可直接拍長篇 `#settings-body` 作為班表說明。範本區域使用 `#structure-schedule`；總覽使用 `#line-dashboard`，一般總覽截圖擷取前三張作閱讀示例；全螢幕截圖使用實際 viewport，禁止 fullPage 掩蓋垂直溢出。圖片與程式一併由 `--screenshots` 更新。
 
@@ -83,11 +106,9 @@
 - `design-system.css` 共用同一份資訊順序及 Grid 元件；桌面使用緊湊橫列，行動寬度才調整排列；來源及下一時段保留。卡片從清單繼承同一份 `--monitor-card-columns`；不得按單條資料新增可變欄寬。數值用四欄或一致的 2×2 Grid，22px 與 tabular-nums 不因資料變長而縮小；曲線 track 不借給數值欄。停留與明細保留精確值；額外圖表排在卡片之後，不再以短螢幕字級縮小維持版面。
 - `alertReasonText` 的 `compact` 只選用本地化摘要鍵；完整原因及原始計算精度保留。整體嚴重程度、輪播及資料來源仍由既有告警模組管理。
 
-
 ## 回報告警時間相容
 
 `monitoring.unified.reporting.redAfterMinutes` 是時段結束後的總分鐘數，須大於等於 `graceMinutes`。計算層只比較 `endAt + redAfterMinutes`，不再把寬限加第二次。`alertConfig` 在讀取／保存時將舊 `redMinutes`（額外等待）轉為 `graceMinutes + redMinutes` 並刪舊鍵；以 own-property 判斷新格式，確保重複正規化不累加。舊欄缺省的額外等待仍為 30，避免更動既有門檻。新設定預設寬限 10／總共 40；升紅燈使用嚴格超過。UI 即時顯示共同起點及舊設定換算提示。`reporting-time.test.mjs` 與實際 API／瀏覽器驗證涵蓋 CD303 的 30／45、舊 30＋45＝75、跨日、45／75 分鐘時段及已提交零產出解除。
-
 
 ## 分頁動畫
 

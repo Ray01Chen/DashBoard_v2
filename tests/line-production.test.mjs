@@ -164,7 +164,8 @@ test('report target overrides and atomic shared line output', async (t) => {
       peers.map((row) => ({
         rowId: row.id,
         slots: (
-          snapshot.records.find((record) => record.rowId === row.id) || snapshot.defaults[row.id]
+          snapshot.records.find((record) => record.rowId === row.id) ||
+          snapshot.defaults[row.id]
         ).slots,
       }));
     const save = async (rowId, slots, extra = {}) =>
@@ -271,7 +272,10 @@ test('report target overrides and atomic shared line output', async (t) => {
           409,
         );
         assert.deepEqual((await report()).records, before);
-        assert.equal((await (await manager(base + '/api/config')).json()).lineTargets[line], 1000);
+        assert.equal(
+          (await (await manager(base + '/api/config')).json()).lineTargets[line],
+          1000,
+        );
       },
     );
     await t.test(
@@ -417,7 +421,11 @@ test('report target overrides and atomic shared line output', async (t) => {
             stationEntry: true,
             slots: [{ id: slot.id, ...values }],
           });
-        const first = await saveStation(3, 0, { target: 111, actual: 23, issue: 'Station A only' });
+        const first = await saveStation(3, 0, {
+          target: 111,
+          actual: 23,
+          issue: 'Station A only',
+        });
         assert.equal(first.status, 200, await first.clone().text());
         const a = await first.json();
         const persistedA = { ...a };
@@ -432,7 +440,11 @@ test('report target overrides and atomic shared line output', async (t) => {
         );
         assert.equal(current.defaults[4].slots[0].actual, null);
         assert.equal(current.rowVersions[4], undefined);
-        const second = await saveStation(4, 0, { target: 222, actual: 7, issue: 'Station B only' });
+        const second = await saveStation(4, 0, {
+          target: 222,
+          actual: 7,
+          issue: 'Station B only',
+        });
         assert.equal(second.status, 200);
         current = await getDay();
         assert.deepEqual(
@@ -448,7 +460,10 @@ test('report target overrides and atomic shared line output', async (t) => {
         assert.deepEqual(monitor.sourceRows, [4]);
         assert.equal(monitor.series.find((value) => value.id === slot.id).actual, 7);
         assert.equal(monitor.series.find((value) => value.id === slot.id).target, 222);
-        assert.equal((await (await manager(base + '/api/config')).json()).lineTargets[line], 1000);
+        assert.equal(
+          (await (await manager(base + '/api/config')).json()).lineTargets[line],
+          1000,
+        );
       },
     );
     await t.test(
@@ -562,11 +577,14 @@ test('report target overrides and atomic shared line output', async (t) => {
           );
         }
         assert.equal(
-          (await (await member(base + `/api/records?date=${batchDate}&shift=night`)).json()).records
-            .length,
+          (await (await member(base + `/api/records?date=${batchDate}&shift=night`)).json())
+            .records.length,
           0,
         );
-        assert.equal((await (await manager(base + '/api/config')).json()).lineTargets[line], 1000);
+        assert.equal(
+          (await (await manager(base + '/api/config')).json()).lineTargets[line],
+          1000,
+        );
         assert.equal(
           current.records.some((record) => record.rowId === 10),
           false,
@@ -592,7 +610,9 @@ test('report target overrides and atomic shared line output', async (t) => {
         assert.equal(config.rows.find((row) => row.id === 4).active, true);
         assert.equal(config.rows.find((row) => row.id === 4).hasOutput, false);
         assert.deepEqual((await readSaved()).records, before.records);
-        const fresh = await (await member(`${base}/api/records?date=2026-11-19&shift=day`)).json();
+        const fresh = await (
+          await member(`${base}/api/records?date=2026-11-19&shift=day`)
+        ).json();
         assert.ok(
           fresh.defaults[4].slots.every((slot) => slot.target === null && slot.actual === null),
         );
@@ -635,7 +655,9 @@ test('report target overrides and atomic shared line output', async (t) => {
           Buffer.from(await response.arrayBuffer()).toString('base64'),
         );
         assert.ok(!template.slice(1).some((row) => Number(row[0].value) === 4));
-        const importRows = Buffer.from(`Row ID,Time slot,Actual\n4,${slot.start}-${slot.end},777`);
+        const importRows = Buffer.from(
+          `Row ID,Time slot,Actual\n4,${slot.start}-${slot.end},777`,
+        );
         const preview = previewImport(
           'non-output.csv',
           importRows.toString('base64'),

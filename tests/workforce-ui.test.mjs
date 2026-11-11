@@ -40,10 +40,26 @@ function draftFixture() {
       { id: 'person-a', name: 'Alex <Lead>', job: 'Pack', active: true },
       { id: 'person-b', name: 'Former colleague', job: 'Test', active: false },
     ],
-    lineStaffing: { 'Line <1>': { day: ['person-a'], night: ['person-b'], owners: ['person-a'] } },
+    lineStaffing: {
+      'Line <1>': { day: ['person-a'], night: ['person-b'], owners: ['person-a'] },
+    },
     rows: [
-      { id: 1, line: 'Line <1>', station: 'Packing', job: 'Pack', active: true, dailyTarget: 0 },
-      { id: 2, line: 'Line <1>', station: 'Testing', job: 'Test', active: true, dailyTarget: null },
+      {
+        id: 1,
+        line: 'Line <1>',
+        station: 'Packing',
+        job: 'Pack',
+        active: true,
+        dailyTarget: 0,
+      },
+      {
+        id: 2,
+        line: 'Line <1>',
+        station: 'Testing',
+        job: 'Test',
+        active: true,
+        dailyTarget: null,
+      },
       {
         id: 3,
         line: 'Line <1>',
@@ -70,8 +86,14 @@ test('personnel additions have stable IDs and removal clears only draft assignme
   assert.equal(person.active, true);
   assert.equal(added.focusId, 'person-name-2');
 
-  handleWorkforceAction(draft, { dataset: { workforceAction: 'remove-person', personIndex: '0' } });
-  assert.deepEqual(draft.lineStaffing['Line <1>'], { day: [], night: ['person-b'], owners: [] });
+  handleWorkforceAction(draft, {
+    dataset: { workforceAction: 'remove-person', personIndex: '0' },
+  });
+  assert.deepEqual(draft.lineStaffing['Line <1>'], {
+    day: [],
+    night: ['person-b'],
+    owners: [],
+  });
   assert.equal(savedSnapshot.personnel[0].name, 'Alex <Lead>');
   assert.deepEqual(savedSnapshot.lineStaffing['Line <1>'].day, ['person-a']);
 });
@@ -112,7 +134,10 @@ test('batch assignment adds several colleagues in one job independently per role
   assert.deepEqual(draft.productionUnits[0].staffing.day, ['person-a', 'person-c', 'person-d']);
   assert.deepEqual(draft.productionUnits[1], before.productionUnits[1]);
   assert.deepEqual(draft.productionUnits[0].staffing.owners, ['person-a']);
-  assert.equal(addStaffAssignments(draft, unit, 'night', 'Pack', ['person-c', 'person-d']), true);
+  assert.equal(
+    addStaffAssignments(draft, unit, 'night', 'Pack', ['person-c', 'person-d']),
+    true,
+  );
   for (const role of ['day', 'night']) {
     assert.deepEqual(
       mappingStaff(draft, { ...unit, job: 'Pack' })[role].map((person) => person.id),
@@ -147,7 +172,10 @@ test('invalid batch selections are rejected atomically without losing existing a
     assert.equal(addStaffAssignments(draft, where, role, job, ['person-c']), false);
     assert.deepEqual(draft, before);
   }
-  assert.equal(addStaffAssignments(draft, unit, 'night', 'Pack', ['person-a', 'person-c']), true);
+  assert.equal(
+    addStaffAssignments(draft, unit, 'night', 'Pack', ['person-a', 'person-c']),
+    true,
+  );
   assert.deepEqual(draft.lineStaffing['Line <1>'].night, ['person-b', 'person-a', 'person-c']);
 });
 
@@ -199,8 +227,14 @@ test('daily-target controls distinguish zero, unknown and invalid fractional inp
     );
     assert.equal(draft.lineTargets['Line <1>'], expected);
   }
-  assert.equal(handleWorkforceChange(draft, { dataset: { lineTarget: '99' }, value: '10' }), false);
-  assert.equal(handleWorkforceChange(draft, { dataset: { lineTarget: '' }, value: '10' }), false);
+  assert.equal(
+    handleWorkforceChange(draft, { dataset: { lineTarget: '99' }, value: '10' }),
+    false,
+  );
+  assert.equal(
+    handleWorkforceChange(draft, { dataset: { lineTarget: '' }, value: '10' }),
+    false,
+  );
   assert.equal(
     handleWorkforceChange(draft, { dataset: { lineTarget: '0.5' }, value: '10' }),
     false,
@@ -331,7 +365,13 @@ test('line target filters preserve hidden edits without depending on mappings', 
 
 test('people can be filtered by job and assignments are a separate page', () => {
   const draft = draftFixture();
-  const markup = workforceSettingsMarkup({ draft, esc, icon, language: 'en', selectedJob: 'Test' });
+  const markup = workforceSettingsMarkup({
+    draft,
+    esc,
+    icon,
+    language: 'en',
+    selectedJob: 'Test',
+  });
   assert.ok(markup.includes('data-person-job-filter'));
   assert.ok(markup.includes('Former colleague'));
   assert.ok(!markup.includes('Alex &lt;Lead&gt;'));
@@ -362,7 +402,11 @@ test('deleting a job deletes active and inactive people and their assignments wi
     draft.personnel.map((person) => person.id),
     ['person-b'],
   );
-  assert.deepEqual(draft.lineStaffing['Line <1>'], { day: [], night: ['person-b'], owners: [] });
+  assert.deepEqual(draft.lineStaffing['Line <1>'], {
+    day: [],
+    night: ['person-b'],
+    owners: [],
+  });
   for (const unit of draft.productionUnits) {
     assert.deepEqual(unit.staffing, { day: [], night: ['person-b'], owners: ['person-b'] });
     assert.equal(unit.dailyTarget, 100);
@@ -423,7 +467,13 @@ test('dropdown model pairing and role forms preserve existing targets, owners an
   assert.ok(!markup.includes('data-staff-person-select'));
   assert.deepEqual(draft, before);
   assert.equal(
-    changeStaffAssignment(draft, { line: 'Line <1>', model: 'Two' }, 'owners', 'person-a', false),
+    changeStaffAssignment(
+      draft,
+      { line: 'Line <1>', model: 'Two' },
+      'owners',
+      'person-a',
+      false,
+    ),
     true,
   );
   assert.deepEqual(draft.productionUnits[0], before.productionUnits[0]);

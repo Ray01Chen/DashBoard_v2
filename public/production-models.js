@@ -52,7 +52,9 @@ export function productionUnits(config) {
     (config.lines || []).map((line) => ({
       line,
       model: DEFAULT_MODEL,
-      dailyTarget: Object.hasOwn(config.lineTargets || {}, line) ? config.lineTargets[line] : null,
+      dailyTarget: Object.hasOwn(config.lineTargets || {}, line)
+        ? config.lineTargets[line]
+        : null,
       staffing: (Object.hasOwn(config.lineStaffing || {}, line)
         ? config.lineStaffing[line]
         : null) || { day: [], night: [], owners: [] },
@@ -70,7 +72,10 @@ export function outputSourceFor(config, unit) {
   const key = productionKey(unit);
   const rows = (config.rows || []).filter(
     (row) =>
-      row.active !== false && !row.deleted && stationHasOutput(row) && sameProduction(row, unit),
+      row.active !== false &&
+      !row.deleted &&
+      stationHasOutput(row) &&
+      sameProduction(row, unit),
   );
   const source = Object.hasOwn(sources, key)
     ? sources[key]
@@ -78,7 +83,8 @@ export function outputSourceFor(config, unit) {
   // Legacy catalogs without models retain their aggregate mode. Current
   // line/model production always uses one station to avoid counting a product
   // repeatedly as it passes through several stations.
-  if ((source === 'all' && !config.models) || rows.some((row) => row.id === source)) return source;
+  if ((source === 'all' && !config.models) || rows.some((row) => row.id === source))
+    return source;
   const former = (config.rows || []).find((row) => row.id === source);
   return (
     (
@@ -126,9 +132,12 @@ export function setProductionUnit(config, line, model, enabled) {
       staffing: { day: [], night: [], owners: [] },
     });
   if (!enabled) {
-    config.productionUnits = config.productionUnits.filter((unit) => !sameProduction(unit, row));
+    config.productionUnits = config.productionUnits.filter(
+      (unit) => !sameProduction(unit, row),
+    );
     for (const mapping of config.rows)
-      if (sameProduction(mapping, row)) Object.assign(mapping, { active: false, deleted: true });
+      if (sameProduction(mapping, row))
+        Object.assign(mapping, { active: false, deleted: true });
   }
   return true;
 }

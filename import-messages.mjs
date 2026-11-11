@@ -2,7 +2,8 @@
 const messages = {
   en: {
     missingShift: 'Whole-day import requires Shift (day or night) on every nonblank data row.',
-    noOutput: 'This station has no output. Reporting is not required; its saved data is unchanged.',
+    noOutput:
+      'This station has no output. Reporting is not required; its saved data is unchanged.',
     lineTargetConflict:
       'Different targets were supplied for the same line and time slot. Enter one shared value.',
     invalidTarget: 'Target must be an integer from 0 to 99,999,999.',
@@ -71,7 +72,8 @@ const messages = {
 };
 
 export function importDiagnostic(language, code, params = {}) {
-  return (messages[language]?.[code] || messages.en[code] || code).replace(/\{(\w+)\}/g, (_, key) =>
-    String(params[key] ?? ''),
+  return (messages[language]?.[code] || messages.en[code] || code).replace(
+    /\{(\w+)\}/g,
+    (_, key) => String(params[key] ?? ''),
   );
 }

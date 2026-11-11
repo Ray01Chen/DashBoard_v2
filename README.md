@@ -1,98 +1,101 @@
 # BP PULSE — BP9 Production Center
 
-Node.js 24.11+、原生 JavaScript/CSS 與 SQLite 的產線管理及填報系統。
+以 Node.js 24.11+、原生 JavaScript／CSS 與 SQLite 建立的生產填報及監控系統。支援中文、英文、泰文及五種顏色主題，前後端共用生產時段、目標與告警規則。
+
+## 第一次接手，先看什麼？
+
+1. 先依下面的「啟動」把網站開起來，實際走過 **設定 → 生產填報 → 生產總覽**。
+2. 閱讀 [使用教學](./docs/USER_GUIDE.md)，理解班表、Target／Actual、來源站、告警與歷史資料。
+3. 閱讀 [程式維護導覽](./docs/CODE_GUIDE.md)，依正在修改的功能找模組；不用先從頭讀完 `app.js`。
+4. 執行 `npm ci`、`npm run check`，建立修改前的基準；畫面或操作變更再執行瀏覽器測試。
 
 ## 啟動
 
-Windows 雙擊 [start.cmd](./start.cmd)，或執行：
+需要 **Node.js 24.11 或更新版本**。
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\start.ps1
+```sh
+npm start
 ```
 
-開啟 <http://localhost:43871/>。預設使用較少使用的 **43871**，也可透過環境變數 PORT 覆寫；啟動訊息會顯示實際位址。區網電腦使用伺服器 IP 與相同 Port。
+開啟 <http://localhost:43871/>。Windows 也可雙擊 [start.cmd](./start.cmd)；它會呼叫 [start.ps1](./start.ps1)，優先使用本機或 `.runtime/` 的 Node.js，必要時下載官方可攜版本。
 
-啟動器優先使用 [.runtime/](./.runtime/) 的可攜 Node.js，找不到符合版本的執行環境時會下載官方 Node.js 24.11.0。已有 Node.js 可執行 npm start。
+服務沒有第三方執行期依賴；`npm ci` 安裝的是開發檢查工具。第一次啟動會由 `data/template.json` 初始化 SQLite，之後設定及填報均以資料庫為準。
 
-## 帳號與操作指南
+| 環境變數              | 用途                                          |
+| --------------------- | --------------------------------------------- |
+| `PORT`                | 服務 Port，預設 `43871`                       |
+| `DB_PATH`             | SQLite 路徑，預設 `data/production.sqlite`    |
+| `BP_MANAGER_PASSWORD` | 全新資料庫的 manager 初始密碼，預設 `manager` |
+| `BP_MEMBER_PASSWORD`  | 全新資料庫的 member 初始密碼，預設 `member`   |
 
-| 帳號    | 初始密碼 | 功能                                 | 詳細教學                                  |
-| ------- | -------- | ------------------------------------ | ----------------------------------------- |
-| manager | manager  | 設定、人員配置、填報與查詢           | [管理員圖文教學](./docs/MANAGER_GUIDE.md) |
-| member  | member   | 產線實績、當日目標、異常、匯入及查詢 | [填報員圖文教學](./docs/MEMBER_GUIDE.md)  |
+manager 可設定、填報與查詢；member 可填報與查詢。帳密雜湊保存在資料庫，重啟不會重設。環境變數由啟動命令或部署環境提供，專案不會自動讀取 `.env`。
 
-也可直接在左側「User guide」查看目前帳號的教學；管理設定內容只會顯示給管理員。介面支援中文、英文、泰文，所有語言下拉選項統一標示 **Chinese / English / Thai**。新瀏覽器預設英文。
+## 文件各自做什麼？
 
-全新資料庫的初始密碼可用 BP_MANAGER_PASSWORD、BP_MEMBER_PASSWORD 覆寫。帳號與密碼雜湊保存在資料庫，重新啟動不會重設帳密。
+| 文件                                        | 何時閱讀                                           |
+| ------------------------------------------- | -------------------------------------------------- |
+| [USER_GUIDE.md](./docs/USER_GUIDE.md)       | 一般操作入口：設定流程、填報、總覽、告警與時段     |
+| [USER_GUIDE.en.md](./docs/USER_GUIDE.en.md) | 對應的英文操作說明                                 |
+| [MANAGER_GUIDE.md](./docs/MANAGER_GUIDE.md) | 管理員設定、人員、配置與班表操作                   |
+| [MEMBER_GUIDE.md](./docs/MEMBER_GUIDE.md)   | 填報、貼上、異常、匯入與儲存衝突                   |
+| [CODE_GUIDE.md](./docs/CODE_GUIDE.md)       | 工程師入口：模組責任、資料流程、相容限制與寫法     |
+| [VALIDATION.md](./docs/VALIDATION.md)       | 各版本實際檢查結果；由上往下是新到舊，不是操作教學 |
 
-## 設定與填報流程
+網站內的 `/guide` 由 `public/help.js` 依帳號角色與語言顯示精簡教學；它不是直接讀取 Markdown。功能修改時應同步維護兩者。`docs/images/` 是實際瀏覽器操作截圖；`docs/examples/production-import-template.xlsx` 是 DEMO 格式範例，實際填報請下載網站依目前設定產生的範本。
 
-1. 基礎資料與班別時間：產線、Model、職務、站點，下拉新增各線 Model 配對，設定兩班生產／休息時段。
-2. 產線日目標：每組產線＋Model 一個預設值，依生產分鐘分配兩班時段，各站沿用相同目標。
-3. 依職務建立人員：可選職務篩選名冊。
-4. 產線人員分配：獨立頁選各線兩班 5-Tigers 及 OWNER；選職務後可勾選多人，一次新增，同職務可多人。
-5. 產線配置：下拉選既有 Line／Model，同表新增、編輯及啟用職務／站點，自動帶入人員；同區選產量來源站。
-6. 分組；7. 警示及刷新；8. 語言與外觀。
+## 程式與資料放哪裡？
 
-日目標只需要產線與有效時間，可在尚無人員或啟用站點時先儲存。配置不等待所有人員分配完成；完成標記僅提示進度。上方及底部 Save settings 發布共享設定；Save draft 只保留在目前瀏覽器及帳號。
+| 路徑                                                                 | 用途                                                                    |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `server.mjs`、`auth.mjs`                                             | HTTP、SQLite、登入、權限、交易、版本檢查與稽核                          |
+| 根目錄其他 `.mjs`                                                    | 預設目標、班表驗證、批次填報、匯入與 Excel／CSV 編解碼                  |
+| `public/app.js`、`public/pages.js`                                   | 前端組裝、頁面路由、載入資料及事件協調                                  |
+| `public/entry.js`                                                    | 填報、儲存佇列、矩形貼上、批次與匯入操作                                |
+| `public/monitor*.js`、`public/dashboard.js`、`public/line-detail.js` | 總覽、數字呈現、圖表、分頁動畫與明細                                    |
+| `public/alerts.js`、`public/alert-display.js`                        | 告警計算與多語言原因／燈號顯示                                          |
+| `public/*-settings.js`、其他共用 `.js`                               | 設定 UI、班表／目標／機種識別、排序與多選                               |
+| `public/*.css`、`public/index.html`                                  | 共用頁殼、主題、版面與功能區樣式；`design-system.css` 最後載入          |
+| `public/i18n.js`、`public/help.js`                                   | 中英泰翻譯及站內教學                                                    |
+| `public/*.svg`                                                       | 品牌及網站圖示                                                          |
+| `data/template.json`                                                 | 新資料庫初始化需要的原始設定；服務啟動仍會讀取，必須保留                |
+| `temp.xlsx`                                                          | 原始 Excel 解析回歸測試樣本；不是可隨意刪除的暫存檔，服務啟動不直接讀它 |
+| `tests/`                                                             | `npm test` 自動發現 `*.test.mjs`；`test-auth.mjs` 是共用測試輔助        |
+| `scripts/`                                                           | 真實瀏覽器驗證與程式／Git 檢查；各 audit 由 browser-smoke 組合執行      |
 
-人員分配的職務選單直接沿用完整基礎清單，空職務也可選。尚無人員或全數停用時，可從提示直接開啟該職務名冊；建立／啟用後回分配頁即可勾選。產線與 Model 分成主／次標題，長名稱換行，手機日目標表保留各欄標籤。
+目前與歷史生產資料存於 SQLite，不在 Excel 或 Git 裡。備份 SQLite 前應停止服務或使用一致性備份工具，避免只複製主檔而漏掉 WAL。
 
-填報直接列出每站，不需站點篩選；每站、每時段獨立填 Target／Actual／Issue。預設目標依產線／Model 日目標及兩班生產分鐘分配，排除休息。修改時段目標只重算該站當日合計，不改其他站、其他日期或預設。支援整日、單班、單時段、鍵盤操作、數字矩形貼上及離格自動儲存；矩形每列對應下一站，相鄰 Target／Actual 欄留在同一時段，後續欄位對再對應下一時段。單欄資料才依上下列交錯 Target／Actual，超過剩餘容量的值直接忽略。
+## Coding Style 與驗證
 
-XLSX／CSV 依站點識別預覽後整批匯入，允許各站不同值；空格保留原值，0 寫入零。多站時只給產線／Model 會拒絕，避免猜站。任一版本衝突會整批回滾。新站實績預設空白，不會複製別站實績。
-
-Excel 範本依 Date、Shift、Line、Model、Job、Station、Time slot、Target、Actual、Issue、Row ID 排欄。每站早晚班相鄰、時段依班表排列，具固定表頭／識別欄、全欄篩選及淡黃色填寫區；預覽同步配置順序。[DEMO 整日範本](./docs/examples/production-import-template.xlsx)供查看格式，舊欄位順序仍可匯入。
-
-看板使用該組所選來源站，不加總產品經過的所有站。缺少配置時仍可選 Line／Model 並看目標預覽；manager 可直接前往該組配置，新增啟用站點並儲存再填。配置只列目前配對，不再推薦舊 Model。取消 Active 保留列供再啟用；Delete 從目前配置刪除，Save settings 後重整也不回來。重新新增使用新 ID，不帶回舊數值；歷史姓名、時段與填報保留。
-
-填報採精簡表格：左欄只顯示職務／站點，Target、Actual 並排，早晚班與整日目標／實績合計固定在左側職務／站點旁。異常只佔一行摘要，點開或 F2 編輯，支援快捷原因、多行、清除與自動儲存；關閉不撐高表格。人員與 OWNER 仍自動保存並於明細查看。Excel 與班別切換放在同一工具列，可下載及匯入整日雙班或單班範本，皆含 Target、Actual、Issue。
-
-產線配置可拖曳職務旁把手或用上下按鈕排序，儲存後填報、站點明細與匯出沿用同組 Line／Model 的順序，來源站不變。工具列最左的「同時段批次填寫」可選日期、產線、機種與時段，分別套用 Target／Actual／Issue，再逐站修改與矩形貼上；空白套用會清除該欄，0 寫入零，也可將該時段 Target 恢復為日目標配置。填報「恢復預設」 經確認後恢復所選日期與產線／Model 兩班所有站點的預設 Target，並清除 Actual 與異常。異常快捷文字在基礎資料建立單一英文清單。
-
-基礎資料可編輯預設時間、儲存多份命名班表範本，再勾選線體套用並儲存。只改範本不會自動改現有線體；沒選的線不變，同線所有 Model 共用時間。目標分配、填報、批次與 Excel 依所選線體 CONFIG。現在／未來日期不併回已刪舊時段，已結束的歷史生產日保留已存時段與數值。
-
-批次時段直接使用所選產線目前 CONFIG 的班表，不比對各站舊時段。改班表後也可直接填報；新時段寫入所選日期，既有時段、數值與異常保留在 SQLite，查看原日期仍可查閱。
-
-生產總覽與生產細節皆可切換全天／早班／晚班，總覽預設全天範圍，曲線包含雙班；卡片數字另以時段／每日切換。全螢幕明細頂部沿用目前主題配色，集中產線、機種、負責人與六項時段／全日／累計數字；各站人員分早班、晚班標示，每小時產量圖使用完整彈窗寬度。
-
-總覽與全螢幕看板提供「時段／每日」切換，保留上次選擇。時段顯示目前目標、實績、差額；每日顯示兩班完整目標、已填實績與差額。卡片以產線曲線為主，曲線按容器實際寬高繪製；桌面全螢幕每頁七組，開啟趨勢及占比仍保留七組空間。手機／平板曲線另佔一整列，清單可捲動。明細保留六項時段／全日／累計數字，累計警示與占比規則不變。
-
-介面採 DELTA 品牌識別、淡色頂部資訊列、側欄選取色條及一致的卡片／篩選區間距；語言與五種主題仍由右上角切換。參考畫面的營運數字與 3D 場景未接入本系統。最新畫面見[生產總覽](./docs/images/production-overview.png)。
-
-分組總產量趨勢依容器寬度繪製，為每個時段保留可讀間距；全天多時段時由圖表內左右捲動，保留全部時段、鍵盤提示與刷新前的捲動位置，不撐寬頁面。
-
-## 資料與維護
-
-工程師可先閱讀[程式維護導覽](./docs/CODE_GUIDE.md)，了解模組責任、儲存流程與歷史資料限制。
-
-資料庫預設為 [data/production.sqlite](./data/production.sqlite)，可用 DB_PATH 覆寫。[temp.xlsx](./temp.xlsx) 與 [data/template.json](./data/template.json) 用於初始樣板；實際填報保存在 SQLite。資料庫與試算表中的識別碼是必要的歷史關聯。
-
-SQLite 使用 WAL、版本檢查、交易與稽核紀錄，支援多使用者同時填報。同一版本的衝突會顯示給使用者，匯入任一列衝突會整批回滾。備份可用 SQLite 備份工具；直接複製資料夾前應停止服務，避免漏掉 WAL 中尚未合併的資料。
-
-## 驗證
-
-```powershell
-.\.runtime\node.exe --test tests/*.test.mjs
+```sh
+npm ci
+npm run check
 ```
 
-另提供 [真實瀏覽器驗證](./scripts/browser-smoke.mjs)，會建立臨時資料庫與獨立 Port，完成後清除。需要本機 Chrome／Edge 與測試工具 playwright-core：
+`npm run check` 依序執行 Git 檔案檢查、ESLint、Prettier、JavaScript 語法檢查及現有自動測試。工具版本由 `package-lock.json` 固定。
 
-```powershell
+| 指令                       | 用途                                                           |
+| -------------------------- | -------------------------------------------------------------- |
+| `npm run lint`             | 未使用變數、未宣告識別字、不可達程式、重複參數／鍵值及固定條件 |
+| `npm run format:check`     | 檢查原始碼與 README 格式                                       |
+| `npm run format`           | 套用共用格式；不重排 seed 資料、操作文件或截圖                 |
+| `npm run syntax:check`     | 解析 JavaScript，不執行或啟動服務                              |
+| `npm run repository:check` | 檢查 Git 索引未混入本機產物，並驗證忽略規則                    |
+| `npm test`                 | 使用獨立測試資料庫的功能與 API 測試                            |
+| `npm run test:browser`     | 實際 Chromium 操作回歸，使用臨時資料庫與 Port                  |
+
+瀏覽器測試另需 Chrome／Edge 及測試工具；它們不屬於服務依賴：
+
+```sh
 npm install --no-save --prefix .runtime/browser-audit playwright-core@1.56.1
-.\.runtime\node.exe scripts/browser-smoke.mjs
+npm run test:browser
 ```
 
-加 --screenshots 會更新教學中的示範截圖。詳見 [測試紀錄](./docs/VALIDATION.md) 與 [English guide](./docs/USER_GUIDE.en.md)。
+Linux 可用 `BP_BROWSER_PATH=/usr/bin/chromium npm run test:browser` 指定瀏覽器；Windows 腳本會搜尋 Chrome／Edge。重拍教學截圖使用 `npm run test:browser -- --screenshots`。目前沒有 TypeScript 或編譯／打包流程，因此沒有 Type Check／Build 指令。
 
-## Production models
+## 哪些應提交 Git？
 
-### Page routes and API boundary
+**應提交：**原始碼、測試、啟動器、工具設定、`package.json`／`package-lock.json`、現行文件與必要教學圖片、初始化 JSON 及測試／DEMO Excel。
 
-The browser and HTTP server share the route catalog in [public/pages.js](./public/pages.js). `/overview`, `/details`, `/entry`, `/guide` and the eight `/settings/...` pages support direct requests and browser history. Unknown paths remain 404; assets use absolute paths. The server currently serves the app shell for known pages, and each page loads data through the authenticated `/api/...` endpoints. This prepares stable page addresses and API contracts for later backend rendering or external production integration; automatic collection is not connected yet.
+**不提交：**`.env`、生產資料庫及 WAL／SHM、備份與匯出、`.runtime/`、`node_modules/`、log、測試輸出、OS／編輯器／Excel 暫存檔。`.env.example` 類樣本可以提交，但只能放範例值。Git 忽略規則不會自動移除已追蹤檔案，因此另用 `repository:check` 檢查索引。
 
-Station mappings support optional `hasOutput` (default `true` for existing data). A false value keeps enabled stations visible with read-only history, prevents production writes and excludes them from batch fill and Excel templates. Current configuration governs editability without rewriting saved snapshots. The batch dialog edits the production date, line/model and interval, saving the original scope before switching. Apply and Save stay open; closing saves and returns entry to the destination. Display-only model formatting splits the first hyphen and never changes IDs or import values.
-
-Settings now use enabled `productionUnits` (`line`, `model`, `dailyTarget`, `staffing`) and a `models` catalog. Every active mapping references an enabled line/model. Station targets, actuals and issues are independent within each enabled line/model. Personnel defaults and imports respect both unit and station identities. Monitoring uses one selected output station per unit. Legacy settings migrate into `Default`; saved production snapshots remain unchanged. `lineTargets` and `lineStaffing` are compatibility views of Default for older clients.
-
-Catalog renames cascade current settings. Removal previews its impact; deleting a job removes its people and assignments in one draft action. Removing a line/model clears its preset and staffing; historical report rows are never removed. The XLSX template includes Model, and ambiguous line-only imports are rejected.
+一次性邀請郵件及指定日期的舊模擬指南已移除；需要查當時內容可從 Git 歷史取得。現行測試、來源範本與歷史資料相容程式仍有用途，不能因檔名像舊檔或沒有直接 import 就刪除。

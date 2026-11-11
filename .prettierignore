@@ -1,0 +1,6 @@
+# Seed data and user guides are reviewed separately from source formatting.
+data/
+docs/
+# Keep hand-authored SVG view fragments and the generated npm lockfile intact.
+*.svg
+package-lock.json
