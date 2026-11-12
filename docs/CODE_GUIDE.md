@@ -138,8 +138,18 @@ Phase 1 的 schema、API、Migration、權限與部署回復規則集中在 [MUL
 - `personal-lists.mjs`、`public/personal-lists.js`、`list-order.js`、`personal-order-ui.js` 仍以使用者＋廠區＋清單類型保存個人順序，與 CONFIG、站點流程及生產資料分離。
 - `public/overview-swipe.js` 管理原有 45px／200ms 編輯入口位移，補上方向鎖定、Pointer capture／取消、觸控與鍵盤；不接觸填報資料。垂直手勢保留原生捲動，橫向滑動不觸發卡片細節，儲存／取消會復位。
 - `public/overview-inline.js` 沿用既有元件檔，匯出 `createOverviewEditor`；卡片數據保持唯讀，下方表格固定捕獲日期、產線／Model、設定版本，各列保存站點版本。`overviewRows` 依設定流程建立列，`overviewChanges` 只產生已修改欄位。
-- 驗證重用 `entry.js` 的 `parseBulkValue`；寫入重用 PUT `/api/entry/interval`。後端原本的 `planStationInterval`、版本檢查、單一 SQLite 交易及 site/RBAC 驗證保持不變。任何站點衝突均回滾整批。
+- 驗證重用 `entry.js` 的 `parseBulkValue`；寫入重用 PUT `/api/entry/interval`。一般區間修補仍沿用 `planStationInterval`；完整填報儲存另走共用補值計畫器，保留版本檢查、單一 SQLite 交易及 site/RBAC 驗證。任何站點衝突均回滾整批。
 - `monitor-ui.js` 的一般展開只呈現已觸發的告警及該單位儲存的異常說明；沒有合成發生時間或重複顯示數據。編輯與查看互斥，全螢幕展開時聚焦目前線體並在區域內捲動，關閉後恢復分頁。
 - `navigation-flyouts.js` 使用原生 Popover top layer，讓懸浮子選單離開側欄捲動裁切；宣告式 `popovertarget` 保留原生點擊關聯，Hover／Focus／鍵盤／觸控共用同一批既有路由連結。只有連結使用 `data-view`，分類使用 `data-nav-group`。
 - 工具列只保留一組日期、班別及時段／每日控制；唯一匯出按鈕依畫面搬至總覽第二排或其他報表工具列，避免重複 State／ID／事件。
 - 測試：`tests/overview-editor.test.mjs`、既有原子批次／隔離測試、`scripts/overview-interaction-audit.mjs`，均接入原有檢查命令。新增 UI 沒有依賴套件或資料庫欄位。
+
+## 儲存時補 0 與回報來源
+
+- `actual-completion.mjs` 共用純計畫器：以交易內最新記錄與有效班表找需要填報的站點。`throughLatest` 以人工 Actual（含手動 0）求各單位最後時段，再展開生產日的前段；自動 0、休息及後段不作截止依據。歷史跨午夜以已捕獲的生產日時間基準排序。
+- PUT `/api/entry/complete` 接受 `date`、`configVersion`、`scopes`（原區間列修補與預期版本）及可選 `throughLatest: [{line, model, shifts}]`。既有 PUT `/api/entry/interval` 只有 `completeActuals: true` 才走同一計畫器。未帶旗標的批次、逐站自動儲存、匯入與恢復預設保留原語意。
+- 後端先驗全部修補與版本，再依站點／班別合併，一個 SQLite 交易一次寫入。未修改的其他使用者實績由最新快照保留；明確清空的實績在補值範圍內成為自動 0。`records` 為實際變更，`currentRecords` 同時刷新未修改的最新站點資料。
+- 沿用 slots JSON，新增可選 `actualAutoFilled: true`，不新增 SQL 欄位或重寫歷史。旗標由伺服器控制，客戶端不能偽造。未改實績的修補保留來源，明確輸入 Actual（含相同的 0）才轉人工；沒有旗標的舊數字維持人工回報語意。
+- `actualWasReported` 供現有監控／告警及補值截止共用。數字與報表可顯示自動 0，人工完整性仍為未回報；門檻、燈號輪播與時間規則不變。
+- `entry.js` 顯式儲存會暫停所涉逐站佇列、等待已送出的請求結束，讓未送出修補與補值同時交易；失敗保留草稿並阻止未確認修補自動重試。批次關閉／切換時段的原自動儲存不帶補值旗標。總覽取消不寫入。
+- 驗證：`tests/actual-completion.test.mjs`、多廠區整合測試與 `scripts/actual-completion-audit.mjs`。測試一律使用隔離 SQLite。

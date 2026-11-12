@@ -4,6 +4,8 @@ export const interactionMessages = {
     settingsNavigation: '設定',
     helpNavigation: '說明',
     noCurrentAlerts: '目前無警報',
+    autoZeroShort: '自動 0',
+    autoFilledZero: '自動補 0・尚未人工回報',
     personalOrder: '清單排序',
     orderReload: '重新載入',
     personalOrderHelp: '拖曳把手，或使用上下按鈕。順序自動儲存，僅套用你的帳號及目前廠區。',
@@ -38,6 +40,8 @@ export const interactionMessages = {
     settingsNavigation: 'Settings',
     helpNavigation: 'Help',
     noCurrentAlerts: 'No current alerts',
+    autoZeroShort: 'Auto 0',
+    autoFilledZero: 'Auto 0 · not manually reported',
     personalOrder: 'List order',
     orderReload: 'Reload',
     personalOrderHelp:
@@ -74,6 +78,8 @@ export const interactionMessages = {
     settingsNavigation: 'การตั้งค่า',
     helpNavigation: 'ช่วยเหลือ',
     noCurrentAlerts: 'ไม่มีการแจ้งเตือนขณะนี้',
+    autoZeroShort: '0 อัตโนมัติ',
+    autoFilledZero: 'เติม 0 อัตโนมัติ · ยังไม่ได้รายงานด้วยตนเอง',
     personalOrder: 'ลำดับรายการ',
     orderReload: 'โหลดใหม่',
     personalOrderHelp:

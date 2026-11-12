@@ -294,7 +294,13 @@ export async function auditOverviewInteractions({
     assert.equal(slot.actual, 12);
     assert.equal(slot.target, 17);
     assert.equal(slot.issue, 'Station input note');
-    assert.equal(saved.records.length, 2);
+    assert.equal(saved.records.length, 6);
+    assert.equal(
+      saved.records.filter(
+        (record) => record.slots.find((slot) => slot.start === '08:00')?.actualAutoFilled,
+      ).length,
+      4,
+    );
     assert.equal(savedA.slots.find((slot) => slot.start === '09:00').actual, null);
     assert.equal(savedA.updatedBy, 'manager');
     await card.locator('[data-line-expand]').click();
@@ -305,7 +311,7 @@ export async function auditOverviewInteractions({
     );
     assert.equal(await card.locator('.line-card-values input').count(), 0);
     record(
-      '45px mouse/keyboard reveals and horizontal touch swipes preserve read-only cards and metrics/trends while distinct alert-only and six-station editors open below; cancel writes nothing and batch save atomically submits only modified fields with existing audit metadata',
+      '45px mouse/keyboard reveals and horizontal touch swipes preserve read-only cards and metrics/trends while distinct alert-only and six-station editors open below; cancel writes nothing and batch save atomically submits modified fields and missing-station automatic zeros with existing audit metadata',
     );
 
     await swipeRight(card);
@@ -317,7 +323,7 @@ export async function auditOverviewInteractions({
         date,
         shift: 'day',
         configVersion: config.version,
-        version: 0,
+        version: saved.records.find((record) => record.rowId === b).version,
         stationEntry: true,
         slots: [{ id: slot.id, actual: 7 }],
       }),

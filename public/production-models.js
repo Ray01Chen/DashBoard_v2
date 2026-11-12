@@ -1,3 +1,8 @@
+/** Automatic zeros are displayed quantities, not evidence of a human report.
+ * Missing provenance on legacy records retains their existing semantics. */
+export const actualWasReported = (slot) =>
+  slot?.actual != null && slot.actualAutoFilled !== true;
+
 /** A missing model belongs to the migrated model, never today's first catalog item.
  * This rule also identifies old report snapshots without rewriting their history. */
 export const DEFAULT_MODEL = 'Default';

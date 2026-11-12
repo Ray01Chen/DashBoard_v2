@@ -1,3 +1,4 @@
+import { validateStationValues } from './actual-completion.mjs';
 import { scheduleFor } from './public/production-schedules.js';
 import { sameProduction, unitFor, stationHasOutput } from './public/production-models.js';
 /**
@@ -29,23 +30,7 @@ export function planStationInterval(data, config, versions, fail) {
     fail(400, 'errCount');
   for (const change of changes) {
     if (!rows.some((row) => row.id === change?.rowId)) fail(400, 'errMapping');
-    if (!change.values || typeof change.values !== 'object' || Array.isArray(change.values))
-      fail(400, 'errCount');
-    const fields = Object.keys(change.values);
-    if (
-      !fields.length ||
-      fields.some((field) => !['target', 'actual', 'issue'].includes(field))
-    )
-      fail(400, 'errCount');
-    for (const [field, value] of Object.entries(change.values)) {
-      if (field === 'issue') {
-        if (typeof value !== 'string' || value.length > 2000) fail(400, 'errSlotData');
-      } else if (
-        value !== null &&
-        (!Number.isSafeInteger(value) || value < 0 || value > 99999999)
-      )
-        fail(400, 'errCount');
-    }
+    validateStationValues(change.values, fail);
   }
   if (
     !data.interval ||

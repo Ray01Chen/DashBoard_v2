@@ -280,6 +280,16 @@ test('multi-site RBAC enforces session ownership, per-site roles, feature grants
     403,
   );
   await result(
+    await request(base, a.cookie, 'PUT', '/api/entry/complete', {
+      site_id: siteB.id,
+      date: '2099-05-01',
+      configVersion: configA.version,
+      scopes: [],
+      throughLatest: [{ line: 'LINE-B', model: 'Default', shifts: ['day'] }],
+    }),
+    403,
+  );
+  await result(
     await request(base, a.cookie, 'POST', '/api/auth/site', { siteId: siteB.id }),
     403,
   );
@@ -366,6 +376,7 @@ test('multi-site RBAC enforces session ownership, per-site roles, feature grants
     await request(base, a.cookie, 'GET', '/api/export?date=2099-05-01&shift=day'),
     403,
   );
+  await result(await request(base, a.cookie, 'PUT', '/api/entry/complete', {}), 403);
   await result(await request(base, a.cookie, 'POST', '/api/import/preview', {}), 403);
   await result(
     await request(base, admin.cookie, 'DELETE', `/api/admin/users/${userA.id}/sites/1`, {}),

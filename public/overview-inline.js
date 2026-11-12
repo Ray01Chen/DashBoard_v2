@@ -16,7 +16,8 @@ export function overviewChanges(rows) {
       if (!parsed.valid) valid = false;
       else if (
         parsed.value !==
-        (field === 'issue' ? item.slot?.issue || '' : (item.slot?.[field] ?? null))
+          (field === 'issue' ? item.slot?.issue || '' : (item.slot?.[field] ?? null)) ||
+        (field === 'actual' && item.slot?.actualAutoFilled && item.actualTouched)
       )
         values[field] = parsed.value;
     }
@@ -217,7 +218,7 @@ export function createOverviewEditor({
         : null;
       panel.dataset.view = view;
       panel.innerHTML = `<header class="overview-editor-heading"><label>${esc(t('inlineSlot'))}<select data-editor-slot aria-label="${esc(t('inlineSlot'))}" ${draft.loading || draft.saving ? 'disabled' : ''}>${draft.choices.map((slot) => `<option value="${esc(slot.key)}" ${slot.key === draft.selected ? 'selected' : ''}>${esc(t(slot.shift) + ' · ' + slot.start + '–' + slot.end)}</option>`).join('')}</select></label></header>
-        <div class="overview-editor-body"><table><thead><tr><th>${esc(t('job'))} / ${esc(t('station'))}</th>${fields.map((field) => `<th>${esc(t(field))}</th>`).join('')}</tr></thead><tbody>${draft.rows.map((item) => `<tr><th scope="row"><strong>${esc(item.row.job || '—')}</strong><span>${esc(item.row.station || '—')}</span></th>${fields.map((field) => `<td>${field === 'issue' ? `<textarea rows="1" maxlength="2000"` : '<input type="text" inputmode="numeric" maxlength="12"'} data-editor-row="${item.row.id}" data-editor-field="${field}" aria-label="${esc([item.row.job, item.row.station, t(field)].join(' · '))}" ${draft.loading || draft.saving ? 'disabled' : ''}${field === 'issue' ? `>${esc(item.draft[field])}</textarea>` : ` value="${esc(item.draft[field])}">`}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+        <div class="overview-editor-body"><table><thead><tr><th>${esc(t('job'))} / ${esc(t('station'))}</th>${fields.map((field) => `<th>${esc(t(field))}</th>`).join('')}</tr></thead><tbody>${draft.rows.map((item) => `<tr><th scope="row"><strong>${esc(item.row.job || '—')}</strong><span>${esc(item.row.station || '—')}</span>${item.slot?.actualAutoFilled ? `<small class="auto-zero-note" title="${esc(t('autoFilledZero'))}">${esc(t('autoZeroShort'))}</small>` : ''}</th>${fields.map((field) => `<td>${field === 'issue' ? `<textarea rows="1" maxlength="2000"` : '<input type="text" inputmode="numeric" maxlength="12"'} data-editor-row="${item.row.id}" data-editor-field="${field}" aria-label="${esc([item.row.job, item.row.station, t(field)].join(' · '))}" ${draft.loading || draft.saving ? 'disabled' : ''}${field === 'issue' ? `>${esc(item.draft[field])}</textarea>` : ` value="${esc(item.draft[field])}">`}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
         <footer class="overview-editor-footer"><span role="status" class="overview-editor-message">${esc(draft.error || (draft.loading ? t('inlineLoading') : !draft.rows.length ? t('inlineUnavailable') : ''))}</span><button type="button" class="button" data-editor-cancel ${draft.saving ? 'disabled' : ''}>${esc(t('inlineCancel'))}</button><button type="button" class="button primary" data-editor-save ${draft.loading || draft.saving || !draft.loaded || !draft.rows.length ? 'disabled' : ''}>${esc(t(draft.saving ? 'saving' : 'inlineSave'))}</button></footer>`;
       if (focus) {
         const input = [...panel.querySelectorAll('[data-editor-field]')].find(
@@ -240,10 +241,6 @@ export function createOverviewEditor({
       sync();
       return;
     }
-    if (!changes.rows.length) {
-      await clear();
-      return;
-    }
     current.saving = true;
     current.error = '';
     sync();
@@ -257,6 +254,7 @@ export function createOverviewEditor({
           shift: interval.shift,
           interval: { start: interval.start, end: interval.end },
           configVersion: current.config.version,
+          completeActuals: true,
           rows: changes.rows,
           expectedVersions: changes.rows.map((change) => ({
             rowId: change.rowId,
@@ -283,6 +281,7 @@ export function createOverviewEditor({
     );
     if (item) {
       item.draft[field] = event.target.value;
+      if (field === 'actual') item.actualTouched = true;
       event.target.setAttribute(
         'aria-invalid',
         String(!parseBulkValue(field, event.target.value).valid),

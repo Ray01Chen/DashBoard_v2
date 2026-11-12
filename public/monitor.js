@@ -1,3 +1,4 @@
+import { actualWasReported } from './production-models.js';
 import { plannedProduction, lineDailyTarget } from './production-targets.js';
 import { alertConfig, evaluateAlerts } from './alerts.js';
 import {
@@ -133,7 +134,7 @@ export function defaultMonitoring(config) {
     ],
   };
 }
-function intervalWindow(slot, date, anchor) {
+export function intervalWindow(slot, date, anchor) {
   const toMinutes = (time) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
   const base = Date.parse(date + 'T00:00:00+07:00');
   const startAt = base + (slot.start < anchor ? 86400000 : 0) + toMinutes(slot.start) * 60000;
@@ -354,7 +355,7 @@ export function buildLineMonitor(
           actuals.length ===
             (sharedOutput && values.some((value) => value.lineShared) ? 1 : rows.length) &&
           actuals.length > 0 &&
-          actuals.every((value) => value.actual != null),
+          actuals.every(actualWasReported),
       };
     });
     const metrics = overviewMetrics(series, now);

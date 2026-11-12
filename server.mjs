@@ -40,6 +40,7 @@ import {
   resolveEntryData,
 } from './production-defaults.mjs';
 import { importTemplate, previewImport } from './production-import.mjs';
+import { planActualCompletion } from './actual-completion.mjs';
 import { planLineOutput, planStationInterval } from './line-production.mjs';
 import {
   upgradeProductionModels,
@@ -759,7 +760,26 @@ function productionDayDefaults(date, shift, { sharedCounts = false } = {}) {
 }
 
 /** Save one versioned record inside the caller's write transaction (also used by imports). */
-function writeRecord(rowId, data, user, method = 'PUT') {
+function writeRecord(
+  rowId,
+  data,
+  user,
+  method = 'PUT',
+  { autoFilled = new Set(), preserveSchedule = false } = {},
+) {
+  // Provenance is server-owned. Echoed JSON cannot manufacture auto-filled
+  // or manually confirmed state; only the completion planner can mark zeros.
+  if (Array.isArray(data.slots))
+    data = {
+      ...data,
+      slots: data.slots.map((slot) => {
+        if (!slot || typeof slot !== 'object') return slot;
+        const clean = { ...slot };
+        delete clean.actualAutoFilled;
+        if (autoFilled.has(slot.id)) clean.actualAutoFilled = true;
+        return clean;
+      }),
+    };
   refreshConfig();
   const row = workspace.config.rows.find((r) => r.id === rowId);
   if (!row) fail(404, 'errNotFound');
@@ -799,6 +819,7 @@ function writeRecord(rowId, data, user, method = 'PUT') {
     allowLegacyMetadata: user.role === 'admin',
     opposite,
     lineDefaults,
+    preserveSchedule,
   });
   data = resolved.data;
   if (!Array.isArray(data.slots) || !data.slots.length || data.slots.length > 96)
@@ -828,6 +849,9 @@ function writeRecord(rowId, data, user, method = 'PUT') {
       kind: 'production',
       target: count(s.target),
       actual: count(s.actual),
+      ...(s.actualAutoFilled === true && count(s.actual) === 0
+        ? { actualAutoFilled: true }
+        : {}),
       ...(s.lineShared ? { lineShared: true } : {}),
       ...(s.targetShared ? { targetShared: true } : {}),
       issue: string(s.issue, 2000),
@@ -1383,8 +1407,117 @@ const server = http.createServer((req, res) =>
         });
         return res.end('\uFEFF' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n'));
       }
-      if (url.pathname === '/api/entry/interval' && req.method === 'PUT') {
+      let intervalBody;
+      if (
+        (url.pathname === '/api/entry/complete' || url.pathname === '/api/entry/interval') &&
+        req.method === 'PUT'
+      ) {
         const data = await body(req);
+        if (url.pathname === '/api/entry/complete' || data.completeActuals === true) {
+          const result = transaction(() => {
+            refreshConfig();
+            if (data.configVersion !== workspace.config.version) fail(409, 'errConfigConflict');
+            const scopes = url.pathname === '/api/entry/complete' ? data.scopes : [data];
+            if (
+              !Array.isArray(scopes) ||
+              scopes.length > 4096 ||
+              (!scopes.length && !data.throughLatest?.length)
+            )
+              fail(400, 'errSlotData');
+            const reports = {};
+            const readScopes = [
+              ...scopes,
+              ...(Array.isArray(data.throughLatest)
+                ? data.throughLatest.flatMap((unit) =>
+                    Array.isArray(unit?.shifts) ? unit.shifts.map((shift) => ({ shift })) : [],
+                  )
+                : []),
+            ];
+            for (const item of readScopes) {
+              scope(data.date, item?.shift);
+              if (!reports[item.shift])
+                reports[item.shift] = {
+                  records: selectAll.all(data.date, item.shift).map(unpack),
+                  defaults: productionDayDefaults(data.date, item.shift),
+                  rowVersions: Object.fromEntries(
+                    workspace.config.rows.map((row) => [
+                      row.id,
+                      revision.get(data.date, item.shift, row.id)?.version || 0,
+                    ]),
+                  ),
+                };
+            }
+            const patches = planActualCompletion(
+              { date: data.date, scopes, throughLatest: data.throughLatest },
+              workspace.config,
+              reports,
+              fail,
+            );
+            const records = patches.map((patch) => ({
+              ...writeRecord(
+                patch.rowId,
+                {
+                  date: data.date,
+                  shift: patch.shift,
+                  configVersion: workspace.config.version,
+                  version: patch.version,
+                  slots: patch.slots,
+                  entryMode: true,
+                  editTargets: true,
+                  sharedLineActual: false,
+                  sharedLineTargets: false,
+                },
+                user,
+                'PUT',
+                { autoFilled: patch.autoFilled, preserveSchedule: patch.preserveSchedule },
+              ),
+              date: data.date,
+              shift: patch.shift,
+            }));
+            const currentRecords = Object.keys(reports).flatMap((shift) =>
+              selectAll
+                .all(data.date, shift)
+                .map(unpack)
+                .filter((record) => {
+                  const row =
+                    record.rowSnapshot ||
+                    workspace.config.rows.find((row) => row.id === record.rowId);
+                  return (
+                    row &&
+                    [...scopes, ...(data.throughLatest || [])].some(
+                      (item) =>
+                        sameProduction(row, item) &&
+                        (item.shifts ? item.shifts.includes(shift) : item.shift === shift),
+                    )
+                  );
+                })
+                .map((record) => {
+                  const activity = getActivity.get(data.date, shift, record.rowId);
+                  return {
+                    ...record,
+                    date: data.date,
+                    shift,
+                    activity: {
+                      lastIncreaseAt: activity?.last_increase_at || null,
+                      totalActual: activity?.total_actual || 0,
+                    },
+                  };
+                }),
+            );
+            return {
+              records,
+              currentRecords,
+              configVersion: workspace.config.version,
+              autoFilledCount: patches.reduce((sum, patch) => sum + patch.autoFilled.size, 0),
+            };
+          });
+          return json(res, 200, result);
+        }
+        // Legacy interval replacement and autosaves deliberately do not complete reports.
+        intervalBody = data;
+      }
+      if (url.pathname === '/api/entry/interval' && req.method === 'PUT') {
+        const data = intervalBody;
         const result = transaction(() => {
           refreshConfig();
           scope(data.date, data.shift);

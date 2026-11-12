@@ -1,3 +1,4 @@
+import { auditActualCompletion } from './actual-completion-audit.mjs';
 import { auditOverviewInteractions } from './overview-interaction-audit.mjs';
 import { auditSiteManagement } from './site-management-audit.mjs';
 import { auditOverviewRefinement } from './overview-refinement-audit.mjs';
@@ -3173,6 +3174,7 @@ try {
   });
   await auditSiteManagement({ browser, baseURL, root, screenshots, record, errors });
   await auditOverviewInteractions({ browser, baseURL, root, screenshots, record, errors });
+  await auditActualCompletion({ browser, baseURL, root, screenshots, record, errors });
   assert.deepEqual(errors, []);
   record('No uncaught browser errors');
   console.log(

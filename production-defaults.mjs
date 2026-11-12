@@ -218,7 +218,12 @@ export function resolveEntryData(
   data,
   current,
   fail,
-  { allowLegacyMetadata = false, opposite = null, lineDefaults = null } = {},
+  {
+    allowLegacyMetadata = false,
+    opposite = null,
+    lineDefaults = null,
+    preserveSchedule = false,
+  } = {},
 ) {
   const managed =
     !allowLegacyMetadata ||
@@ -234,7 +239,9 @@ export function resolveEntryData(
   // A deleted configuration can only edit its saved history. Today's schedule
   // must not append new slots to that history. Existing live mappings retain
   // support for explicitly reporting newly configured intervals.
-  if (!row.deleted)
+  // Completing a historical report follows its captured plan, not newly
+  // configured slots outside the explicitly selected completion range.
+  if (!row.deleted && !preserveSchedule)
     for (const slot of scheduleFor(config, row.line, data.shift).filter(
       (slot) => slot.kind === 'production',
     )) {
@@ -259,6 +266,7 @@ export function resolveEntryData(
         ...(Object.hasOwn(slot, 'actual')
           ? {
               actual: slot.actual,
+              actualAutoFilled: slot.actualAutoFilled === true,
               lineShared: data.sharedLineActual === true,
             }
           : {}),

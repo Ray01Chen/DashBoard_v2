@@ -46,6 +46,12 @@ Save settings at top/bottom publishes the draft. Save draft stays in this browse
 
 ![Station production entry](./images/production-entry.png)
 
+**Save now** completes station Actuals with automatic zeros. Whole day / Whole shift finds the latest human Actual for the selected line/model and fills missing stations from the start through that interval. Breaks and later intervals stay unchanged. Single interval, Fill interval and Overview Save complete only the selected interval. With no human Actual, a day/shift save cannot infer a cutoff.
+
+A typed zero is a human report. **Auto 0** is not, cannot extend the completion range, and does not clear missing-report alerts. Type zero to confirm it. Untouched saved quantities are preserved; Target and Issue are not zero-filled. Autosave and cancelling do not complete peers. Closing Fill interval retains its existing edited-field autosave only.
+
+![Explicit Save fills the prefix through the last human Actual; the later shift stays blank](./images/actual-completion.png)
+
 Paste the spreadsheet rectangle directly: each source row is the next station, column 1 is Target and column 2 is Actual in the same interval. Columns 3/4 are the next interval. A single source column alone alternates Target/Actual down the rows. Overflow is ignored and never wraps.
 
 ![Adjacent Target and Actual columns stay in one interval](./images/production-entry-paste.png)
@@ -150,9 +156,9 @@ Managers open **Settings → Alerts & refresh** (`/settings/alerts`), enable eac
 
 Reporting example: grace 30 / red after 45 means red after 45 total minutes, not 75. The red total cannot be below grace. Legacy extra-wait rules are converted to their original effective total (30 + 45 displays 75); review, edit and save the desired total. This preserves existing behavior until deliberately changed.
 
-Blank Actual is unreported; submitted **0** is a valid report. Breaks never require Actual. Backfilling clears reporting alerts automatically.
+Blank Actual and **Auto 0** remain unreported; a manually submitted **0** is a valid human report. Breaks never require Actual. Human backfilling clears reporting alerts automatically.
 
-The completion forecast starts at the **last contiguous completed report**, divides remaining target by productive time from that cutoff to the deadline, and excludes breaks. Unreported production is unknown; it is never replaced with zero or recent average output. The reason includes the data cutoff, deadline and planned pace figures. Missing required data shows **NO DATA**; overdue reports mark **STALE**.
+The completion forecast starts at the **last contiguous completed report**, divides remaining target by productive time from that cutoff to the deadline, and excludes breaks. Unreported production, including Auto 0, is unknown to the forecast; it is never treated as confirmed zero or estimated from recent average output. The reason includes the data cutoff, deadline and planned pace figures. Missing required data shows **NO DATA**; overdue reports mark **STALE**.
 
 The overall light prioritizes **red over yellow**. Green requires every enabled check to be evaluable and normal; no data or all disabled is gray. Yellow pulses slowly, red quickly, green stays steady. Multiple reasons rotate every **5 seconds**, red first; the light does not change with the reason. Legacy blue/purple rules contribute yellow; optional frame flashing is separate. Open line details to read full reasons and all evaluations. Language changes translate reasons immediately.
 
@@ -181,7 +187,7 @@ The risk expresses how much faster than the original planned pace is required; P
 
 Row one contains date, Today, Whole day / Day / Night and Interval / Daily. Row two has line/group filters on the left and List order, Display options, Export report and Fullscreen on the right. Personal orders are stored per account/site; configured station sequence remains unchanged. The header Site selector shows the site name once, falling back to its code only when the name is missing.
 
-Hover or swipe a read-only card right to reveal **Edit** on its left; keyboard focus also reveals it. A separate table opens underneath: select a time slot at its top left and edit each configured output station's Target, Actual and Issue. Date, line/model, shift scope and site come from the report. There are no quick-text or apply-to-all controls. **Save** sends only changed fields in one atomic, version-checked batch, closes and refreshes the card. **Cancel** writes nothing. Blank Actual means unreported; zero is valid.
+Hover or swipe a read-only card right to reveal **Edit** on its left; keyboard focus also reveals it. A separate table opens underneath: select a time slot at its top left and edit each configured output station's Target, Actual and Issue. Date, line/model, shift scope and site come from the report. There are no quick-text or apply-to-all controls. **Save** sends changed fields and missing-station automatic zeros in one atomic, version-checked batch, closes and refreshes the card. **Cancel** writes nothing. A typed zero is valid; Auto 0 remains marked as not manually reported.
 
 Slot changes ask before discarding unsaved values. Failures preserve input; a version conflict rejects the whole batch. Cancel and reopen to review the latest data. Fullscreen retains drafts, pauses rotation and keeps the table's scrolling local.
 

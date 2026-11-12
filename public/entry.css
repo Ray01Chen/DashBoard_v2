@@ -1119,3 +1119,12 @@
   color: var(--primary);
   white-space: nowrap;
 }
+
+/* Provenance is visible without widening the station grid or changing totals. */
+[data-auto-zero-label],
+.auto-zero-note {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  margin-left: 4px;
+}

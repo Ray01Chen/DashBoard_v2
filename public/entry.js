@@ -85,6 +85,9 @@ const messages = {
     saveMine: 'Save my changed cells',
     latest: 'Latest saved data',
     mine: 'Your changes',
+    autoZeroShort: 'Auto 0',
+    autoFilledZero: 'Auto 0 · not manually reported',
+    completeEmptyScope: 'Choose a single interval or edit an interval before saving.',
     saveNow: 'Save now',
     restoreDefaults: 'Restore defaults',
     restoreDefaultsTitle: 'Restore production defaults?',
@@ -201,6 +204,9 @@ const messages = {
     saveMine: '儲存我修改的欄位',
     latest: '最新已儲存資料',
     mine: '我的修改',
+    autoZeroShort: '自動 0',
+    autoFilledZero: '自動補 0・尚未人工回報',
+    completeEmptyScope: '請選擇單一時段，或先編輯要填報的時段。',
     saveNow: '立即儲存',
     restoreDefaults: '恢復預設',
     restoreDefaultsTitle: '要恢復這份生產填報的預設值嗎？',
@@ -315,6 +321,9 @@ const messages = {
     saveMine: 'บันทึกเฉพาะช่องที่ฉันแก้ไข',
     latest: 'ข้อมูลที่บันทึกล่าสุด',
     mine: 'การแก้ไขของคุณ',
+    autoZeroShort: '0 อัตโนมัติ',
+    autoFilledZero: 'เติม 0 อัตโนมัติ · ยังไม่ได้รายงานด้วยตนเอง',
+    completeEmptyScope: 'เลือกช่วงเวลาเดียวหรือแก้ไขช่วงเวลาก่อนบันทึก',
     saveNow: 'บันทึกตอนนี้',
     restoreDefaults: 'คืนค่าเริ่มต้น',
     restoreDefaultsTitle: 'คืนค่าเริ่มต้นของรายงานการผลิตนี้หรือไม่',
@@ -387,6 +396,9 @@ export function entryChanges(baseline, draft) {
     for (const field of ['target', 'actual', 'issue']) {
       if (
         slotValue(slot, field) !== slotValue(originals.get(slot.id), field) ||
+        (field === 'actual' &&
+          originals.get(slot.id)?.actualAutoFilled === true &&
+          slot.actualAutoFilled === false) ||
         (['actual', 'target'].includes(field) &&
           slot[field === 'actual' ? 'syncActual' : 'syncTarget'] &&
           !originals.get(slot.id)?.[field === 'actual' ? 'syncActual' : 'syncTarget'])
@@ -405,7 +417,10 @@ export function mergeEntryChanges(record, changes) {
   for (const change of changes) {
     const slot = slots.get(change.id) || { id: change.id, actual: null, issue: '' };
     for (const field of ['target', 'actual', 'issue']) {
-      if (Object.hasOwn(change, field)) slot[field] = change[field];
+      if (Object.hasOwn(change, field)) {
+        slot[field] = change[field];
+        if (field === 'actual') slot.actualAutoFilled = false;
+      }
     }
     slots.set(slot.id, slot);
   }
@@ -740,6 +755,15 @@ export function createEntryAutosaveQueue({
       else schedule(entry);
       notify(entry);
     },
+    block(key, error) {
+      const entry = entries.get(key);
+      if (!entry) return;
+      clearTimer(entry);
+      entry.error = error;
+      entry.status =
+        conflictCodes.has(error.code) || error.status === 409 ? 'conflict' : 'error';
+      notify(entry);
+    },
     retry(key) {
       const entry = entries.get(key);
       // A conflict needs an explicit review/rebase; a plain Retry may not overwrite it.
@@ -888,6 +912,8 @@ export function createEntryController({
   const invalid = new Map();
   const reviewed = new Map();
   const localSaved = new Map();
+  const touchedIntervals = new Map();
+  let completing = false;
   // Keep this editor outside the rerendered matrix. Background refreshes must
   // not destroy a note, reset its cursor or shift the table underneath it.
   const issueDialog = document.createElement('dialog');
@@ -1010,6 +1036,206 @@ export function createEntryController({
     },
   });
 
+  const completionKey = (item) =>
+    JSON.stringify([
+      item.date,
+      item.line,
+      item.model,
+      item.shift,
+      item.interval.start,
+      item.interval.end,
+    ]);
+  function noteCompletion(entry, slot) {
+    const row =
+      entry.latest.rowSnapshot ||
+      getContext().config.rows.find((row) => row.id === entry.latest.rowId);
+    if (!row || !slot.start || !slot.end) return;
+    const item = {
+      date: entry.latest.date,
+      line: row.line,
+      model: modelOf(row),
+      shift: entry.latest.shift,
+      interval: { start: slot.start, end: slot.end },
+    };
+    touchedIntervals.set(completionKey(item), item);
+  }
+  function completionScopes() {
+    const context = getContext();
+    if (mode !== 'sheet')
+      return [...touchedIntervals.values()].filter(
+        (item) =>
+          item.date === context.date &&
+          (!line || item.line === line) &&
+          (!model || item.model === model) &&
+          (mode === 'day' || item.shift === selectedShift),
+      );
+    const shiftContext = contextsFor(context)[selectedShift];
+    if (!shiftContext) return [];
+    const visible = rowsFor(shiftContext).filter(
+      (row) =>
+        (!line || row.line === line) &&
+        (!model || modelOf(row) === model) &&
+        stationHasOutput(row, context.config),
+    );
+    return [...new Map(visible.map((row) => [productionKey(row), row])).values()].flatMap(
+      (unit) => {
+        const slot = intervalsFor(
+          shiftContext,
+          visible.filter((row) => sameProduction(row, unit)),
+        ).find((slot) => slot.id === selectedSlot);
+        return slot
+          ? [
+              {
+                date: context.date,
+                line: unit.line,
+                model: modelOf(unit),
+                shift: selectedShift,
+                interval: { start: slot.start, end: slot.end },
+              },
+            ]
+          : [];
+      },
+    );
+  }
+  /** Hold pending station queues while the complete scope commits atomically.
+   * Autosaves already acknowledged before the click remain valid reports; only
+   * pending changes and fresh database-side missing peers join this transaction. */
+  async function saveCompleteScope() {
+    if (completing || invalid.size || importState.busy || bulkEditor) return false;
+    const context = getContext(),
+      scopes = completionScopes();
+    const throughLatest =
+      mode === 'sheet'
+        ? []
+        : [
+            ...new Map(
+              (line && model ? [{ line, model }] : scopes).map((item) => [
+                JSON.stringify([item.line, item.model]),
+                {
+                  line: item.line,
+                  model: item.model,
+                  shifts: mode === 'day' ? ['day', 'night'] : [selectedShift],
+                },
+              ]),
+            ).values(),
+          ];
+    if (!scopes.length && !throughLatest.length) {
+      setBanner(text('completeEmptyScope'));
+      return false;
+    }
+    const entries = queue.values().filter(
+      (entry) =>
+        entry.latest.date === context.date &&
+        [...scopes, ...throughLatest].some((item) => {
+          const row =
+            entry.latest.rowSnapshot ||
+            context.config.rows.find((row) => row.id === entry.latest.rowId);
+          return (
+            (item.shifts
+              ? item.shifts.includes(entry.latest.shift)
+              : entry.latest.shift === item.shift) &&
+            row &&
+            sameProduction(row, item)
+          );
+        }),
+    );
+    completing = true;
+    mount.inert = true;
+    issueDialog.inert = true;
+    entries.forEach((entry) => queue.pause(entry.key, true));
+    updateStatuses();
+    try {
+      await Promise.all(entries.map((entry) => entry.running));
+      const conflict = entries.find(
+        (entry) => entry.error?.status === 409 || conflictCodes.has(entry.error?.code),
+      );
+      if (conflict) throw conflict.error;
+      if (entries.some((entry) => entry.latest.configVersion !== context.config.version))
+        throw new Error(text('configChanged'));
+      const requests = scopes.map((item) => {
+        const rows = [],
+          expectedVersions = [];
+        for (const entry of entries) {
+          if (entry.latest.shift !== item.shift) continue;
+          const row =
+            entry.latest.rowSnapshot ||
+            context.config.rows.find((row) => row.id === entry.latest.rowId);
+          if (!row || !sameProduction(row, item)) continue;
+          const slot = entry.latest.slots.find(
+            (slot) => slot.start === item.interval.start && slot.end === item.interval.end,
+          );
+          const change =
+            slot &&
+            entryChanges(entry.baseline, entry.latest).find((change) => change.id === slot.id);
+          if (!change) continue;
+          const values = Object.fromEntries(
+            Object.entries(change).filter(([field]) => field !== 'id'),
+          );
+          rows.push({ rowId: row.id, values });
+          expectedVersions.push({ rowId: row.id, version: entry.latest.version });
+        }
+        return {
+          line: item.line,
+          model: item.model,
+          shift: item.shift,
+          interval: item.interval,
+          rows,
+          expectedVersions,
+        };
+      });
+      const result = await api('/api/entry/complete', {
+        method: 'PUT',
+        body: JSON.stringify({
+          date: context.date,
+          configVersion: context.config.version,
+          scopes: requests,
+          throughLatest,
+        }),
+      });
+      for (const record of result.currentRecords || result.records) {
+        const saved = { ...record, configVersion: result.configVersion },
+          key = keyFor(saved, saved.rowId);
+        const previous = queue.get(key);
+        const remaining = previous
+          ? entryChanges(previous.baseline, previous.latest).filter((change) => {
+              const slot = previous.latest.slots.find((slot) => slot.id === change.id);
+              const row =
+                previous.latest.rowSnapshot ||
+                context.config.rows.find((row) => row.id === saved.rowId);
+              return !scopes.some(
+                (item) =>
+                  item.shift === saved.shift &&
+                  sameProduction(item, row) &&
+                  item.interval.start === slot?.start &&
+                  item.interval.end === slot?.end,
+              );
+            })
+          : [];
+        localSaved.set(key, saved);
+        queue.ensure(key, saved);
+        queue.rebase(key, saved, false);
+        if (remaining.length) queue.update(key, mergeEntryChanges(saved, remaining));
+        reviewed.delete(key);
+        onSaved(saved, { key, completed: true, hasNewerEdits: remaining.length > 0 });
+      }
+      scopes.forEach((item) => touchedIntervals.delete(completionKey(item)));
+      setBanner('');
+      return true;
+    } catch (error) {
+      entries
+        .filter((entry) => entryChanges(entry.baseline, entry.latest).length)
+        .forEach((entry) => queue.block(entry.key, error));
+      setBanner(error.message || text('network'));
+      return false;
+    } finally {
+      completing = false;
+      mount.inert = false;
+      issueDialog.inert = false;
+      entries.forEach((entry) => queue.pause(entry.key, false));
+      render();
+    }
+  }
+
   function status(entry) {
     if (entry.paused) return { kind: 'invalid', label: text('invalidActual') };
     return { kind: entry.status, label: text(entry.status) };
@@ -1039,11 +1265,29 @@ export function createEntryController({
     );
     const overall = mount.querySelector('[data-entry-overall]');
     if (overall)
-      overall.textContent = pending.length
-        ? `${text(entries.some((entry) => entry.paused) ? 'invalidActual' : entries.some((entry) => entry.status === 'conflict') ? 'conflict' : entries.some((entry) => entry.error) ? 'error' : entries.some((entry) => entry.running) ? 'saving' : 'pending')} (${pending.length})`
-        : text(entries.length ? 'saved' : 'autosave');
+      overall.textContent = completing
+        ? text('saving')
+        : pending.length
+          ? `${text(entries.some((entry) => entry.paused) ? 'invalidActual' : entries.some((entry) => entry.status === 'conflict') ? 'conflict' : entries.some((entry) => entry.error) ? 'error' : entries.some((entry) => entry.running) ? 'saving' : 'pending')} (${pending.length})`
+          : text(entries.length ? 'saved' : 'autosave');
     const saveButton = mount.querySelector('[data-entry-action="save-all"]');
-    if (saveButton) saveButton.disabled = !pending.length;
+    if (saveButton) {
+      const context = getContext();
+      const canReport = Object.values(contextsFor(context)).some((part) =>
+        rowsFor(part).some(
+          (row) =>
+            (!line || row.line === line) &&
+            (!model || modelOf(row) === model) &&
+            stationHasOutput(row, context.config),
+        ),
+      );
+      saveButton.disabled =
+        completing ||
+        context.loading ||
+        !!invalid.size ||
+        !canReport ||
+        !(completionScopes().length || (mode !== 'sheet' && line && model));
+    }
     for (const input of [
       ...mount.querySelectorAll('[data-entry-field], [data-issue-cell]'),
       ...issueDialog.querySelectorAll('[data-entry-field]'),
@@ -1052,8 +1296,22 @@ export function createEntryController({
       if (!entry) continue;
       const field = input.dataset.entryField || 'issue';
       const latest = entry.latest.slots.find((slot) => slot.id === input.dataset.slotId);
+      if (field === 'actual') {
+        const label = input.closest('label')?.querySelector('[data-auto-zero-label]');
+        if (label) {
+          label.textContent = latest?.actualAutoFilled ? text('autoZeroShort') : '';
+          label.title = latest?.actualAutoFilled ? text('autoFilledZero') : '';
+        }
+        input.dataset.actualAutoFilled = String(latest?.actualAutoFilled === true);
+        if (latest?.actualAutoFilled) input.title = text('autoFilledZero');
+        else if (input.title === text('autoFilledZero')) input.removeAttribute('title');
+      }
       const baseline = entry.baseline.slots.find((slot) => slot.id === input.dataset.slotId);
-      const changed = slotValue(latest, field) !== slotValue(baseline, field);
+      const changed =
+        slotValue(latest, field) !== slotValue(baseline, field) ||
+        (field === 'actual' &&
+          baseline?.actualAutoFilled &&
+          latest?.actualAutoFilled === false);
       input.dataset.cellState = invalid.has(`${entry.key}|${input.dataset.slotId}|${field}`)
         ? 'invalid'
         : changed
@@ -1191,7 +1449,11 @@ export function createEntryController({
       for (const field of bulkFields) {
         const parsed = parseBulkValue(field, item.draft[field]);
         if (!parsed.valid) valid = false;
-        else if (parsed.value !== slotValue(item.slot, field)) values[field] = parsed.value;
+        else if (
+          parsed.value !== slotValue(item.slot, field) ||
+          (field === 'actual' && item.slot?.actualAutoFilled && item.actualTouched)
+        )
+          values[field] = parsed.value;
       }
       return Object.keys(values).length ? [{ rowId: item.row.id, values }] : [];
     });
@@ -1212,7 +1474,7 @@ export function createEntryController({
   function renderBulkRows() {
     const editor = bulkEditor;
     bulkDialog.querySelector('[data-bulk-preview]').innerHTML = editor.rows.length
-      ? `<table><thead><tr><th>${esc(text('job'))} / ${esc(text('station'))}</th>${bulkFields.map((field) => `<th>${esc(text(field))}</th>`).join('')}</tr></thead><tbody>${editor.rows.map((item) => `<tr data-bulk-row="${esc(item.row.id)}"><th scope="row"><strong>${esc(item.row.station || '—')}</strong><small>${esc(item.row.job || '—')}</small></th>${bulkFields.map((field) => `<td><input type="text" ${field === 'issue' ? '' : 'inputmode="numeric"'} autocomplete="off" maxlength="${field === 'issue' ? 2000 : 12}" data-bulk-cell="${field}" data-bulk-row-id="${esc(item.row.id)}" aria-label="${esc((item.row.station || item.row.job || '') + ' · ' + text(field))}" title="${esc(item.draft[field])}" value="${esc(item.draft[field])}"></td>`).join('')}</tr>`).join('')}</tbody></table>`
+      ? `<table><thead><tr><th>${esc(text('job'))} / ${esc(text('station'))}</th>${bulkFields.map((field) => `<th>${esc(text(field))}</th>`).join('')}</tr></thead><tbody>${editor.rows.map((item) => `<tr data-bulk-row="${esc(item.row.id)}"><th scope="row"><strong>${esc(item.row.station || '—')}</strong><small>${esc(item.row.job || '—')}${item.slot?.actualAutoFilled ? `<span class="auto-zero-note" title="${esc(text('autoFilledZero'))}">${esc(text('autoZeroShort'))}</span>` : ''}</small></th>${bulkFields.map((field) => `<td><input type="text" ${field === 'issue' ? '' : 'inputmode="numeric"'} autocomplete="off" maxlength="${field === 'issue' ? 2000 : 12}" data-bulk-cell="${field}" data-bulk-row-id="${esc(item.row.id)}" aria-label="${esc((item.row.station || item.row.job || '') + ' · ' + text(field))}" title="${esc(item.draft[field])}" value="${esc(item.draft[field])}"></td>`).join('')}</tr>`).join('')}</tbody></table>`
       : '';
   }
 
@@ -1294,6 +1556,9 @@ export function createEntryController({
     const request = ++bulkRequest;
     // A refreshed baseline retains only cells changed in this dialog, allowing
     // concurrent edits to untouched fields (including issues) to survive.
+    const touched = new Map(
+      (editor.rows || []).map((item) => [item.row.id, item.actualTouched]),
+    );
     const drafts = new Map(
       (editor.rows || []).map((item) => [
         item.row.id,
@@ -1301,7 +1566,11 @@ export function createEntryController({
           bulkFields
             .filter((field) => {
               const parsed = parseBulkValue(field, item.draft[field]);
-              return !parsed.valid || parsed.value !== slotValue(item.slot, field);
+              return (
+                !parsed.valid ||
+                parsed.value !== slotValue(item.slot, field) ||
+                (field === 'actual' && item.slot?.actualAutoFilled && item.actualTouched)
+              );
             })
             .map((field) => [field, item.draft[field]]),
         ),
@@ -1373,6 +1642,7 @@ export function createEntryController({
             row,
             slot,
             defaultTarget: defaultSlot?.target ?? null,
+            actualTouched: touched.get(row.id) || false,
             version: saved.get(row.id)?.version ?? data.rowVersions?.[row.id] ?? 0,
             draft: {
               target: String(slot?.target ?? ''),
@@ -1418,7 +1688,10 @@ export function createEntryController({
     }
     for (const input of inputs) {
       if (!field && input.value.trim() === '') continue;
-      for (const row of editor.rows) row.draft[input.dataset.bulkField] = input.value.trim();
+      for (const row of editor.rows) {
+        row.draft[input.dataset.bulkField] = input.value.trim();
+        if (input.dataset.bulkField === 'actual') row.actualTouched = true;
+      }
       input.value = '';
     }
     renderBulkRows();
@@ -1439,21 +1712,21 @@ export function createEntryController({
     return true;
   }
 
-  function saveBulk() {
+  function saveBulk(completeActuals = false) {
     const editor = bulkEditor;
     if (!editor) return Promise.resolve(true);
     if (editor.savePromise) return editor.savePromise;
     const work = (async () => {
       if (editor.loading) await editor.loadPromise;
       if (bulkEditor !== editor) return false;
-      if (!bulkHasChanges()) return true;
+      if (!completeActuals && !bulkHasChanges()) return true;
       if (editor.needsRefresh || !applyBulk()) return false;
       const changes = bulkChanges(editor);
       if (!changes.valid) {
         updateBulkControls();
         return false;
       }
-      if (!changes.rows.length) return true;
+      if (!completeActuals && !changes.rows.length) return true;
       editor.busy = true;
       bulkDialog.querySelector('[data-bulk-error]').textContent = '';
       updateBulkControls();
@@ -1465,6 +1738,7 @@ export function createEntryController({
             date: editor.date,
             shift: editor.shift,
             interval: editor.interval,
+            completeActuals,
             configVersion: editor.configVersion,
             rows: changes.rows,
             expectedVersions: changes.rows.map((change) => ({
@@ -1474,7 +1748,7 @@ export function createEntryController({
           }),
         });
         if (destroyed || bulkEditor !== editor) return false;
-        for (const record of result.records) {
+        for (const record of result.currentRecords || result.records) {
           const key = `${editor.date}|${editor.shift}|${record.rowId}`;
           const saved = {
             ...record,
@@ -1488,10 +1762,12 @@ export function createEntryController({
           reviewed.delete(key);
           onSaved(saved, { key, bulk: true });
           const row = editor.rows.find((item) => item.row.id === record.rowId);
+          if (!row) continue;
           row.slot = record.slots.find(
             (slot) => slot.start === editor.interval.start && slot.end === editor.interval.end,
           );
           row.version = record.version;
+          row.actualTouched = false;
           row.draft = {
             target: String(row.slot.target ?? ''),
             actual: String(row.slot.actual ?? ''),
@@ -1567,7 +1843,10 @@ export function createEntryController({
         }
         edits.push({ index, field, value: cells[y][x].trim() });
       }
-    for (const edit of edits) editor.rows[edit.index].draft[edit.field] = edit.value;
+    for (const edit of edits) {
+      editor.rows[edit.index].draft[edit.field] = edit.value;
+      if (edit.field === 'actual') editor.rows[edit.index].actualTouched = true;
+    }
     bulkDialog.querySelector('[data-bulk-error]').textContent = '';
     renderBulkRows();
     updateBulkControls();
@@ -2007,6 +2286,7 @@ export function createEntryController({
                     return (
                       '<label><span>' +
                       esc(text(field)) +
+                      (field === 'actual' ? '<small data-auto-zero-label></small>' : '') +
                       '</span><input type="text" inputmode="numeric" autocomplete="off" maxlength="12"' +
                       attributes +
                       ' value="' +
@@ -2532,7 +2812,7 @@ export function createEntryController({
 
   function onInput(event) {
     const input = event.target.closest('[data-entry-field]');
-    if (!input) return;
+    if (!input || completing) return;
     const key = input.dataset.rowKey,
       entry = queue.get(key);
     if (!entry) return;
@@ -2553,6 +2833,7 @@ export function createEntryController({
       input.removeAttribute('aria-invalid');
       input.removeAttribute('title');
       slot[input.dataset.entryField] = parsed.value;
+      if (input.dataset.entryField === 'actual') slot.actualAutoFilled = false;
     } else {
       slot.issue = input.value;
       if (issueEditor?.key === key) issueEditor.limitReached = false;
@@ -2561,6 +2842,7 @@ export function createEntryController({
       key,
       [...invalid.keys()].some((value) => value.startsWith(key + '|')),
     );
+    noteCompletion(entry, slot);
     queue.update(key, next);
     setBanner('');
   }
@@ -2610,6 +2892,8 @@ export function createEntryController({
       if (!drafts.has(edit.rowKey)) drafts.set(edit.rowKey, copy(entry.latest));
       const slot = drafts.get(edit.rowKey).slots.find((slot) => slot.id === edit.slotId);
       slot[edit.field] = edit.value;
+      if (edit.field === 'actual') slot.actualAutoFilled = false;
+      noteCompletion(entry, slot);
     }
     // No DOM/queue/invalid mutation occurs until the entire destination rectangle is checked.
     for (const edit of plan.edits)
@@ -2682,7 +2966,7 @@ export function createEntryController({
     if (action === 'bulk-refresh') return loadBulkPreview();
     if (action === 'bulk-apply') return applyBulk(button.dataset.bulkApplyField);
     if (action === 'bulk-default-target') return applyBulkDefaultTargets();
-    if (action === 'bulk-save') return saveBulk();
+    if (action === 'bulk-save') return saveBulk(true);
     if (action === 'restore-defaults') {
       const [restoreLine, restoreModel] = JSON.parse(button.dataset.restoreDefaults);
       return restoreUnitDefaults({ line: restoreLine, model: restoreModel });
@@ -2732,7 +3016,7 @@ export function createEntryController({
       return;
     }
     if (action === 'save-all') {
-      if (!(await queue.flush()) || invalid.size) setBanner(text('pending'));
+      await saveCompleteScope();
     } else if (action === 'retry') queue.retry(key);
     else if (action === 'discard') {
       const entry = queue.get(key);
@@ -2798,6 +3082,8 @@ export function createEntryController({
   }
 
   function onFocusOut(event) {
+    // The explicit Save owns pending edits and missing peers in one transaction.
+    if (completing || event.relatedTarget?.closest('[data-entry-action="save-all"]')) return;
     const input = event.target.closest('[data-entry-field]');
     if (input) void queue.flush(input.dataset.rowKey);
   }
@@ -2877,7 +3163,7 @@ export function createEntryController({
     if (event.isComposing) return;
     if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
-      void saveBulk();
+      void saveBulk(true);
     } else if (event.key === 'Enter' && event.target.matches('[data-bulk-cell]')) {
       const cells = [
         ...bulkDialog.querySelectorAll(`[data-bulk-cell="${event.target.dataset.bulkCell}"]`),
@@ -2894,7 +3180,10 @@ export function createEntryController({
       const row = bulkEditor?.rows.find(
         (item) => String(item.row.id) === input.dataset.bulkRowId,
       );
-      if (row) row.draft[input.dataset.bulkCell] = input.value;
+      if (row) {
+        row.draft[input.dataset.bulkCell] = input.value;
+        if (input.dataset.bulkCell === 'actual') row.actualTouched = true;
+      }
     }
     updateBulkControls();
   });
@@ -2916,12 +3205,14 @@ export function createEntryController({
     refresh: render,
     flush: () => queue.flush(),
     hasPendingChanges: () =>
+      completing ||
       importState.busy ||
       bulkEditor?.busy ||
       bulkHasChanges() ||
       invalid.size > 0 ||
       queue.hasPendingChanges(),
     async canLeave() {
+      if (completing) return false;
       closeIssue();
       if (!(await closeBulk(false))) return false;
       return !importState.busy && !invalid.size && (await queue.flush());
