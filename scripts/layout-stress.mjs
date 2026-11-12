@@ -76,11 +76,7 @@ export async function auditLayoutStress({ page, context, baseURL, readConfig, re
     for (const fullscreen of [false, true]) {
       if (fullscreen) await page.locator('#enter-fullscreen').click();
       for (const scope of ['interval', 'day']) {
-        await page
-          .locator(
-            `${fullscreen ? '.board-actions' : '.line-dashboard-heading'} [data-metric-scope="${scope}"]`,
-          )
-          .click();
+        await page.locator(`#metric-scope-controls [data-metric-scope="${scope}"]`).click();
         if (scope === 'interval')
           await page.waitForFunction(
             () =>
@@ -127,27 +123,24 @@ export async function auditLayoutStress({ page, context, baseURL, readConfig, re
             false,
           );
           await card.locator('[data-line-expand]').click();
-          if (fullscreen) {
-            const dialog = page.locator('#line-detail-dialog');
-            assert.equal(await dialog.isVisible(), true);
-            assert.match(
-              await dialog.locator('#line-modal-title').innerText(),
-              new RegExp(model),
-            );
-            assert.equal(await dialog.locator('[data-detail-alert-list]').isVisible(), true);
-            await dialog.locator('[data-close-line-dialog]').click();
-          } else {
-            assert.match(
-              await card.locator('.expanded-slot-info').innerText(),
-              new RegExp(model),
-            );
-            assert.equal(await card.locator('[data-card-alert-list]').isVisible(), true);
-            assert.match(
-              await card.locator('[data-expanded-metrics]').innerText(),
-              scope === 'day' ? /199,999,998/ : /99,999,999/,
-            );
-            await card.locator('[data-line-expand]').click();
-          }
+          assert.equal(await card.locator('.card-expanded-details').isVisible(), true);
+          assert.ok(
+            (await card.locator('.card-expanded-details').innerText()).trim().length > 0,
+          );
+          assert.equal(
+            await card
+              .locator(
+                '.card-expanded-details input, .card-expanded-details [data-metric], .expanded-slot-info',
+              )
+              .count(),
+            0,
+          );
+          assert.match(
+            await card.locator('.line-card-top .production-identity').getAttribute('title'),
+            new RegExp(model),
+          );
+          await card.locator('[data-line-expand]').click();
+          await card.locator('.card-expanded-details').waitFor({ state: 'hidden' });
         }
       }
       if (fullscreen) await page.locator('#exit-fullscreen').click();

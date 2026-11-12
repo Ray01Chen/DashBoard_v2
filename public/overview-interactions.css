@@ -69,222 +69,320 @@
   border-top: 3px solid var(--primary);
   background: var(--tint);
 }
-/* Reserve the translated row's right edge without reflowing adjacent rows.
-   The left rail travels into this same 45px gutter with the row. */
-#line-dashboard #line-cards {
-  --inline-edit-height: 192px;
+/* Five categories share the existing icon and route links. Popover top-layer
+   rendering prevents sidebar overflow or fullscreen clipping. */
+#sidebar .navigation-category {
+  width: 100%;
 }
-#line-dashboard #line-cards[data-inline-available='true'] {
-  padding-right: 45px;
-}
-#line-dashboard #line-cards[data-inline-available='true'] .line-card {
-  position: relative;
-  overflow: visible;
-  transition: transform 200ms ease-out;
-}
-@media (hover: hover) {
-  #line-cards[data-inline-available='true'] .line-card:hover,
-  #line-cards[data-inline-available='true'] .line-card:focus-within {
-    transform: translateX(45px);
-  }
-}
-#line-dashboard #line-cards .line-card[data-inline-editing] {
-  transform: translateX(45px);
-  height: auto;
-  min-height: var(--inline-edit-height);
-  cursor: default;
-}
-.line-edit-rail {
-  position: absolute;
-  left: -45px;
-  top: 0;
-  bottom: 0;
-  width: 45px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 8px;
-  opacity: 0;
-  transition: opacity 200ms ease-out;
-}
-.line-card:hover .line-edit-rail,
-.line-card:focus-within .line-edit-rail,
-[data-inline-editing] .line-edit-rail {
-  opacity: 1;
-}
-.line-edit-rail button {
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  gap: 3px;
-  padding: 6px 2px;
-  width: 42px;
-  min-height: 42px;
-  background: var(--surface);
-  color: var(--primary);
-  border: 1px solid var(--line);
-  border-radius: 7px;
+#sidebar .nav-category {
   cursor: pointer;
 }
-.line-edit-rail small {
-  font-size: 10px;
-  overflow-wrap: anywhere;
+#sidebar .nav-chevron {
+  display: flex;
+  margin-left: auto;
 }
-.line-edit-rail .icon {
-  width: 17px;
-  height: 17px;
+#sidebar .nav-chevron .icon {
+  width: 14px;
+  height: 14px;
 }
-#line-cards [data-inline-editing] [data-inline-hidden] {
-  display: none !important;
+#sidebar .navigation-category.active > .nav-category {
+  color: var(--primary-dark);
+  background: var(--soft);
+  border-color: var(--ui-border);
+  box-shadow: inset 3px 0 var(--primary);
 }
-#line-cards [data-inline-control] {
-  min-width: 0;
-  max-width: 100%;
+#sidebar .nav-flyout {
+  position: fixed;
+  inset: auto;
+  width: min(240px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  margin: 0;
+  padding: 8px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  box-shadow: var(--ui-shadow);
 }
-#line-cards [data-inline-actual] {
-  width: 100%;
-  min-width: 0;
-  font-size: 16px;
-  padding: 7px 3px;
-  font-variant-numeric: tabular-nums;
-}
-.inline-slot {
+#sidebar .nav-flyout:popover-open {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 5px;
+  gap: 4px;
 }
-.inline-slot,
-.inline-issue label {
-  display: grid;
-  gap: 3px;
-  font-size: 11px;
-  color: var(--muted);
+body.sidebar-collapsed:not(.navigation-open) #sidebar .nav-chevron {
+  display: none;
 }
-.inline-slot select,
-.inline-issue :is(select, textarea) {
-  width: 100%;
-  min-width: 0;
-  min-height: 30px;
-  padding: 4px;
-  font-size: 12px;
-}
-.inline-issue textarea {
-  resize: vertical;
-  max-height: 100px;
-}
-.inline-feedback {
+body.sidebar-collapsed:not(.navigation-open) #sidebar .nav-flyout .nav-label {
   display: block;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  line-height: 1.5;
-  margin-top: 5px;
 }
-#line-cards [data-inline-editing] .line-card-status {
-  max-height: none;
-  overflow: visible;
+body.sidebar-collapsed:not(.navigation-open) #sidebar .nav-flyout .nav-item {
+  justify-content: start;
+  padding: 10px;
 }
-body.fullscreen-board #line-dashboard #line-cards:has([data-inline-editing]) {
+/* Cards stay read-only. Expansion adds one full-width region underneath the
+   existing shared grid; it never changes metric nodes or trend geometry. */
+.line-card-actions {
+  grid-area: expand;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.overview-edit-button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 34px;
+  width: 40px;
+  padding: 3px;
+  border: 1px solid var(--ui-border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 10px;
+  cursor: pointer;
+}
+.overview-edit-button .icon {
+  width: 15px;
+  height: 15px;
+}
+#line-dashboard #line-cards .line-card:is([data-editor-open], .is-expanded) {
+  height: auto;
+  grid-template-rows: minmax(var(--monitor-row-height), auto) auto;
+}
+.row-expansion {
+  grid-column: 1 / -1;
+  min-width: 0;
+  width: 100%;
+  animation: row-reveal 200ms ease-out;
   overflow: hidden;
 }
-@media (hover: none) {
-  #line-dashboard #line-cards[data-inline-available='true'] .line-card {
-    transform: translateX(45px);
+@keyframes row-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
   }
-  .line-edit-rail {
+  to {
     opacity: 1;
+    transform: none;
   }
 }
-@media (max-width: 750px) {
-  #line-dashboard #line-cards .line-card[data-inline-editing] {
-    min-height: var(--inline-edit-height);
+.overview-editor {
+  border-top: 1px solid var(--ui-border);
+  padding-top: 12px;
+  margin-top: 4px;
+  cursor: default;
+}
+.overview-editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 4px 10px;
+}
+.overview-editor-heading .production-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.overview-editor-heading .production-line {
+  font-size: 15px;
+}
+.overview-editor-heading label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.overview-editor-heading select {
+  min-width: 190px;
+  min-height: 34px;
+  padding: 5px 8px;
+}
+.overview-editor-body {
+  overflow: auto;
+  max-height: 360px;
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+}
+.overview-editor-body table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  min-width: 460px;
+}
+.overview-editor-body th,
+.overview-editor-body td {
+  padding: 7px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.overview-editor-body thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+  font-size: 12px;
+}
+.overview-editor-body th:first-child {
+  width: 23%;
+}
+.overview-editor-body th:nth-child(2),
+.overview-editor-body th:nth-child(3) {
+  width: 17%;
+}
+.overview-editor-body tbody th {
+  font-size: 12px;
+  font-weight: 500;
+}
+.overview-editor-body tbody th strong,
+.overview-editor-body tbody th span {
+  display: inline;
+  margin-right: 6px;
+}
+.overview-editor-body input,
+.overview-editor-body textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 8px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.overview-editor-body textarea {
+  resize: vertical;
+  max-height: 110px;
+}
+.overview-editor-body [aria-invalid='true'] {
+  border-color: var(--critical);
+}
+.overview-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 2px 2px;
+}
+.overview-editor-message {
+  margin-right: auto;
+  color: var(--critical);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.overview-editor-message:empty {
+  display: none;
+}
+.reported-issue {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) minmax(0, 1fr);
+  gap: 4px 12px;
+  border-top: 1px solid var(--line);
+  padding: 8px 0;
+}
+.reported-issue p {
+  grid-column: 1 / -1;
+  white-space: pre-wrap;
+  margin: 0;
+}
+.reported-issue small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+body.fullscreen-board
+  #line-dashboard
+  #line-cards
+  .line-card:is([data-editor-open], .is-expanded) {
+  flex: 1 1 0;
+  min-height: 0;
+  grid-template-rows: var(--monitor-row-height) minmax(0, 1fr);
+}
+body.fullscreen-board .overview-editor {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+body.fullscreen-board .overview-editor-body {
+  min-height: 0;
+  flex: 1;
+  max-height: none;
+}
+body.fullscreen-board #line-cards .card-expanded-details {
+  min-height: 0;
+  overflow-y: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .row-expansion {
+    animation: none;
   }
-  body.fullscreen-board #line-dashboard #line-cards .line-card[data-inline-editing] {
-    min-height: 0;
-    overflow-y: auto;
+}
+@media (max-width: 620px) {
+  .overview-editor-heading select {
+    min-width: 0;
+    max-width: 100%;
   }
-  .personal-order-open {
-    font-size: 11px;
+  .overview-editor-heading label {
+    width: 100%;
+  }
+  .overview-editor-heading select {
+    flex: 1;
+  }
+  .overview-editor-body th,
+  .overview-editor-body td {
     padding: 6px;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  #line-dashboard #line-cards[data-inline-available='true'] .line-card,
-  .line-edit-rail {
-    transition: none;
-  }
-}
-
-body.fullscreen-board #line-dashboard #line-cards .line-card[data-inline-editing] {
-  flex: 0 0 var(--inline-edit-height);
-}
 @container monitoring (max-width: 1065px) {
-  #line-dashboard #line-cards {
-    --inline-edit-height: 300px;
+  #line-dashboard #line-cards .line-card:is([data-editor-open], .is-expanded) {
+    grid-template-rows: auto auto auto;
+  }
+  #line-dashboard #line-cards .row-expansion {
+    grid-row: 3;
+  }
+  body.fullscreen-board
+    #line-dashboard
+    #line-cards
+    .line-card:is([data-editor-open], .is-expanded) {
+    grid-template-rows: 82px 74px minmax(0, 1fr);
   }
 }
 @container monitoring (max-width: 620px) {
-  #line-dashboard #line-cards {
-    --inline-edit-height: 460px;
+  #line-dashboard #line-cards .line-card:is([data-editor-open], .is-expanded) {
+    grid-template-rows: auto auto auto auto auto;
+  }
+  #line-dashboard #line-cards .row-expansion {
+    grid-row: 5;
+  }
+  body.fullscreen-board
+    #line-dashboard
+    #line-cards
+    .line-card:is([data-editor-open], .is-expanded) {
+    grid-template-rows: 88px 78px 44px 50px minmax(0, 1fr);
   }
 }
 
-/* The same health region owns the only period readout or selector. */
-#line-dashboard #line-cards [data-inline-editing] .line-health {
-  grid-template-rows: 24px 24px auto;
+body.fullscreen-board #line-cards .row-expansion {
+  align-self: stretch;
+  height: 100%;
+  margin-top: 0;
+  max-height: 100%;
 }
-#line-dashboard #line-cards [data-inline-editing] .line-card-status {
-  display: grid;
-  height: auto;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto auto;
-  gap: 5px 8px;
-  max-height: none;
+body.fullscreen-board .overview-editor-heading,
+body.fullscreen-board .overview-editor-footer {
+  flex: 0 0 auto;
 }
-#line-cards [data-inline-editing] [data-card-reason] {
-  grid-column: 1;
-  grid-row: 1;
-}
-#line-cards [data-inline-editing] .reason-controls {
-  position: static;
-  grid-column: 2;
-  grid-row: 1;
-}
-#line-cards [data-inline-editing] .inline-issue {
-  grid-column: 1 / -1;
-}
-.inline-feedback:empty {
+#board-site-name {
   display: none;
 }
-.inline-slot {
-  width: 100%;
-  margin-top: 3px;
+body.fullscreen-board[data-board-header='false'] #board-site-name {
+  display: block;
 }
-.inline-issue textarea {
-  min-height: 52px;
-}
-#line-dashboard #line-cards [data-inline-editing] [data-inline-actual] {
-  grid-column: 1;
-  grid-row: 2;
-  height: 28px;
-  min-height: 28px;
-  text-align: right;
-}
-/* The action gutter comes from secondary tracks, not from the trend plot.
-   All rows use the same tracks at each existing container breakpoint. */
-@container monitoring (min-width: 1066px) {
-  #line-dashboard #line-cards[data-inline-available='true'] {
-    --monitor-card-columns: minmax(118px, 0.85fr) minmax(118px, 0.8fr) minmax(248px, 1.35fr)
-      minmax(180px, 1.6fr) minmax(220px, 1.6fr) 24px;
-  }
-  #line-dashboard #line-cards[data-inline-available='true'] .line-card {
-    column-gap: 6px;
-  }
-}
-@container monitoring (min-width: 621px) and (max-width: 1065px) {
-  #line-dashboard #line-cards[data-inline-available='true'] {
-    --monitor-card-columns: 130px 136px minmax(180px, 1fr) 24px;
-  }
-}
-body.fullscreen-board #line-cards [data-inline-editing] textarea {
-  resize: none;
+#report-export-slot:empty {
+  display: none;
 }

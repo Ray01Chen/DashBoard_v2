@@ -961,6 +961,7 @@ const files = {
   '/overview-inline.js': ['overview-inline.js', 'text/javascript'],
   '/interaction-messages.js': ['interaction-messages.js', 'text/javascript'],
   '/overview-interactions.css': ['overview-interactions.css', 'text/css'],
+  '/navigation-flyouts.js': ['navigation-flyouts.js', 'text/javascript'],
   '/app.js': ['app.js', 'text/javascript'],
   '/site-management.js': ['site-management.js', 'text/javascript'],
   '/site-messages.js': ['site-messages.js', 'text/javascript'],

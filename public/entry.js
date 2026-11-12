@@ -425,7 +425,7 @@ export function parseEntryActual(value) {
 // Numeric fields distinguish blank from zero. Notes keep their original text,
 // including captured newlines, until the user explicitly changes them.
 const bulkFields = ['target', 'actual', 'issue'];
-const parseBulkValue = (field, value) =>
+export const parseBulkValue = (field, value) =>
   field === 'issue'
     ? { valid: String(value).length <= 2000, value: String(value) }
     : parseEntryActual(value);

@@ -3,7 +3,7 @@ import { auditSiteManagement } from './site-management-audit.mjs';
 import { auditOverviewRefinement } from './overview-refinement-audit.mjs';
 import { auditCompactBoard } from './compact-board-audit.mjs';
 import { auditLayoutRefinement } from './layout-refinement-audit.mjs';
-import { auditNavigation } from './navigation-audit.mjs';
+import { auditNavigation, navigateView } from './navigation-audit.mjs';
 import { auditDesign } from './design-audit.mjs';
 /**
  * Real Chromium workflow checks against a fresh, temporary SQLite database.
@@ -96,12 +96,7 @@ try {
   await page.locator('#login-submit').click();
   await page.locator('#login-dialog').waitFor({ state: 'hidden' });
   await mkdir(path.join(root, 'docs/images'), { recursive: true });
-  const navigate = async (view, target = page) => {
-    const link = target.locator(`[data-view="${view}"]`);
-    if ((await target.locator('#sidebar').getAttribute('aria-hidden')) === 'true')
-      await target.locator('#toggle-navigation').click();
-    await link.click();
-  };
+  const navigate = (view, target = page) => navigateView(target, view);
   const readConfig = async () => (await context.request.get(baseURL + '/api/config')).json();
   const readReport = async (date, shift = 'day') =>
     (await context.request.get(baseURL + `/api/records?date=${date}&shift=${shift}`)).json();
@@ -1157,7 +1152,7 @@ try {
   assert.equal(await card.locator('[data-metric="currentTarget"] b').innerText(), '122');
   assert.equal(await card.locator('[data-metric="currentActual"] b').innerText(), '22');
   assert.equal(await card.locator('[data-metric="currentGap"] b').innerText(), '-100');
-  await page.locator('.dashboard-actions [data-metric-scope="day"]').click();
+  await page.locator('#metric-scope-controls [data-metric-scope="day"]').click();
   assert.equal(await card.locator('[data-metric="dailyTarget"] b').innerText(), '777');
   const sourceActuals = (
     await Promise.all(['day', 'night'].map((shift) => readReport(reportDate, shift)))
@@ -1182,7 +1177,7 @@ try {
   );
   assert.equal(
     await page
-      .locator('.dashboard-actions [data-metric-scope="day"]')
+      .locator('#metric-scope-controls [data-metric-scope="day"]')
       .getAttribute('aria-pressed'),
     'true',
   );
@@ -1197,7 +1192,7 @@ try {
   await page.locator('#report-date').fill(reportDate);
   await page.locator('#report-date').dispatchEvent('change');
   await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
-  await page.locator('.dashboard-actions [data-metric-scope="interval"]').click();
+  await page.locator('#metric-scope-controls [data-metric-scope="interval"]').click();
   assert.equal(await card.locator('[data-metric="currentTarget"] b').innerText(), '122');
   record(
     'Interval/Daily switches only the three displayed metrics, uses both shifts for daily totals, and persists after reload',
@@ -2410,7 +2405,7 @@ try {
     await page.locator('#report-date').fill(futureDate);
     await page.locator('#report-date').dispatchEvent('change');
     await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
-    await page.locator('.dashboard-actions [data-metric-scope="day"]').click();
+    await page.locator('#metric-scope-controls [data-metric-scope="day"]').click();
     const monitorCard = page
       .locator('.line-card')
       .filter({ hasText: 'DEMO-A' })
@@ -2421,7 +2416,7 @@ try {
     await page.locator('#report-date').dispatchEvent('change');
     await page.waitForFunction(() => !document.querySelector('#refresh-now').disabled);
     assert.equal(await monitorCard.locator('[data-metric="dailyActual"] b').innerText(), '5');
-    await page.locator('.dashboard-actions [data-metric-scope="interval"]').click();
+    await page.locator('#metric-scope-controls [data-metric-scope="interval"]').click();
 
     await page.goto(baseURL + '/settings/master-data');
     await page.locator('#schedule-template-select').selectOption(alternativeId);
@@ -2652,7 +2647,7 @@ try {
     await page.locator('#language-select').selectOption(language);
     await page.locator('#enter-fullscreen').click();
     for (const metricScope of ['interval', 'day']) {
-      await page.locator(`.board-actions [data-metric-scope="${metricScope}"]`).click();
+      await page.locator(`#metric-scope-controls [data-metric-scope="${metricScope}"]`).click();
       for (const [width, height] of [
         [2560, 1440],
         [1920, 1080],
@@ -2773,7 +2768,7 @@ try {
   }
   await page.locator('#language-select').selectOption('en');
   await page.locator('#enter-fullscreen').click();
-  await page.locator('.board-actions [data-metric-scope="interval"]').click();
+  await page.locator('#metric-scope-controls [data-metric-scope="interval"]').click();
   if (screenshots) {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.locator('#group-trend').evaluate((chart) => (chart.scrollLeft = 0));
@@ -2834,7 +2829,9 @@ try {
   });
   const member = await memberContext.newPage();
   await member.goto(baseURL + '/settings/line-configuration');
-  await member.locator('[data-view="overview"].active').waitFor();
+  await member.waitForFunction(() =>
+    document.querySelector('[data-view="overview"]')?.classList.contains('active'),
+  );
   await member.waitForURL(baseURL + '/overview');
   assert.equal(new URL(member.url()).pathname, '/overview');
   await navigate('help', member);

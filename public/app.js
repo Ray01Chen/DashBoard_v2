@@ -1,12 +1,13 @@
+import { createNavigationFlyouts } from './navigation-flyouts.js';
 import { createPersonalOrderUI } from './personal-order-ui.js';
-import { createOverviewInline } from './overview-inline.js';
+import { createOverviewEditor } from './overview-inline.js';
 import { createSiteManagementUI } from './site-management.js';
 import { boardDisplayPreferences } from './board-display.js';
 import { cancelMonitorPageMotion } from './monitor-carousel.js';
 import { MonitorPaging, pageSize, fitMonitorPage } from './monitor-paging.js';
 import { listOrder, byProduction } from './list-order.js';
 import { linePickerMarkup, linePickerGroups, updateLinePicker } from './line-picker.js';
-import { handleMonitorAction, renderedMonitorLines } from './monitor-ui.js';
+import { handleMonitorAction, renderedMonitorLines, expandedMonitorKey } from './monitor-ui.js';
 import { schedulePreview } from './schedule-preview.js';
 import { alertConfig, validAlertConfig } from './alerts.js';
 import {
@@ -64,6 +65,10 @@ import { renderMonitoring, groupSettings, alertSettings } from './dashboard.js';
 const $ = (s) => document.querySelector(s),
   $$ = (s) => [...document.querySelectorAll(s)];
 const paths = {
+  shield: 'M12 3 3 7v6c0 5 9 9 9 9s9-4 9-9V7L12 3Z M8 12l3 3 5-6',
+  users:
+    'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M17 4a4 4 0 0 1 0 8 M22 21v-2a4 4 0 0 0-3-3.87',
+  book: 'M12 6v15 M3 4h5a4 4 0 0 1 4 2 4 4 0 0 1 4-2h5v15h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3V4Z',
   factory: 'M3 21V10l6 3V7l6 3V3h6v18H3Z',
   grid: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
   clipboard: 'M9 5H5v16h14V5h-4 M9 3h6v4H9z M8 12h8 M8 16h5',
@@ -174,6 +179,7 @@ const state = {
   lastTime: null,
 };
 const monitorPaging = new MonitorPaging();
+const navigationFlyouts = createNavigationFlyouts();
 const personalOrder = createPersonalOrderUI({
   api,
   t: (key) => t(key),
@@ -183,7 +189,7 @@ const personalOrder = createPersonalOrderUI({
     render();
   },
 });
-const overviewInline = createOverviewInline({
+const overviewEditor = createOverviewEditor({
   api,
   getContext: monitorContext,
   canEdit: () => canUse('production.write'),
@@ -349,6 +355,7 @@ function applyAccess() {
   $('#site-select').title = state.user?.site?.site_name || '';
   $('#site-select').disabled = !state.user;
   applyFeatureAccess();
+  navigationFlyouts.accessChanged();
 }
 function showLogin(expired = false) {
   state.user = null;
@@ -476,6 +483,7 @@ function overlayNavigation() {
   );
 }
 function closeNavigation() {
+  navigationFlyouts.close();
   document.body.classList.remove('navigation-open');
   applyCollapse();
 }
@@ -594,12 +602,14 @@ function updateHeadings() {
     b.classList.toggle('active', b.dataset.view === view);
     b.setAttribute('aria-current', b.dataset.view === view ? 'page' : 'false');
   });
-  const management = $('#management-nav');
-  const inManagement = isAdministration(view);
-  if (inManagement && management.dataset.activeView !== view) management.open = true;
-  management.dataset.activeView = view;
-  management.classList.toggle('active', inManagement);
-  management.querySelector('summary').setAttribute('aria-expanded', String(management.open));
+  navigationFlyouts.setActive(view);
+  const overview = view === 'overview';
+  $('#metric-scope-controls').hidden = !hasWholeDayScope();
+  const exportSlot = $(overview ? '#overview-operations' : '#report-export-slot');
+  if ($('#export').parentElement !== exportSlot) {
+    if (overview) exportSlot.insertBefore($('#export'), $('#enter-fullscreen'));
+    else exportSlot.append($('#export'));
+  }
   updateSettingsNavigation();
 }
 function updateSettingsNavigation() {
@@ -927,7 +937,9 @@ function monitorContext() {
   };
   return {
     config,
-    inline: overviewInline,
+    editor: overviewEditor,
+    expansionKey: overviewEditor.key || expandedMonitorKey(state.date),
+    focusKey: overviewEditor.focusKey,
     records: monitorRecords(),
     dailyRecords: state.dailyReport
       ? monitorRecords(
@@ -945,18 +957,13 @@ function monitorContext() {
     boardPage: monitorPaging.page,
     paging: monitorPaging,
     boardSize: board
-      ? fitMonitorPage(
-          cards.clientHeight -
-            (overviewInline.active
-              ? Math.max(
-                  0,
-                  parseFloat(cardStyle.getPropertyValue('--inline-edit-height')) -
-                    parseFloat(cardStyle.getPropertyValue('--monitor-row-height')),
-                )
-              : 0),
-          parseFloat(cardStyle.getPropertyValue('--monitor-row-height')),
-          parseFloat(cardStyle.rowGap),
-        )
+      ? overviewEditor.active || expandedMonitorKey(state.date)
+        ? 1
+        : fitMonitorPage(
+            cards.clientHeight,
+            parseFloat(cardStyle.getPropertyValue('--monitor-row-height')),
+            parseFloat(cardStyle.rowGap),
+          )
       : pageSize,
     language: state.language,
     alertFilter: state.view === 'overview' ? state.alertFilter || 'all' : 'all',
@@ -1212,7 +1219,7 @@ async function setView(view, options = {}) {
   if ((!state.config && !isAdministration(view)) || !state.user || !pagePath(view))
     return false;
   if (administration?.isBusy() || switchingSite || personalOrder.busy) return false;
-  if (view !== state.view && !(await overviewInline.guard())) return false;
+  if (view !== state.view && !(await overviewEditor.guard())) return false;
   if (
     (view === 'sites' && state.user.systemRole !== 'system_admin') ||
     (view === 'users' && !canManage()) ||
@@ -1221,7 +1228,7 @@ async function setView(view, options = {}) {
     toast(t('errForbidden'));
     return false;
   }
-  if (!(await overviewInline.guard()) || !(await entryController?.canLeave())) {
+  if (!(await overviewEditor.guard()) || !(await entryController?.canLeave())) {
     toast(t('resolveEntryChanges'));
     return false;
   }
@@ -2393,20 +2400,6 @@ document.addEventListener('keydown', (event) => {
     }
   }
 });
-$('#management-nav').addEventListener('toggle', (event) => {
-  event.currentTarget
-    .querySelector('summary')
-    .setAttribute('aria-expanded', String(event.currentTarget.open));
-});
-$('#management-nav > summary').addEventListener('click', (event) => {
-  if (state.collapsed && !overlayNavigation()) {
-    event.preventDefault();
-    state.collapsed = false;
-    stored('bp-collapsed', 'false');
-    $('#management-nav').open = true;
-    applyCollapse();
-  }
-});
 $('#open-settings').onclick = (event) => {
   if (followPageLink(event)) void setView('settings');
 };
@@ -2435,7 +2428,7 @@ $('#report-date').onchange = async () => {
     $('#report-date').value = state.date;
     return;
   }
-  if (!(await overviewInline.guard()) || !(await entryController?.canLeave())) {
+  if (!(await overviewEditor.guard()) || !(await entryController?.canLeave())) {
     $('#report-date').value = state.date;
     return toast(t('resolveEntryChanges'));
   }
@@ -2444,7 +2437,7 @@ $('#report-date').onchange = async () => {
   loadRecords();
 };
 $('#today').onclick = async () => {
-  if (!(await overviewInline.guard()) || !(await entryController?.canLeave()))
+  if (!(await overviewEditor.guard()) || !(await entryController?.canLeave()))
     return toast(t('resolveEntryChanges'));
   state.date = today();
   $('#report-date').value = state.date;
@@ -2456,7 +2449,7 @@ $$('[data-report-scope]').forEach(
     (b.onclick = async () => {
       const scope = b.dataset.reportScope;
       if (reportScope() === scope) return;
-      if (!(await overviewInline.guard()) || !(await entryController?.canLeave()))
+      if (!(await overviewEditor.guard()) || !(await entryController?.canLeave()))
         return toast(t('resolveEntryChanges'));
       if (hasWholeDayScope()) state.overviewScope = scope;
       if (scope !== 'all') state.shift = scope;
@@ -2527,7 +2520,7 @@ $('#slot-tabs').onkeydown = (e) => {
 };
 $('#refresh').onclick = loadRecords;
 $('#group-tabs').onclick = (e) => {
-  if (overviewInline.active) return toast(t('inlineBusy'));
+  if (overviewEditor.active) return toast(t('inlineBusy'));
   const button = e.target.closest('[data-group]');
   if (button) {
     state.groupId = button.dataset.group;
@@ -2537,7 +2530,7 @@ $('#group-tabs').onclick = (e) => {
   }
 };
 $('#monitor-status-filters').onclick = (event) => {
-  if (overviewInline.active) return toast(t('inlineBusy'));
+  if (overviewEditor.active) return toast(t('inlineBusy'));
   const button = event.target.closest('[data-alert-filter]');
   if (!button) return;
   state.alertFilter = button.dataset.alertFilter;
@@ -2548,22 +2541,21 @@ $('#monitor-status-filters').onclick = (event) => {
 document.addEventListener(
   'click',
   (event) => {
-    if (overviewInline.active && event.target.closest('.personal-order-open')) {
+    if (overviewEditor.active && event.target.closest('.personal-order-open')) {
       event.preventDefault();
       toast(t('inlineBusy'));
     }
   },
   true,
 );
-$('#line-cards').onclick = (e) => {
-  if (overviewInline.handle(e, renderedMonitorLines())) return;
-  if (overviewInline.active) return;
-  // Fullscreen details use the existing dialog instead of making a fixed-height
-  // card taller. Ordinary mode retains inline expansion.
-  const fullDetail =
-    document.body.classList.contains('fullscreen-board') &&
-    e.target.closest('[data-line-expand]');
-  if (!fullDetail && handleMonitorAction(e, monitorContext())) return;
+$('#line-cards').onclick = async (e) => {
+  if (overviewEditor.handle(e, renderedMonitorLines())) return;
+  if (e.target.closest('[data-line-expand]') && !(await overviewEditor.guard())) return;
+  if (overviewEditor.active) return;
+  if (await handleMonitorAction(e, monitorContext())) {
+    renderChart();
+    return;
+  }
   const button = e.target.closest('[data-monitor-line]');
   if (button) {
     if (document.body.classList.contains('fullscreen-board')) {
@@ -2573,7 +2565,6 @@ $('#line-cards').onclick = (e) => {
         line: button.dataset.monitorLine,
         defaults: state.defaults,
       });
-      if (fullDetail) $('#line-detail-dialog .detail-alert-panel details').open = true;
       return;
     }
     state.detailGroupId = state.groupId;
@@ -2592,7 +2583,7 @@ setInterval(() => {
     !$('#login-dialog').open
   ) {
     const paused =
-      overviewInline.active ||
+      overviewEditor.active ||
       personalOrder.busy ||
       document.hidden ||
       !!$('dialog[open]') ||
@@ -2677,7 +2668,7 @@ document.addEventListener('keydown', (e) => {
 });
 window.addEventListener('beforeunload', (e) => {
   if (
-    overviewInline.active ||
+    overviewEditor.active ||
     personalOrder.busy ||
     settingsNeedProtection() ||
     entryController?.hasPendingChanges()
@@ -2821,7 +2812,7 @@ window.addEventListener('resize', () => {
     renderChart();
 });
 $('#board-pagination').onclick = (e) => {
-  if (overviewInline.active) return toast(t('inlineBusy'));
+  if (overviewEditor.active) return toast(t('inlineBusy'));
   const now = Date.now() + state.serverOffset;
   if (e.target.closest('[data-board-rotation]')) {
     monitorPaging.togglePause(now);
@@ -2998,7 +2989,7 @@ $('#site-select').onchange = async (event) => {
       settingsSaving ||
       personalOrder.busy ||
       administration.isBusy() ||
-      !(await overviewInline.guard()) ||
+      !(await overviewEditor.guard()) ||
       !(await entryController?.canLeave())
     )
       return;
@@ -3077,7 +3068,7 @@ $('#login-form').addEventListener('submit', async (event) => {
 $('#logout').onclick = async () => {
   if (personalOrder.busy) return toast(t('orderSaving'));
   if (settingsSaving) return;
-  if (!(await overviewInline.guard()) || !(await entryController?.canLeave()))
+  if (!(await overviewEditor.guard()) || !(await entryController?.canLeave()))
     return toast(t('resolveEntryChanges'));
   const dirty = settingsNeedProtection() || entryController?.hasPendingChanges();
   if (dirty && !(await confirmAction('logoutTitle', 'logoutDesc', 'logout', 'continueEditing')))

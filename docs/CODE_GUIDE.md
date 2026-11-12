@@ -133,12 +133,12 @@ Phase 1 的 schema、API、Migration、權限與部署回復規則集中在 [MUL
 
 `overview-refinement-audit.mjs` 使用獨立日期與真實 API，對比小數值／六位數的圖表位置尺寸、每張卡片各欄座標、22px 數字實測邊界、三語與不同解析度／縮放；另確認顯示設定保存、重設及沒有生產設定寫入。選單圖與大數字圖由此測試產生。
 
-## 個人排序與總覽 Inline Editing
+## 個人排序與總覽多站點編輯
 
-- `personal-lists.mjs`：啟動時以 `CREATE TABLE IF NOT EXISTS` 增加 `user_list_orders`（`user_id + site_id + list_id` 複合主鍵、FK、JSON items、version、updated_at），不改既有業務表。GET `/api/preferences/lists` 回傳目前廠區的實際清單與本人的排序；PUT `/api/preferences/lists/:listId` 以版本更新本人排序。Session 廠區、當下授權與交易重驗沿用 Phase 1。
-- `public/personal-lists.js` 定義清單的穩定身份與實際資料來源；`list-order.js` 只排列畫面副本，`setPersonalOrders` 的狀態由登入／廠區載入，設定更新後重載。沒有偏好時保留來源順序，新增身份附加末尾。`personal-order-ui.js` 負責 Pointer Events、鍵盤按鈕、位移動畫及序列化自動儲存；失敗保留未儲存順序並提供重試／重載。站點流程、時間與歷史資料不套個人排序。
-- `public/overview-inline.js`：草稿固定在目前報表日期／班別／產出站點，只有時段可在狀態旁選擇；同一時段不再於卡片其他位置重複。保存讀取時的 record/config version，避免草稿被刷新或其他使用者的修改覆蓋。沿用 `/api/entry/records/:rowId` 的 `stationEntry:true`，只提交實績與原有純文字 issue，不重建異常資料模型。`writeRecord` 既有版本驗證、RBAC、site_id、updated_by／updated_at 及 audit 保持有效。
-- `dashboard.js` 在原有卡片更新後掛接相同編輯器；安靜刷新不覆蓋草稿。全螢幕依編輯列需要的高度減少頁面容量，保留鄰列，停止自動換頁；退出全螢幕仍沿用原草稿。動畫與版面集中於 `overview-interactions.css`，使用現有主題 tokens，支援 reduced motion。
-- 測試：`tests/personal-lists.test.mjs`、`tests/multi-site.test.mjs`、`scripts/overview-interaction-audit.mjs`；後者已接入完整 browser smoke，使用獨立測試廠區／資料庫。
-
-管理導覽使用原側欄內的 `#management-nav` 原生 details／summary，保留舊路由及權限。`data-active-view` 只追蹤展開狀態，不能使用保留給頁面連結的 `data-view`，以免被共用路由事件當成導覽連結。
+- `personal-lists.mjs`、`public/personal-lists.js`、`list-order.js`、`personal-order-ui.js` 仍以使用者＋廠區＋清單類型保存個人順序，與 CONFIG、站點流程及生產資料分離。
+- `public/overview-inline.js` 沿用既有元件檔，匯出 `createOverviewEditor`；卡片數據保持唯讀，下方表格固定捕獲日期、產線／Model、設定版本，各列保存站點版本。`overviewRows` 依設定流程建立列，`overviewChanges` 只產生已修改欄位。
+- 驗證重用 `entry.js` 的 `parseBulkValue`；寫入重用 PUT `/api/entry/interval`。後端原本的 `planStationInterval`、版本檢查、單一 SQLite 交易及 site/RBAC 驗證保持不變。任何站點衝突均回滾整批。
+- `monitor-ui.js` 的一般展開只呈現已觸發的告警及該單位儲存的異常說明；沒有合成發生時間或重複顯示數據。編輯與查看互斥，全螢幕展開時聚焦目前線體並在區域內捲動，關閉後恢復分頁。
+- `navigation-flyouts.js` 使用原生 Popover top layer，讓懸浮子選單離開側欄捲動裁切；宣告式 `popovertarget` 保留原生點擊關聯，Hover／Focus／鍵盤／觸控共用同一批既有路由連結。只有連結使用 `data-view`，分類使用 `data-nav-group`。
+- 工具列只保留一組日期、班別及時段／每日控制；唯一匯出按鈕依畫面搬至總覽第二排或其他報表工具列，避免重複 State／ID／事件。
+- 測試：`tests/overview-editor.test.mjs`、既有原子批次／隔離測試、`scripts/overview-interaction-audit.mjs`，均接入原有檢查命令。新增 UI 沒有依賴套件或資料庫欄位。

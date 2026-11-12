@@ -3,7 +3,11 @@ import { cancelMonitorPageMotion } from './monitor-carousel.js';
  * their existing modules; temporary expansion/filter state never enters CONFIG. */
 import { localeTags } from './i18n.js';
 import { alertConfig } from './alerts.js';
-import { productionIdentityMarkup, productionLabel } from './production-models.js';
+import {
+  productionIdentityMarkup,
+  productionLabel,
+  sameProduction,
+} from './production-models.js';
 import { schedulesForLine } from './production-schedules.js';
 import { productionWindows } from './monitor.js';
 import {
@@ -14,6 +18,9 @@ import {
   updateAlertList,
 } from './alert-display.js';
 const expanded = new Set();
+export const closeMonitorAlerts = () => expanded.clear();
+export const expandedMonitorKey = (date) =>
+  [...expanded].find((key) => key.startsWith(date))?.slice(date.length);
 const filterLabels = new WeakMap();
 let rendered = new Map();
 export const severityFilters = ['all', 'red', 'yellow', 'green', 'noData', 'disabled'];
@@ -159,7 +166,7 @@ export function monitorCard(line, ctx, metrics) {
   const period = slotPresentation(line, ctx),
     reason = reasonView(line, ctx),
     rate = achievementView(line, ctx);
-  const open = !ctx.board && expanded.has(ctx.date + key);
+  const open = expanded.has(ctx.date + key);
   return `<article class="line-card alarm-${line.status}${line.blink ? ' blinking-frame' : ''}${open ? ' is-expanded' : ''}" data-monitor-line="${esc(key)}" role="group" aria-label="${esc(productionLabel(line))}">
     <span class="line-card-top"><button type="button" class="line-identity-open" title="${esc(t('details'))}">${productionIdentityMarkup(line, esc)}</button><span class="line-source">${esc(t('sourceLabel', { name: line.sourceLabel === 'all' ? t('allStations') : line.sourceLabel || t('noSource') }))}</span></span>
     <span class="line-health"><span class="line-severity"><span class="signal-lamp lamp-${line.status}" role="img" aria-label="${esc(t('alertState_' + line.unified.severity))}"></span><span class="severity-badge severity-${line.unified.severity}">${esc(t('alertState_' + line.unified.severity))}</span></span><span class="production-state state-${period.state}">${esc(t(period.state === 'completed' ? 'slotCompleted' : period.state))}</span><small class="health-period">${esc(range(period.slot))}</small></span>
@@ -167,8 +174,8 @@ export function monitorCard(line, ctx, metrics) {
     <span class="line-trend"></span>
 
     <div class="line-card-status"><span class="${['red', 'yellow'].includes(line.unified.severity) ? 'alert-text' : ''}" data-card-reason title="${esc(reason.full)}">${esc(reason.text)}</span><div class="reason-controls" ${reason.count > 1 ? '' : 'hidden'}><button type="button" class="reason-step" data-reason-step="-1" aria-label="${esc(t('previous'))}">${icon('left')}</button><output data-reason-count aria-label="${esc(t('alertReasons'))}">${reason.index} / ${reason.count}</output><button type="button" class="reason-step" data-reason-step="1" aria-label="${esc(t('next'))}">${icon('right')}</button></div></div>
-    <button type="button" class="card-reason-toggle icon-button" data-line-expand aria-expanded="${open}" aria-label="${esc(t('alertDetails'))}" title="${esc(t('alertDetails'))}">${icon('down')}</button>
-    <section class="card-expanded-details" ${open ? '' : 'hidden'}><div class="expanded-slot-info"><strong>${esc(productionLabel(line))}</strong><p data-expanded-source></p><dl data-expanded-metrics></dl></div><div><strong>${esc(t('alertDetails'))}</strong><ul data-card-alert-list></ul></div><button type="button" class="button card-open-detail">${esc(t('openProductionDetails'))}${icon('right')}</button></section>
+    <div class="line-card-actions"><button type="button" class="card-reason-toggle icon-button" data-line-expand aria-expanded="${open}" aria-label="${esc(t('alertDetails'))}" title="${esc(t('alertDetails'))}">${icon('down')}</button></div>
+    <section class="card-expanded-details row-expansion" ${open ? '' : 'hidden'}><strong>${esc(t('alertDetails'))}</strong><ul data-card-alert-list></ul><div data-card-issues></div></section>
   </article>`;
 }
 export function updateMonitorCard(card, line, ctx) {
@@ -176,7 +183,7 @@ export function updateMonitorCard(card, line, ctx) {
   const period = slotPresentation(line, ctx),
     reason = reasonView(line, ctx),
     rate = achievementView(line, ctx);
-  const open = !ctx.board && expanded.has(ctx.date + (line.key || line.line));
+  const open = expanded.has(ctx.date + (line.key || line.line));
   const classes =
     'line-card alarm-' +
     line.status +
@@ -207,23 +214,41 @@ export function updateMonitorCard(card, line, ctx) {
   label.className = ['red', 'yellow'].includes(line.unified.severity) ? 'alert-text' : '';
   card.querySelector('.reason-controls').hidden = reason.count < 2;
   card.querySelector('[data-reason-count]').textContent = reason.index + ' / ' + reason.count;
+  card.querySelector('.card-expanded-details').hidden = !open;
+  card.querySelector('[data-line-expand]').setAttribute('aria-expanded', String(open));
   if (open) {
-    card.querySelector('[data-expanded-source]').textContent =
-      card.querySelector('.line-source').textContent;
-    const fields =
-      ctx.metricScope === 'day'
-        ? ['dailyTarget', 'dailyActual', 'dailyGap']
-        : ['currentTarget', 'currentActual', 'currentGap'];
-    card.querySelector('[data-expanded-metrics]').innerHTML =
-      fields
-        .map(
-          (key) => `<dt>${ctx.esc(ctx.t(key))}</dt><dd>${ctx.esc(ctx.number(line[key]))}</dd>`,
-        )
-        .join('') + `<dt>${ctx.esc(t('achievementRate'))}</dt><dd>${ctx.esc(rate.full)}</dd>`;
+    const reasons = line.unified.reasons || [];
+    updateAlertList(
+      card.querySelector('[data-card-alert-list]'),
+      { ...line.unified, results: reasons },
+      t,
+    );
+    const rows = new Map(ctx.config.rows.map((row) => [row.id, row]));
+    const notes = (ctx.records || []).flatMap((record) => {
+      const row = record.rowSnapshot || rows.get(record.rowId);
+      if (!row || !sameProduction(row, line)) return [];
+      return (record.slots || [])
+        .filter((slot) => slot.issue)
+        .map((slot) => ({ row, record, slot }));
+    });
+    const details = card.querySelector('[data-card-issues]');
+    const content = JSON.stringify([notes, reasons.length, t('noCurrentAlerts')]);
+    if (details.dataset.content !== content) {
+      details.dataset.content = content;
+      details.innerHTML =
+        notes
+          .map(
+            ({ row, record, slot }) =>
+              `<div class="reported-issue"><strong>${ctx.esc([row.job, row.station].filter(Boolean).join(' / '))}</strong><span>${ctx.esc(slot.start + '–' + slot.end)}</span><p>${ctx.esc(slot.issue)}</p>${record.updatedAt ? `<small>${ctx.esc(new Intl.DateTimeFormat(localeTags[ctx.language], { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }).format(new Date(record.updatedAt)))}${record.updatedBy ? ' · ' + ctx.esc(record.updatedBy) : ''}</small>` : ''}</div>`,
+          )
+          .join('') ||
+        (reasons.length
+          ? ''
+          : `<p class="no-current-alerts">${ctx.esc(t('noCurrentAlerts'))}</p>`);
+    }
   }
-  if (open) updateAlertList(card.querySelector('[data-card-alert-list]'), line.unified, t);
 }
-export function handleMonitorAction(event, ctx) {
+export async function handleMonitorAction(event, ctx) {
   const card = event.target.closest('.line-card');
   const line = card && rendered.get(card.dataset.monitorLine);
   if (!line) return false;
@@ -235,17 +260,36 @@ export function handleMonitorAction(event, ctx) {
     return true;
   }
   const toggle = event.target.closest('[data-line-expand]');
-  if (!toggle) return false;
+  if (!toggle) return !!event.target.closest('.card-expanded-details');
   cancelMonitorPageMotion(card.parentElement);
   event.preventDefault();
   const id = ctx.date + (line.key || line.line),
     open = !expanded.has(id);
-  if (open) expanded.add(id);
-  else expanded.delete(id);
+  if (!open) {
+    const panel = card.querySelector('.card-expanded-details');
+    if (panel.dataset.closing) return true;
+    panel.dataset.closing = 'true';
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
+      await panel
+        .animate(
+          [
+            { height: panel.offsetHeight + 'px', opacity: 1 },
+            { height: '0px', opacity: 0 },
+          ],
+          { duration: 180, easing: 'ease-out' },
+        )
+        .finished.catch(() => {});
+    delete panel.dataset.closing;
+    expanded.delete(id);
+  } else {
+    expanded.clear();
+    expanded.add(id);
+  }
   card.querySelector('.card-expanded-details').hidden = !open;
   toggle.setAttribute('aria-expanded', String(open));
   updateMonitorCard(card, line, ctx);
-  if (open) card.querySelector('.card-expanded-details').scrollIntoView({ block: 'nearest' });
+  if (open && !ctx.board)
+    card.querySelector('.card-expanded-details').scrollIntoView({ block: 'nearest' });
   return true;
 }
 export function updateStatusFilters(element, lines, ctx) {

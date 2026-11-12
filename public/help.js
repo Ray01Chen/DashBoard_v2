@@ -87,8 +87,8 @@ const guides = {
       {
         title: 'Overview, details and full-screen board',
         paragraphs: [
-          'The left sidebar groups Production, Review & analysis, and Settings & help. Collapse it to icons; desktop collapse is remembered. Small screens and fullscreen use a temporary drawer. Both views order scope filters, group totals, alert filters, line cards and charts consistently. Desktop cards keep identity, signal/status, four metrics, trend, current/next slot and a short alert reason on one horizontal row. Long models use ellipsis and a full tooltip; open details for the complete identity. All cards share column positions and trend sizes. Tabular numbers remain complete when they fit, otherwise use compact text with exact values on hover and in details. Intermediate widths switch every metric grid to two rows without shrinking fonts or charts. Ordinary mode keeps inline expansion; the fullscreen arrow opens the existing details dialog without making a card taller.',
-          'Overview defaults to Whole day. Use Interval / Daily beside the title or in the fullscreen header; your choice persists after refresh. Interval shows the active target, actual and gap. Daily shows the complete two-shift target, reported actual and gap, regardless of the shift filter. Missing values stay —. Large per-line curves adapt to their containers. Alerts and output share retain their cumulative rules. Whole day / Day / Night is available above both Overview and Production details. Each line/model uses its selected output station; group totals never double-count every station.',
+          'The sidebar has five consistent categories: Production, Review & analysis, Settings, Management and Help. Hover, focus or click a category to open its links in a right-side floating menu. Menus never push other items or clip inside the sidebar. Only authorized links appear. The active category and current page are highlighted.',
+          'Overview defaults to Whole day. Row one contains date, Today, Whole day / Day / Night and Interval / Daily. Row two contains line/group filters on the left and List order, Export report and Fullscreen on the right. Group totals and alert-status controls follow below. Daily metrics use both shifts; each line/model uses its configured output source, so station counts are not double-counted.',
           'Normal line clicks open details. Full screen clicks open a station-detail dialog; X or Esc returns to the same group/page. Its header follows the active colour theme and keeps line, model, owner and the six interval/daily/cumulative metrics together. Each station labels Day and Night personnel separately.',
           'The group trend scrolls horizontally for dense schedules; hover or Tab for values. Display options saves visible groups, alert summary, filters, title, carousel controls and trend/share charts in this browser. Hidden filters remain applied; configured rotation continues when controls are hidden. Cards reclaim the space. Settings and Exit fullscreen remain available. Restore display defaults resets these choices; ordinary mode is unaffected. Ordinary pages show at most seven units. Fullscreen fits up to seven complete readable rows in the available height and reduces page size on shorter screens or with optional charts; the page never scrolls vertically. Current rows evenly share the remaining height; fonts stay unchanged and trends have a height cap. Previous/next and page counts retain line order. Alerts & refresh sets rotation seconds (12 by default; 0 disables). Pause pages / Resume pages controls rotation locally. Manual navigation and resume restart a full interval. Dialogs, drawers, expanded cards, focus inside a card and hidden tabs pause rotation temporarily. Filters recalculate pages; switching pages retains dashboard/chart/filter nodes. Navigation uses a 600ms slide/fade (next left, previous right). Reduced motion switches directly; data refresh never replays navigation. Saved custom intervals are retained.',
         ],
@@ -107,7 +107,7 @@ const guides = {
         title: 'Accounts, language and data',
         paragraphs: [
           'Open List order in the header (or fullscreen controls). Choose a list and drag its handle or use the arrow buttons. The order saves automatically to your account and current site, survives login, and new items appear last. Other users, CONFIG station sequence and chronological slots are unchanged. If saving fails, retry or reload; do not leave before Order saved.',
-          'To edit output on Production Overview, hover a line and choose Edit on the left (always visible on touch). The date, shift and output station follow the displayed report. Select the time slot beside the status; it appears only once. Enter Slot actual and issue quick text / notes, then Save or Cancel. Only that station and slot change; blank Actual is unreported, zero is valid. Fullscreen uses the same draft and pauses page rotation. A conflict or network error keeps your input; cancel and reopen to load the latest revision.',
+          'Choose Edit on a line to open a separate table underneath its unchanged read-only card. Pick a time slot, then independently edit Target, Actual and Issue for every enabled output-producing station. Date, line, model, shift scope and site come from the report. Slot changes ask before discarding input. Save submits only changed fields in one version-checked transaction and closes on success; Cancel writes nothing. Errors retain input. The right arrow opens full alerts and reported issues only; no alerts shows No current alerts. The two expansion modes are mutually exclusive.',
           'Managers configure shared presets and assignments. Members enter each station’s targets/actuals and issue notes, import and review reports; shared Settings are unavailable to members.',
           'Use the language control for English, Chinese or Thai and the theme control for your preferred colour. These browser preferences do not change another user’s view.',
           'Line/model headings omit the Model prefix. A name is split at its first hyphen: ECD16010094 appears on the first model line and (ORV3-PSU-3KW-AutoLine) on the second. Names without a hyphen use one line. The stored name and Excel identifiers are unchanged.',
@@ -202,8 +202,8 @@ const guides = {
       {
         title: '總覽、細節與全螢幕看板',
         paragraphs: [
-          '左側導覽依生產、查詢與分析、設定與說明分組，可收合成圖示並保留桌面選擇；手機及全螢幕使用暫時側欄。一般與全螢幕都依篩選、分組總覽、告警、產線卡片及圖表排列。桌面卡片以單列橫向呈現機種、燈號與狀態、四項數值、曲線、目前／下一時段及告警短摘要。長機種省略顯示，停留或開明細可看完整名稱；各卡片欄位與曲線位置一致。數字使用等寬數字，有空間就顯示完整值，不足才改短格式，停留及明細保留精確值；中等寬度一起改成兩列數值，不縮字或擠壓曲線。一般模式可展開卡片；全螢幕按箭頭開明細視窗，卡片不增高。',
-          '總覽預設「全天」。標題旁或全螢幕頂部可切「時段／每日」，重新整理保留選擇；時段顯示目前目標、實績、差額，每日顯示雙班完整目標、已填實績及差額，不受早晚班篩選影響。各產線大曲線隨容器調整；缺值顯示 —，警示與占比維持累計規則。生產總覽與生產細節上方都可切換全天／早班／晚班。每組產線／Model 仍只使用所選來源站，避免重複計產量。',
+          '左側統一為生產作業、查詢分析、設定、管理、說明五個分類。滑入、鍵盤聚焦或點擊分類，可在右側懸浮選單選擇功能，不會推動下方項目或被側欄裁切。只顯示有權限的功能，並標示目前分類與頁面；手機可點擊操作。',
+          '總覽預設「全天」。第一排依序放日期、今天、全天／早班／晚班，右側切換時段／每日；第二排左側選產線／樓層，右側放清單排序、匯出報表、全螢幕。下方維持分組總覽及告警狀態列。每日數據仍計算雙班，每組產線／Model 只取設定的產量來源站，避免各站重複計量。',
           '全螢幕明細頂部沿用目前主題配色，集中產線、機種、負責人及六項時段／全日／累計數字；各站人員分早班、晚班標示。X 或 Esc 關閉後保留分組與頁次。',
           '密集時段可在分組趨勢圖內左右捲動，停留或 Tab 查看數值；顯示選項可勾選分組總覽、告警摘要、篩選列、頁面標題、輪播控制及趨勢／占比，立即保存於目前瀏覽器。隱藏的篩選仍生效，自動換頁仍依原設定運作；卡片使用騰出的高度。顯示選項與離開全螢幕始終保留，可按還原顯示預設還原，一般模式不受影響。一般每頁最多七組，全螢幕依實際可用高度顯示最多七組，螢幕較矮或開啟額外圖表時自動減少，當頁卡片均分剩餘高度，字體維持不變、曲線有上限，整頁不需垂直捲動。上一頁／下一頁及頁數保留產線排序。管理員在「警示與刷新」設自動切換秒數（預設 12，0 停用）並儲存；使用「暫停換頁／恢復換頁」控制目前瀏覽器的輪播。手動換頁及恢復後重新等待完整間隔；彈窗、側欄、一般模式展開卡片、卡片內焦點或背景分頁會暫停。篩選後重算頁數，換頁不重建分組、篩選及其他圖表；向左／向右滑動淡入淡出約 600ms，減少動態效果時直接切換，刷新不重播動畫。已存自訂間隔會保留。',
         ],
@@ -222,7 +222,7 @@ const guides = {
         title: '帳號、語言及資料保存',
         paragraphs: [
           '在頁首或全螢幕控制列開啟「清單排序」，選擇清單後拖曳把手，或使用上下按鈕。順序自動存入你的帳號與目前廠區，重新登入仍保留；新增項目排最後，不影響其他人。站點配置與時段先後仍依業務設定。若儲存失敗可重試或重新載入，看到「順序已儲存」後再離開。',
-          '生產總覽可直接編輯：滑入線體後點左側「編輯」（觸控會常駐顯示），日期、班別與產出站點沿用畫面資料，只在狀態旁選一次時段，再改實績、異常快捷文字／說明，按儲存或取消。只改該站該時段；實績空白是未回報，0 是有效回報。全螢幕沿用相同草稿，編輯時暫停換頁。版本衝突或連線失敗會保留輸入；可取消後重新開啟取得最新資料。',
+          '生產總覽按「編輯」，會在保持唯讀的卡片下方開啟多站點表格。只需選時段，再分別填各啟用產出站的目標、實績與異常；日期、產線、機種、班別範圍及廠區沿用報表。切換時段會提示尚未儲存的修改。儲存以單一交易提交改過的欄位，成功後收合；取消不寫入。失敗保留輸入。右側箭頭只展開完整告警及已填異常，沒有警報就顯示目前無警報；兩種模式不會同時展開。',
           'manager 管理共用預設及人員配置；member 可填每站當日目標／實績及異常、匯入與查詢，但不能修改共享 Settings。',
           '右上角可選英文、中文、泰文及配色。個人瀏覽器的偏好不會改變其他使用者的畫面。',
           '產線標題不再加 Model 字樣。型號以第一個 - 分成兩行，例如第一行 ECD16010094，第二行 (ORV3-PSU-3KW-AutoLine)；沒有 - 就顯示一行。只是顯示格式，保存名稱與 Excel 識別不變。',
@@ -319,7 +319,7 @@ const guides = {
         title: 'ภาพรวม รายละเอียด และกระดานเต็มหน้าจอ',
         paragraphs: [
           'ทุกการ์ดใช้ตำแหน่งคอลัมน์และขนาดกราฟเดียวกัน ตัวเลขใช้ความกว้างเท่ากัน แสดงค่าเต็มเมื่อพอดี หากไม่พอใช้รูปย่อและอ่านค่าเต็มได้เมื่อชี้หรือเปิดรายละเอียด จอขนาดกลางเปลี่ยนทุกการ์ดเป็นค่าตัวเลขสองแถว ไม่ลดตัวอักษรหรือขนาดกราฟ',
-          'แถบซ้ายจัดกลุ่มการผลิต การวิเคราะห์ การตั้งค่าและคู่มือ ย่อเป็นไอคอนและจดจำสถานะบนเดสก์ท็อป จอเล็กและเต็มจอใช้แถบชั่วคราว ทั้งสองโหมดเรียงตัวกรอง สรุปกลุ่ม แจ้งเตือน การ์ดและกราฟ การ์ดเดสก์ท็อปแถวเดียวแสดงรุ่น สัญญาณ/สถานะ ตัวเลขสี่ค่า กราฟ ช่วงปัจจุบัน/ถัดไปและเหตุผลย่อ รุ่นยาวย่อด้วยจุด ชี้เมาส์หรือเปิดรายละเอียดเพื่ออ่านครบ ตัวเลขใหญ่ใช้รูปย่อและดูค่าเต็มได้ ปกติขยายในหน้า เต็มจอเปิดหน้าต่างรายละเอียดโดยไม่เพิ่มความสูงการ์ด',
+          'แถบซ้ายมีห้าหมวด: การผลิต การวิเคราะห์ การตั้งค่า การจัดการ และช่วยเหลือ ชี้เมาส์ โฟกัส หรือแตะหมวดเพื่อเปิดเมนูลอยด้านขวา ไม่ดันรายการอื่น แสดงเฉพาะสิทธิ์ที่ได้รับและเน้นหน้าปัจจุบัน',
           'ภาพรวมเริ่มต้นที่ทั้งวัน สลับช่วงเวลา/รายวันข้างชื่อหน้าหรือด้านบนเต็มจอ จำตัวเลือกหลังรีเฟรช ช่วงเวลาแสดงเป้า ผลจริงและผลต่างปัจจุบัน รายวันแสดงเป้าเต็มวัน ผลจริงและผลต่างรวมสองกะโดยไม่ขึ้นกับตัวกรองกะ กราฟแต่ละสายขยายตามพื้นที่ ไม่มีข้อมูลแสดง — การแจ้งเตือนและสัดส่วนยังใช้ข้อมูลสะสม ทั้งหน้าภาพรวมและรายละเอียดเลือกทั้งวัน/กะเช้า/กะกลางคืนได้ แต่ละสาย/Model ยังใช้สถานีแหล่งผลผลิตเดียวเพื่อไม่ให้นับซ้ำ',
           'หน้าต่างเต็มหน้าจอใช้สีตามธีมและรวมสาย Model ผู้รับผิดชอบ และหกค่าของช่วงปัจจุบัน รายวัน และสะสมไว้ด้านบน การ์ดแต่ละสถานีแยกบุคลากรกะเช้าและกะกลางคืน X หรือ Esc กลับกลุ่ม/หน้าเดิม',
           'กราฟรวมเลื่อนแนวนอนได้ ชี้เมาส์หรือ Tab ดูค่า ตัวเลือกการแสดงผลบันทึกการเปิด/ปิดสรุปกลุ่ม สรุปเตือน ตัวกรอง หัวหน้า ตัวควบคุมเปลี่ยนหน้าและกราฟไว้ในเบราว์เซอร์ ตัวกรองและการเปลี่ยนหน้าอัตโนมัติยังทำงานแม้ซ่อนส่วนควบคุม การ์ดใช้ความสูงที่คืนมา ปุ่มตั้งค่าและออกจากเต็มจอยังคงอยู่ คืนค่าเริ่มต้นได้และไม่กระทบโหมดปกติ ปกติไม่เกินเจ็ดคู่ต่อหน้า เต็มจอคำนวณจากความสูงจริง สูงพอแสดงเจ็ด จอเตี้ยหรือเปิดกราฟเพิ่มจะลดจำนวนโดยไม่เลื่อนทั้งหน้า การ์ดแบ่งความสูงที่เหลือเท่ากัน ไม่เพิ่มขนาดตัวอักษรและจำกัดความสูงกราฟ ปุ่มก่อน/ถัดไปและเลขหน้ารักษาลำดับ ตั้งวินาทีเปลี่ยนหน้าในแจ้งเตือนและรีเฟรช ค่าเริ่มต้น 12, 0 ปิด ปุ่มหยุด/เปลี่ยนหน้าต่อใช้เฉพาะเบราว์เซอร์นี้ เปลี่ยนหน้าด้วยมือหรือทำต่อเริ่มรอเต็มช่วงใหม่ หยุดชั่วคราวเมื่อเปิดหน้าต่าง แถบข้าง ขยายการ์ด โฟกัสในการ์ดหรือซ่อนแท็บ ตัวกรองคำนวณหน้าใหม่ เปลี่ยนหน้าไม่สร้างกระดาน กราฟหรือตัวกรองใหม่ เลื่อนพร้อมจาง 600ms ถัดไปเลื่อนซ้าย ย้อนกลับเลื่อนขวา ลดการเคลื่อนไหวจะเปลี่ยนทันที รีเฟรชไม่เล่นซ้ำ ค่าช่วงเวลาที่บันทึกแล้วคงเดิม',
@@ -339,7 +339,7 @@ const guides = {
         title: 'บัญชี ภาษา และการเก็บข้อมูล',
         paragraphs: [
           'เปิดลำดับรายการที่ส่วนหัวหรือแถบเต็มจอ เลือกรายการแล้วลากที่จับหรือใช้ลูกศร บันทึกอัตโนมัติเฉพาะบัญชีและโรงงานปัจจุบัน เข้าสู่ระบบใหม่ยังคงลำดับ รายการใหม่อยู่ท้าย ไม่กระทบผู้อื่น ลำดับสถานีและช่วงเวลายังเป็นไปตามการตั้งค่า หากบันทึกล้มเหลวให้ลองใหม่หรือโหลดใหม่',
-          'แก้ไขยอดจริงจากภาพรวมได้โดยชี้ที่สายแล้วกดแก้ไขด้านซ้าย (จอสัมผัสแสดงเสมอ) ใช้วันที่ กะ และสถานีจากรายงาน เลือกช่วงเวลาเพียงครั้งเดียวข้างสถานะ กรอกยอดจริงและปัญหา แล้วบันทึกหรือยกเลิก เปลี่ยนเฉพาะสถานีและช่วงเวลาที่เลือก ช่องว่างคือยังไม่รายงาน 0 คือรายงานแล้ว เต็มจอใช้ร่างเดิมและหยุดสลับหน้า หากข้อมูลขัดแย้งหรือเครือข่ายล้มเหลวจะเก็บข้อความไว้ ยกเลิกแล้วเปิดใหม่เพื่อโหลดรุ่นล่าสุด',
+          'กดแก้ไขเพื่อเปิดตารางหลายสถานีใต้การ์ดเดิมที่ยังอ่านได้ เลือกช่วงเวลาแล้วแก้ Target, Actual และปัญหาแยกแต่ละสถานี วันที่ สาย รุ่น และโรงงานใช้จากรายงาน เปลี่ยนช่วงเวลาต้องยืนยันก่อนทิ้งร่าง บันทึกเฉพาะช่องที่แก้ในธุรกรรมเดียว สำเร็จแล้วปิดตาราง ยกเลิกไม่เขียนข้อมูล เมื่อผิดพลาดเก็บร่างไว้ ลูกศรด้านขวาแสดงเฉพาะการแจ้งเตือนและปัญหาที่บันทึก ไม่มีการแจ้งเตือนจะแจ้งให้ทราบ สองโหมดไม่เปิดพร้อมกัน',
           'ผู้จัดการแก้ค่าเริ่มต้น การมอบหมายและลำดับสถานี ผู้บันทึกแก้ Target, Actual และปัญหารายสถานี ใช้กรอกทั้งสายตามช่วงและนำเข้าได้ แต่แก้ Settings ร่วมไม่ได้',
           'ส่วนหัวมีภาษาอังกฤษ จีน และไทย รวมถึงสีธีม ความชอบของเบราว์เซอร์หนึ่งไม่เปลี่ยนหน้าจอของผู้อื่น',
           'ชื่อผลิตภัณฑ์ไม่แสดงคำนำหน้า Model แบ่งที่ขีดแรก บรรทัดแรกเป็นรหัส บรรทัดที่สองเป็นข้อความส่วนที่เหลือในวงเล็บ ชื่อที่ไม่มีขีดใช้บรรทัดเดียว รหัสที่บันทึกและใน Excel ไม่เปลี่ยน',
@@ -416,7 +416,7 @@ const exampleLabels = {
       'fullscreen-display-options':
         'Choose visible fullscreen sections and restore display defaults',
       'seven-line-board': 'Compact fullscreen cards, adaptive paging and Interval/Daily switch',
-      'overview-inline-edit': 'Edit Actual and issue directly in the production row',
+      'overview-inline-edit': 'Expand the per-station Target, Actual and issue table',
       'group-trend-dense': 'Dense whole-day trend: scroll horizontally to view every interval',
     },
   },
@@ -447,14 +447,14 @@ const exampleLabels = {
       'shared-grid-numbers': '共用欄位與六位數，曲線保持對齊及大小',
       'fullscreen-display-options': '勾選全螢幕顯示區塊與恢復預設',
       'seven-line-board': '緊湊全螢幕卡片、自動分頁與時段／每日切換',
-      'overview-inline-edit': '在線體內編輯實績與異常',
+      'overview-inline-edit': '向下展開各站目標、實績與異常表格',
       'group-trend-dense': '全天多時段趨勢：左右捲動查看所有時段',
     },
   },
   th: {
     note: 'ขยายหัวข้อการทำงานเพื่อดูภาพ ตัวอย่างใช้เมนู English และข้อมูล DEMO ตำแหน่งปุ่มเหมือน Chinese/Thai คลิกภาพเพื่อดูขนาดเต็ม',
     captions: {
-      'overview-inline-edit': 'แก้ไขยอดจริงและปัญหาในแถวการผลิต',
+      'overview-inline-edit': 'ขยายตารางเป้าหมาย ยอดจริง และปัญหารายสถานี',
       'schedule-timeline': 'ไทม์ไลน์ทั้งวันและตัวอย่างเป้าหมายรุ่น',
       'unified-alerts': 'เปิดกฎเตือนและปรับเกณฑ์',
       'setup-order': 'ลำดับตั้งค่า',

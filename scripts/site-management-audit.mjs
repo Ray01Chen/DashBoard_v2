@@ -1,3 +1,4 @@
+import { navigateView } from './navigation-audit.mjs';
 /** Exercise real login cookies, administration forms and site-scoped APIs in the
  * disposable smoke database. No production data or browser storage is seeded. */
 import assert from 'node:assert/strict';
@@ -111,14 +112,14 @@ export async function auditSiteManagement({
             `${language}/${theme}/${width}`,
           );
           if (width === 390) await page.locator('#toggle-navigation').click();
-          await page.locator('[data-view="sites"]').click();
+          await navigateView(page, 'sites');
           await page.locator('[data-access-form="site"]').waitFor();
           assert.equal(
             await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
             false,
           );
           if (width === 390) await page.locator('#toggle-navigation').click();
-          await page.locator('[data-view="users"]').click();
+          await navigateView(page, 'users');
           await page.locator('[data-access-form="membership"]').waitFor();
         }
       }
@@ -230,9 +231,9 @@ export async function auditSiteManagement({
     assert.equal(cookie.httpOnly, true);
     assert.equal(cookie.sameSite, 'Strict');
     await switchSite(report, 1);
-    await report.locator('#management-nav > summary').click();
+    await report.locator('[data-nav-trigger="management"]').click();
     assert.equal(await report.locator('[data-view="users"]').isVisible(), true);
-    assert.equal(await report.locator('[data-view="settings"]').isVisible(), true);
+    assert.equal(await report.locator('[data-nav-trigger="settings"]').isVisible(), true);
     assert.equal(await report.locator('[data-view="sites"]').isVisible(), false);
     assert.equal(await report.locator('#current-site-name').innerText(), siteA.site_name);
     const detail = await json(await user.request.get(baseURL + '/api/config'));

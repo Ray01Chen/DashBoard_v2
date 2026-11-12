@@ -2,6 +2,17 @@
  * Deliberately unsorted catalogs catch accidental edits by display index. */
 import assert from 'node:assert/strict';
 
+export async function navigateView(page, view) {
+  if ((await page.locator('#sidebar').getAttribute('aria-hidden')) === 'true')
+    await page.locator('#toggle-navigation').click();
+  const link = page.locator(`[data-view="${view}"]`);
+  const group = await link.evaluate(
+    (node) => node.closest('[data-nav-group]').dataset.navGroup,
+  );
+  if (!(await link.isVisible())) await page.locator(`[data-nav-trigger="${group}"]`).click();
+  await link.click();
+}
+
 export async function auditNavigation({
   browser,
   context,
@@ -202,7 +213,7 @@ export async function auditNavigation({
     'Source line/model/job/station/person ordering refreshes without alphabetic overrides after add, rename and delete; original indexes, configured station sequence and saved array order remain intact',
   );
 
-  await page.locator('[data-view="overview"]').click();
+  await navigateView(page, 'overview');
   await page.waitForFunction(() => location.pathname === '/overview');
   assert.equal(await page.title(), 'BP9 · Production Overview');
   await page.locator('#collapse-sidebar').click();
@@ -225,7 +236,7 @@ export async function auditNavigation({
   await page.locator('#navigation-scrim').click({ position: { x: 380, y: 300 } });
   assert.equal(await page.locator('#sidebar').getAttribute('aria-hidden'), 'true');
   await page.locator('#toggle-navigation').click();
-  await page.locator('[data-view="details"]').click();
+  await navigateView(page, 'details');
   await page.waitForFunction(
     () => location.pathname === '/details' && document.querySelector('#sidebar').inert,
   );

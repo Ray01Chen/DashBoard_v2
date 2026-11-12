@@ -298,7 +298,7 @@ export async function auditCompactBoard({
   for (const theme of themes) {
     await page.locator('#theme-select').selectOption(theme);
     for (const scope of ['interval', 'day']) {
-      await page.locator(`.line-dashboard-heading [data-metric-scope="${scope}"]`).click();
+      await page.locator(`#metric-scope-controls [data-metric-scope="${scope}"]`).click();
       await page.locator('#enter-fullscreen').click();
       await page.locator('[data-group=""]').click();
       await ready();
@@ -397,16 +397,19 @@ export async function auditCompactBoard({
   assert.equal(plot.matches, true);
   assert.equal(plot.labelsFit, true);
   await page.locator('#line-cards .line-card').first().locator('[data-line-expand]').click();
-  assert.equal(await page.locator('#line-detail-dialog').isVisible(), true);
   assert.equal(
-    await page.locator('#line-detail-dialog [data-detail-alert-list]').isVisible(),
+    await page.locator('#line-cards .card-expanded-details:not([hidden])').isVisible(),
     true,
   );
+  assert.equal(await page.locator('#line-detail-dialog').isVisible(), false);
   assert.equal(
     await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight),
     true,
   );
-  await page.locator('[data-close-line-dialog]').click();
+  await page.locator('#line-cards .line-card').first().locator('[data-line-expand]').click();
+  await page
+    .locator('#line-cards .card-expanded-details:not([hidden])')
+    .waitFor({ state: 'hidden' });
   record(
     'All five themes retain compact cards; auto/manual paging, explicit pause/resume, full manual dwell, stable dashboard nodes, filters, live refresh, optional charts and fullscreen alert details work without page scrolling',
   );

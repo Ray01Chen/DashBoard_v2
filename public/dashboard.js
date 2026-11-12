@@ -177,10 +177,11 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
     ctx.now,
     ctx.boardSize,
   );
-  // Reserve extra room for the edited row, and retain its neighbors whenever
-  // height permits. Its page follows the same stable line order, never a modal.
-  const editingIndex = ctx.inline?.active
-    ? lines.findIndex((line) => (line.key || line.line) === ctx.inline.key)
+  // Keep the expanded unit on its page. Fullscreen dedicates the remaining
+  // height to that unit; closing restores its page in the usual line order.
+  const focusKey = ctx.expansionKey || ctx.focusKey;
+  const editingIndex = focusKey
+    ? lines.findIndex((line) => (line.key || line.line) === focusKey)
     : -1;
   const page = boardPage(
       lines,
@@ -190,6 +191,7 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
       ctx.boardSize,
     ),
     cardLines = page.lines;
+  if (editingIndex >= 0 && ctx.paging) ctx.paging.page = page.page;
   const viewKey = JSON.stringify([
     cardLines.map((line) => line.key || line.line),
     date,
@@ -233,7 +235,7 @@ export function renderMonitoring(ctx, { chart = true } = {}) {
     updateOverviewMetrics(cards.children[index], line, ctx);
     updateMonitorCard(cards.children[index], line, ctx);
   }
-  ctx.inline?.sync();
+  ctx.editor?.sync();
   fitMonitorNumbers(cards, ctx);
   // Batch text writes before measuring plots; hidden dashboards need no plot work.
   for (const [index, line] of cardLines.entries()) {

@@ -243,11 +243,6 @@ textarea:focus-visible {
 .workspace > .online-dot {
   margin-left: auto;
 }
-.nav-caption {
-  color: var(--muted);
-  font-size: 10px;
-  margin: 0 10px 11px;
-}
 nav {
   display: grid;
   gap: 7px;
@@ -1529,7 +1524,6 @@ dialog::backdrop {
 }
 .sidebar-collapsed .brand-word,
 .sidebar-collapsed .workspace,
-.sidebar-collapsed .nav-caption,
 .sidebar-collapsed .sidebar-bottom,
 .sidebar-collapsed .nav-label {
   display: none;
@@ -1721,7 +1715,6 @@ html[lang='th'] .nav-item {
   }
   .brand-word,
   .workspace,
-  .nav-caption,
   .sidebar-bottom,
   .nav-label {
     display: none;

@@ -1,3 +1,4 @@
+import { navigateView } from './navigation-audit.mjs';
 /** Regression scene for the reported CD303 threshold and shared pagination.
  * All settings/reports are written through the real API in the disposable DB. */
 import assert from 'node:assert/strict';
@@ -95,7 +96,7 @@ export async function auditLayoutRefinement({
   const saved = await readConfig();
   assert.equal(saved.monitoring.unified.reporting.redAfterMinutes, 45);
   assert.equal(Object.hasOwn(saved.monitoring.unified.reporting, 'redMinutes'), false);
-  await page.locator('[data-view="overview"]').click();
+  await navigateView(page, 'overview');
   await page.locator('#report-date').fill(date);
   await page.locator('#report-date').dispatchEvent('change');
   await page.waitForFunction(

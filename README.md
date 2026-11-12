@@ -115,4 +115,4 @@ Linux 可用 `BP_BROWSER_PATH=/usr/bin/chromium npm run test:browser` 指定瀏�
 
 ### 個人清單排序與總覽直接編輯
 
-頁首／全螢幕的「清單排序」以資料庫保存每個使用者、廠區與清單類型的顯示順序；不再用名稱自動覆蓋。總覽線體左側可直接編輯所選產出站點的實績與異常，沿用原填報 API、廠區 RBAC、樂觀鎖及審計欄位。操作及截圖見 [使用教學](docs/USER_GUIDE.md#個人清單排序與總覽直接編輯)，程式入口見 [CODE_GUIDE](docs/CODE_GUIDE.md#個人排序與總覽-inline-editing)。
+頁首／全螢幕的「清單排序」以資料庫保存每個使用者、廠區與清單類型的顯示順序；不再用名稱自動覆蓋。總覽線體可在下方表格逐站編輯目標、實績與異常，沿用原填報 API、廠區 RBAC、樂觀鎖及審計欄位。操作及截圖見 [使用教學](docs/USER_GUIDE.md#總覽工具列與多站點填報)，程式入口見 [CODE_GUIDE](docs/CODE_GUIDE.md#個人排序與總覽多站點編輯)。

@@ -46,67 +46,180 @@
           ><small data-i18n="plantOperations">廠區營運</small></span
         ><span class="online-dot"></span>
       </div>
-      <p class="nav-caption" data-i18n="productionNavigation"></p>
-      <nav data-i18n-aria="workspace">
-        <a
-          href="/overview"
-          class="nav-item active"
-          data-view="overview"
-          data-i18n-title="overview"
-        >
-          <span data-icon="grid"></span
-          ><span class="nav-label" data-i18n="overview">生產總覽</span>
-        </a>
-        <a
-          href="/entry"
-          class="nav-item"
-          data-view="entry"
-          data-permission="production.write"
-          data-i18n-title="entry"
-          ><span data-icon="edit"></span><span class="nav-label" data-i18n="entry"></span
-        ></a>
-        <p class="nav-caption" data-i18n="reviewNavigation"></p>
-        <a href="/details" class="nav-item" data-view="details" data-i18n-title="details"
-          ><span data-icon="clipboard"></span><span class="nav-label" data-i18n="details"></span
-        ></a>
-        <p class="nav-caption" data-i18n="supportNavigation"></p>
-        <a
-          href="/settings/master-data"
-          class="nav-item"
-          data-view="settings"
-          data-admin-only
-          data-i18n-title="settings"
-          ><span data-icon="settings"></span><span class="nav-label" data-i18n="settings"></span
-        ></a>
-        <details id="management-nav" class="management-nav" data-admin-only>
-          <summary class="nav-item" data-i18n-title="managementNavigation">
+      <nav data-i18n-aria="workspace" class="category-navigation">
+        <div id="production-nav" class="navigation-category" data-nav-group="production">
+          <button
+            type="button"
+            class="nav-item nav-category"
+            data-nav-trigger="production"
+            data-i18n-title="productionNavigation"
+            aria-expanded="false"
+            aria-controls="nav-production-menu"
+            popovertarget="nav-production-menu"
+            popovertargetaction="show"
+            aria-haspopup="true"
+          >
+            <span data-icon="factory"></span
+            ><span class="nav-label" data-i18n="productionNavigation"></span
+            ><span class="nav-chevron" data-icon="right"></span>
+          </button>
+          <div
+            id="nav-production-menu"
+            class="nav-flyout"
+            data-nav-popover
+            popover
+            aria-label="productionNavigation"
+            data-i18n-aria="productionNavigation"
+          >
+            <a href="/overview" class="nav-item" data-view="overview" data-i18n-title="overview"
+              ><span data-icon="grid"></span
+              ><span class="nav-label" data-i18n="overview"></span></a
+            ><a
+              href="/entry"
+              class="nav-item"
+              data-view="entry"
+              data-i18n-title="entry"
+              data-permission="production.write"
+              ><span data-icon="edit"></span><span class="nav-label" data-i18n="entry"></span
+            ></a>
+          </div>
+        </div>
+        <div id="analysis-nav" class="navigation-category" data-nav-group="analysis">
+          <button
+            type="button"
+            class="nav-item nav-category"
+            data-nav-trigger="analysis"
+            data-i18n-title="reviewNavigation"
+            aria-expanded="false"
+            aria-controls="nav-analysis-menu"
+            popovertarget="nav-analysis-menu"
+            popovertargetaction="show"
+            aria-haspopup="true"
+          >
+            <span data-icon="trend"></span
+            ><span class="nav-label" data-i18n="reviewNavigation"></span
+            ><span class="nav-chevron" data-icon="right"></span>
+          </button>
+          <div
+            id="nav-analysis-menu"
+            class="nav-flyout"
+            data-nav-popover
+            popover
+            aria-label="reviewNavigation"
+            data-i18n-aria="reviewNavigation"
+          >
+            <a href="/details" class="nav-item" data-view="details" data-i18n-title="details"
+              ><span data-icon="clipboard"></span
+              ><span class="nav-label" data-i18n="details"></span
+            ></a>
+          </div>
+        </div>
+        <div id="settings-nav" class="navigation-category" data-nav-group="settings">
+          <button
+            type="button"
+            class="nav-item nav-category"
+            data-nav-trigger="settings"
+            data-i18n-title="settingsNavigation"
+            aria-expanded="false"
+            aria-controls="nav-settings-menu"
+            popovertarget="nav-settings-menu"
+            popovertargetaction="show"
+            aria-haspopup="true"
+          >
             <span data-icon="settings"></span
+            ><span class="nav-label" data-i18n="settingsNavigation"></span
+            ><span class="nav-chevron" data-icon="right"></span>
+          </button>
+          <div
+            id="nav-settings-menu"
+            class="nav-flyout"
+            data-nav-popover
+            popover
+            aria-label="settingsNavigation"
+            data-i18n-aria="settingsNavigation"
+          >
+            <a
+              href="/settings/master-data"
+              class="nav-item"
+              data-view="settings"
+              data-i18n-title="settings"
+              data-admin-only
+              ><span data-icon="settings"></span
+              ><span class="nav-label" data-i18n="settings"></span
+            ></a>
+          </div>
+        </div>
+        <div id="management-nav" class="navigation-category" data-nav-group="management">
+          <button
+            type="button"
+            class="nav-item nav-category"
+            data-nav-trigger="management"
+            data-i18n-title="managementNavigation"
+            aria-expanded="false"
+            aria-controls="nav-management-menu"
+            popovertarget="nav-management-menu"
+            popovertargetaction="show"
+            aria-haspopup="true"
+          >
+            <span data-icon="shield"></span
             ><span class="nav-label" data-i18n="managementNavigation"></span
-            ><span class="management-chevron" data-icon="down"></span>
-          </summary>
-          <div class="management-links">
+            ><span class="nav-chevron" data-icon="right"></span>
+          </button>
+          <div
+            id="nav-management-menu"
+            class="nav-flyout"
+            data-nav-popover
+            popover
+            aria-label="managementNavigation"
+            data-i18n-aria="managementNavigation"
+          >
             <a
               href="/administration/sites"
               class="nav-item"
               data-view="sites"
-              data-system-only
               data-i18n-title="sites"
-              ><span data-icon="grid"></span><span class="nav-label" data-i18n="sites"></span
-            ></a>
-            <a
+              data-system-only
+              ><span data-icon="grid"></span
+              ><span class="nav-label" data-i18n="sites"></span></a
+            ><a
               href="/administration/users"
               class="nav-item"
               data-view="users"
-              data-admin-only
               data-i18n-title="users"
-              ><span data-icon="clipboard"></span
-              ><span class="nav-label" data-i18n="users"></span
+              data-admin-only
+              ><span data-icon="users"></span><span class="nav-label" data-i18n="users"></span
             ></a>
           </div>
-        </details>
-        <a href="/guide" class="nav-item" data-view="help" data-i18n-title="help"
-          ><span data-icon="info"></span><span class="nav-label" data-i18n="help"></span
-        ></a>
+        </div>
+        <div id="help-nav" class="navigation-category" data-nav-group="help">
+          <button
+            type="button"
+            class="nav-item nav-category"
+            data-nav-trigger="help"
+            data-i18n-title="helpNavigation"
+            aria-expanded="false"
+            aria-controls="nav-help-menu"
+            popovertarget="nav-help-menu"
+            popovertargetaction="show"
+            aria-haspopup="true"
+          >
+            <span data-icon="book"></span
+            ><span class="nav-label" data-i18n="helpNavigation"></span
+            ><span class="nav-chevron" data-icon="right"></span>
+          </button>
+          <div
+            id="nav-help-menu"
+            class="nav-flyout"
+            data-nav-popover
+            popover
+            aria-label="helpNavigation"
+            data-i18n-aria="helpNavigation"
+          >
+            <a href="/guide" class="nav-item" data-view="help" data-i18n-title="help"
+              ><span data-icon="book"></span><span class="nav-label" data-i18n="help"></span
+            ></a>
+          </div>
+        </div>
       </nav>
       <div class="sidebar-bottom">
         <div class="template-note" data-admin-only>
@@ -145,12 +258,6 @@
           <span>DELTA THAILAND</span><span>›</span><strong id="breadcrumb"></strong>
         </div>
         <div class="topbar-right">
-          <button
-            type="button"
-            class="button personal-order-open"
-            popovertarget="personal-order-panel"
-            data-i18n="personalOrder"
-          ></button>
           <span class="status" id="connection"><i></i><span data-i18n="syncing"></span></span
           ><label class="header-select"
             ><span data-icon="globe"></span
@@ -194,8 +301,7 @@
         <div id="report-content">
           <section class="filter-bar" data-i18n-aria="reportDate">
             <div class="filter-group">
-              <label class="filter-label" for="report-date" data-i18n="reportDate"></label
-              ><label class="date-control"
+              <label class="date-control"
                 ><span data-icon="calendar"></span
                 ><input id="report-date" type="date" data-i18n-aria="reportDate" /></label
               ><button class="button today-button" id="today" data-i18n="today"></button
@@ -210,36 +316,53 @@
                 </button>
               </div>
             </div>
-            <button class="button export-button" id="export" disabled>
-              <span data-icon="download"></span><span data-i18n="export"></span>
-            </button>
+            <div id="report-export-slot">
+              <button class="button export-button" id="export" disabled>
+                <span data-icon="download"></span><span data-i18n="export"></span>
+              </button>
+            </div>
+            <div
+              class="metric-scope-buttons"
+              id="metric-scope-controls"
+              role="group"
+              data-i18n-aria="metricScope"
+            >
+              <button
+                data-metric-scope="interval"
+                aria-pressed="true"
+                data-i18n="metricInterval"
+              ></button>
+              <button
+                data-metric-scope="day"
+                aria-pressed="false"
+                data-i18n="metricDay"
+              ></button>
+            </div>
           </section>
           <section id="line-dashboard" hidden>
-            <div class="board-header">
-              <div>
-                <span class="section-eyebrow">BP9 / LIVE PRODUCTION</span
-                ><strong id="board-context"></strong>
-              </div>
-              <div class="board-actions">
+            <div class="board-header overview-tools">
+              <span id="board-context" hidden></span>
+              <div
+                class="group-tabs"
+                id="group-tabs"
+                role="tablist"
+                data-i18n-aria="group"
+              ></div>
+              <span id="board-site-name" class="board-site-label"></span>
+              <div class="board-actions" id="overview-operations">
                 <button
                   type="button"
                   class="button personal-order-open"
                   popovertarget="personal-order-panel"
                   data-i18n="personalOrder"
                 ></button>
-                <span id="board-site-name" class="board-site-label"></span>
-                <div class="metric-scope-buttons" role="group" data-i18n-aria="metricScope">
-                  <button
-                    data-metric-scope="interval"
-                    aria-pressed="true"
-                    data-i18n="metricInterval"
-                  ></button>
-                  <button
-                    data-metric-scope="day"
-                    aria-pressed="false"
-                    data-i18n="metricDay"
-                  ></button>
-                </div>
+
+                <button class="button" id="enter-fullscreen">
+                  <span data-icon="fullscreen"></span
+                  ><span data-i18n="fullscreen"></span></button
+                ><button class="button" id="exit-fullscreen">
+                  <span data-icon="close"></span><span data-i18n="exitFullscreen"></span>
+                </button>
                 <details class="board-display-options">
                   <summary data-i18n="displayOptions"></summary>
                   <div class="board-display-panel">
@@ -290,35 +413,8 @@
                     ></button>
                   </div>
                 </details>
-                <button class="button" id="exit-fullscreen">
-                  <span data-icon="close"></span><span data-i18n="exitFullscreen"></span>
-                </button>
               </div>
             </div>
-            <div class="line-dashboard-heading">
-              <div>
-                <h2 data-i18n="lineOverview"></h2>
-                <p data-i18n="lineOverviewDesc"></p>
-              </div>
-              <div class="dashboard-actions">
-                <div class="metric-scope-buttons" role="group" data-i18n-aria="metricScope">
-                  <button
-                    data-metric-scope="interval"
-                    aria-pressed="true"
-                    data-i18n="metricInterval"
-                  ></button>
-                  <button
-                    data-metric-scope="day"
-                    aria-pressed="false"
-                    data-i18n="metricDay"
-                  ></button>
-                </div>
-                <button class="button" id="enter-fullscreen">
-                  <span data-icon="fullscreen"></span><span data-i18n="fullscreen"></span>
-                </button>
-              </div>
-            </div>
-            <div class="group-tabs" id="group-tabs" role="tablist" data-i18n-aria="group"></div>
             <div
               id="group-summary"
               class="group-summary"

@@ -177,12 +177,14 @@ The risk expresses how much faster than the original planned pace is required; P
 
 ![Daily targets and automatic planned pace](./images/daily-targets.png)
 
-## Personal list order and inline production editing
+## Overview controls and multi-station editing
 
-Open **List order** in the header or fullscreen controls. Choose a list, drag its handle or use the arrow buttons, and wait for **Order saved**. Orders are stored in SQLite per account and current site, survive login, and never change another user's view. New items go last; without a preference, source order is retained. Station configuration sequence and chronological slots remain business settings.
+Row one contains date, Today, Whole day / Day / Night and Interval / Daily. Row two has line/group filters on the left and List order, Export report and Fullscreen on the right. Personal orders are stored per account/site; configured station sequence remains unchanged.
 
-On Production Overview, hover a line and choose **Edit** on its left; touch devices always show the entry. Edit Slot actual in place, use the displayed date, shift and output station, choose the single time slot beside the status, and select issue quick text or enter notes. Cards no longer repeat the slot or show the next slot. **Save** changes only that station/slot using the existing report API; **Cancel** writes nothing. Blank Actual is unreported; zero is valid. Production-write permission is required.
+Choose **Edit** on a read-only card. A separate table opens underneath: select a time slot and edit each configured output station's Target, Actual and Issue. Date, line/model, shift scope and site come from the report. There are no quick-text or apply-to-all controls. **Save** sends only changed fields in one atomic, version-checked batch, closes and refreshes the card. **Cancel** writes nothing. Blank Actual means unreported; zero is valid.
 
-Editing pauses pagination. Fullscreen and refresh retain the draft; fullscreen reduces page capacity when needed. Errors retain input. A conflicting revision is rejected: cancel and reopen to load the latest report before applying an informed change. Sorting failures offer Retry and Reload.
+Slot changes ask before discarding unsaved values. Failures preserve input; a version conflict rejects the whole batch. Cancel and reopen to review the latest data. Fullscreen retains drafts, pauses rotation and keeps the table's scrolling local.
 
-The sidebar **Management** group expands to Site management and User management. Entering a management route opens its group and highlights the current page. Only authorized items are shown.
+The right arrow opens **alerts and reported issues only**, including their existing reasons, times and station information. No current alerts is shown when applicable. Alert viewing and editing are mutually exclusive.
+
+The sidebar has five categories: Production, Review & analysis, Settings, Management and Help. Hover, focus or click to open a right-side floating menu; Escape closes it. Only authorized links appear. Menus keep their original routes and do not move other items.

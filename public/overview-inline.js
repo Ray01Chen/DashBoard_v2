@@ -1,12 +1,65 @@
+import { parseBulkValue } from './entry.js';
 import { scheduleFor } from './production-schedules.js';
-import { issuePresets, issueLabel } from './issue-presets.js';
-import { sameProduction, stationHasOutput } from './production-models.js';
-import { slotPresentation } from './monitor-ui.js';
-import { cancelMonitorPageMotion } from './monitor-carousel.js';
+import {
+  sameProduction,
+  stationHasOutput,
+  productionIdentityMarkup,
+} from './production-models.js';
+import { slotPresentation, closeMonitorAlerts } from './monitor-ui.js';
 
-/** One captured station/report revision owns a draft. Polling and fullscreen
- * changes may redraw cards, but never replace the draft's values or version. */
-export function createOverviewInline({
+const fields = ['target', 'actual', 'issue'];
+/** Compare normalized values, so unchanged blanks, zero and multiline notes
+ * never become destructive patches. The existing batch API validates again. */
+export function overviewChanges(rows) {
+  let valid = true;
+  const changes = rows.flatMap((item) => {
+    const values = {};
+    for (const field of fields) {
+      const parsed = parseBulkValue(field, item.draft[field]);
+      if (!parsed.valid) valid = false;
+      else if (
+        parsed.value !==
+        (field === 'issue' ? item.slot?.issue || '' : (item.slot?.[field] ?? null))
+      )
+        values[field] = parsed.value;
+    }
+    return Object.keys(values).length ? [{ rowId: item.row.id, values }] : [];
+  });
+  return { valid, rows: changes };
+}
+export function overviewRows(config, report, unit, interval) {
+  const saved = new Map(report.records.map((record) => [record.rowId, record]));
+  return config.rows
+    .filter(
+      (row) => row.active && !row.deleted && stationHasOutput(row) && sameProduction(row, unit),
+    )
+    .map((row) => {
+      const record = saved.get(row.id),
+        defaults = report.defaults[row.id];
+      const slot =
+        record?.slots.find(
+          (slot) => slot.start === interval.start && slot.end === interval.end,
+        ) ||
+        defaults?.slots.find(
+          (slot) => slot.start === interval.start && slot.end === interval.end,
+        );
+      return {
+        row: record?.rowSnapshot ? { ...record.rowSnapshot, id: row.id } : row,
+        slot,
+        version: record?.version ?? report.rowVersions?.[row.id] ?? 0,
+        draft: {
+          target: String(slot?.target ?? ''),
+          actual: String(slot?.actual ?? ''),
+          issue: slot?.issue || '',
+        },
+      };
+    });
+}
+
+/** A single downward editor captures its unit/date/config and station revisions.
+ * Quiet polling only updates the read-only card; drafts are never rebased or
+ * copied to another interval without explicit confirmation. */
+export function createOverviewEditor({
   api,
   getContext,
   canEdit,
@@ -17,234 +70,197 @@ export function createOverviewInline({
 }) {
   const root = document.querySelector('#line-cards');
   let draft = null,
-    serial = 0;
-  const context = () => getContext();
+    serial = 0,
+    restoreKey = null;
   const dirty = () =>
     draft?.loaded &&
-    (draft.actual !== draft.originalActual || draft.issue !== draft.originalIssue);
-  const rows = () =>
-    context().config.rows.filter(
-      (row) =>
-        row.active &&
-        !row.deleted &&
-        stationHasOutput(row) &&
-        sameProduction(row, draft.line) &&
-        draft.line.sourceRows.includes(row.id),
-    );
-  function options() {
-    if (!draft?.loaded) return [];
-    const record = draft.report.records.find((item) => item.rowId === draft.rowId);
-    const defaults = draft.report.defaults[draft.rowId];
-    // Saved records own their historical slot IDs and boundaries. Never map a
-    // retired interval onto a different current interval with the same ID.
-    return (record?.slots || defaults?.slots || []).filter((slot) => slot.kind !== 'break');
-  }
-  function selectSlot(id) {
-    const slot = options().find((item) => item.id === id) || options()[0];
-    draft.slotId = slot?.id || '';
-    draft.actual = draft.originalActual = slot?.actual == null ? '' : String(slot.actual);
-    draft.issue = draft.originalIssue = slot?.issue || '';
-  }
-  async function load(preferred) {
+    (!overviewChanges(draft.rows).valid || overviewChanges(draft.rows).rows.length > 0);
+  async function load() {
     const current = draft,
-      sequence = ++serial;
+      generation = ++serial;
     current.loading = true;
-    current.error = '';
     current.loaded = false;
+    current.rows = [];
+    current.error = '';
     sync();
     try {
+      const selected = current.choices.find((slot) => slot.key === current.selected);
+      if (!selected) throw new Error(getContext().t('inlineNoSlot'));
       const report = await api(
-        `/api/records?${new URLSearchParams({ date: current.date, shift: current.shift })}`,
+        `/api/records?${new URLSearchParams({ date: current.date, shift: selected.shift })}`,
       );
-      if (draft !== current || sequence !== serial) return;
-      if (report.configVersion !== context().config.version)
-        throw new Error(context().t('configChanged'));
-      current.report = report;
+      if (draft !== current || generation !== serial) return;
+      if (report.configVersion !== current.config.version)
+        throw new Error(getContext().t('configChanged'));
+      current.rows = overviewRows(current.config, report, current.unit, selected);
       current.loaded = true;
-      const match = options().find(
-        (item) => preferred && item.start === preferred.start && item.end === preferred.end,
-      );
-      selectSlot(match?.id);
     } catch (error) {
       if (draft === current) current.error = error.message;
     } finally {
-      if (draft === current && sequence === serial) {
+      if (draft === current && generation === serial) {
         current.loading = false;
         sync();
       }
     }
   }
   async function open(line) {
-    const ctx = context();
     if (!canEdit()) return;
     if (draft) {
-      toast(ctx.t('inlineBusy'));
+      toast(getContext().t('inlineBusy'));
       return;
     }
-    cancelMonitorPageMotion(root);
-    const period = slotPresentation(line, ctx).slot;
-    const preferredShift = ['day', 'night'].find((shift) =>
-      scheduleFor(ctx.config, line.line, shift).some(
-        (slot) => slot.start === period?.start && slot.end === period?.end,
-      ),
+    const ctx = getContext();
+    closeMonitorAlerts();
+    const shifts = ctx.shift === 'all' ? ['day', 'night'] : [ctx.shift];
+    const choices = shifts.flatMap((shift) =>
+      scheduleFor(ctx.config, line.line, shift)
+        .filter((slot) => slot.kind === 'production')
+        .map((slot) => ({
+          ...slot,
+          shift,
+          key: JSON.stringify([shift, slot.start, slot.end]),
+        })),
     );
+    if (!choices.length) {
+      toast(ctx.t('inlineNoSlot'));
+      return;
+    }
+    const period = slotPresentation(line, ctx).slot;
+    const selected =
+      choices.find((slot) => slot.start === period?.start && slot.end === period?.end) ||
+      choices[0];
     draft = {
       key: line.key || line.line,
-      line,
       date: ctx.date,
-      shift: preferredShift || (ctx.shift === 'night' ? 'night' : 'day'),
-      rowId: line.sourceRows[0],
+      unit: { line: line.line, model: line.model },
+      config: structuredClone(ctx.config),
+      choices,
+      selected: selected.key,
+      rows: [],
       loading: true,
     };
-    if (!rows().length) {
-      draft = null;
-      toast(ctx.t('inlineUnavailable'));
-      return;
-    }
-    draft.rowId = rows()[0].id;
     redraw();
-    await load(period);
-    root.querySelector('[data-inline-actual]')?.focus({ preventScroll: true });
+    await load();
+    root.querySelector('[data-overview-panel] input')?.focus({ preventScroll: true });
   }
-  function clear() {
+  async function clear() {
+    if (!draft || draft.closing) return;
+    draft.closing = true;
+    const panel = root.querySelector('[data-overview-panel]');
+    if (panel) panel.inert = true;
+    if (panel && !matchMedia('(prefers-reduced-motion: reduce)').matches)
+      await panel
+        .animate(
+          [
+            { height: panel.offsetHeight + 'px', opacity: 1 },
+            { height: '0px', opacity: 0 },
+          ],
+          { duration: 180, easing: 'ease-out' },
+        )
+        .finished.catch(() => {});
+    restoreKey = draft?.key || null;
     serial++;
     draft = null;
-    for (const card of root.children) restore(card);
+    root.querySelectorAll('[data-overview-panel]').forEach((node) => node.remove());
+    root
+      .querySelectorAll('[data-editor-open]')
+      .forEach((card) => card.removeAttribute('data-editor-open'));
     redraw();
   }
-  function restore(card) {
-    card.removeAttribute('data-inline-editing');
-    card.querySelectorAll('[data-inline-control]').forEach((node) => node.remove());
-    card.querySelectorAll('[data-inline-hidden]').forEach((node) => {
-      node.hidden = false;
-      node.removeAttribute('data-inline-hidden');
-    });
-    card.querySelector('.line-edit-rail')?.remove();
-    card.removeAttribute('data-inline-view');
-  }
-  function hide(node) {
-    if (node) {
-      node.dataset.inlineHidden = '';
-      node.hidden = true;
-    }
-  }
   function sync() {
-    const { t, esc, icon } = context();
-    root.dataset.inlineActive = String(!!draft);
-    root.dataset.inlineAvailable = String(canEdit());
+    const { t, esc, icon, language } = getContext();
     for (const card of root.querySelectorAll('.line-card')) {
       const active = draft?.key === card.dataset.monitorLine;
-      if (!canEdit() && !active) {
-        restore(card);
+      let trigger = card.querySelector('[data-overview-edit]');
+      if (canEdit() && !trigger) {
+        trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = 'overview-edit-button';
+        trigger.dataset.overviewEdit = '';
+        card.querySelector('.line-card-actions').prepend(trigger);
+      }
+      if (trigger) {
+        trigger.hidden = !canEdit();
+        trigger.innerHTML = `${icon('edit')}<span>${esc(t('inlineEdit'))}</span>`;
+        trigger.setAttribute('aria-expanded', String(active));
+      }
+      card.toggleAttribute('data-editor-open', active);
+      if (!active) {
+        card.querySelector('[data-overview-panel]')?.remove();
         continue;
       }
-      let rail = card.querySelector('.line-edit-rail');
-      if (!rail) {
-        rail = document.createElement('div');
-        rail.className = 'line-edit-rail';
-        card.append(rail);
+      let panel = card.querySelector('[data-overview-panel]');
+      if (!panel) {
+        panel = document.createElement('section');
+        panel.dataset.overviewPanel = '';
+        panel.className = 'overview-editor row-expansion';
+        card.append(panel);
       }
-      const state = active
-        ? `${draft.loading}|${draft.saving}|${draft.loaded}|${draft.slotId}`
-        : 'closed';
-      if (rail.dataset.state !== state || rail.dataset.language !== context().language) {
-        rail.dataset.state = state;
-        rail.dataset.language = context().language;
-        rail.innerHTML = active
-          ? `<button type="button" data-inline-save title="${esc(t('inlineSave'))}" ${draft.loading || draft.saving || !draft.loaded || !draft.slotId ? 'disabled' : ''}>${icon('check')}<small>${esc(t('inlineSave'))}</small></button><button type="button" data-inline-cancel title="${esc(t('inlineCancel'))}" ${draft.saving ? 'disabled' : ''}>${icon('close')}<small>${esc(t('inlineCancel'))}</small></button>`
-          : `<button type="button" data-inline-open title="${esc(t('inlineEdit'))}">${icon('edit')}<small>${esc(t('inlineEdit'))}</small></button>`;
-      }
-      if (!active) continue;
-      card.dataset.inlineEditing = '';
       const view = JSON.stringify([
-        draft.date,
-        draft.shift,
-        draft.rowId,
-        draft.slotId,
+        draft.selected,
         draft.loading,
         draft.saving,
         draft.error,
-        context().language,
-        context().metricScope,
+        language,
       ]);
-      if (card.dataset.inlineView === view) continue;
-      card.dataset.inlineView = view;
-      card.querySelectorAll('[data-inline-control]').forEach((node) => node.remove());
-      for (const node of card.querySelectorAll('[data-inline-hidden]')) {
-        node.hidden = false;
-        node.removeAttribute('data-inline-hidden');
-      }
-      const metric = card.querySelector(
-        '[data-metric="currentActual"], [data-metric="dailyActual"]',
-      );
-      hide(metric?.querySelector('b'));
-      if (metric)
-        metric.insertAdjacentHTML(
-          'beforeend',
-          `<input data-inline-control data-inline-actual type="number" inputmode="numeric" min="0" max="99999999" step="1" aria-label="${esc(t('inlineActual'))}" value="${esc(draft.actual || '')}" ${draft.loading || draft.saving ? 'disabled' : ''}>`,
+      if (panel.dataset.view === view) continue;
+      const focus = panel.contains(document.activeElement)
+        ? {
+            row: document.activeElement.dataset.editorRow,
+            field: document.activeElement.dataset.editorField,
+            start: document.activeElement.selectionStart,
+          }
+        : null;
+      panel.dataset.view = view;
+      panel.innerHTML = `<header class="overview-editor-heading">${productionIdentityMarkup(draft.unit, esc, { singleLine: true })}<label>${esc(t('inlineSlot'))}<select data-editor-slot aria-label="${esc(t('inlineSlot'))}" ${draft.loading || draft.saving ? 'disabled' : ''}>${draft.choices.map((slot) => `<option value="${esc(slot.key)}" ${slot.key === draft.selected ? 'selected' : ''}>${esc(t(slot.shift) + ' · ' + slot.start + '–' + slot.end)}</option>`).join('')}</select></label></header>
+        <div class="overview-editor-body"><table><thead><tr><th>${esc(t('job'))} / ${esc(t('station'))}</th>${fields.map((field) => `<th>${esc(t(field))}</th>`).join('')}</tr></thead><tbody>${draft.rows.map((item) => `<tr><th scope="row"><strong>${esc(item.row.job || '—')}</strong><span>${esc(item.row.station || '—')}</span></th>${fields.map((field) => `<td>${field === 'issue' ? `<textarea rows="1" maxlength="2000"` : '<input type="text" inputmode="numeric" maxlength="12"'} data-editor-row="${item.row.id}" data-editor-field="${field}" aria-label="${esc([item.row.job, item.row.station, t(field)].join(' · '))}" ${draft.loading || draft.saving ? 'disabled' : ''}${field === 'issue' ? `>${esc(item.draft[field])}</textarea>` : ` value="${esc(item.draft[field])}">`}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+        <footer class="overview-editor-footer"><span role="status" class="overview-editor-message">${esc(draft.error || (draft.loading ? t('inlineLoading') : !draft.rows.length ? t('inlineUnavailable') : ''))}</span><button type="button" class="button" data-editor-cancel ${draft.saving ? 'disabled' : ''}>${esc(t('inlineCancel'))}</button><button type="button" class="button primary" data-editor-save ${draft.loading || draft.saving || !draft.loaded || !draft.rows.length ? 'disabled' : ''}>${esc(t(draft.saving ? 'saving' : 'inlineSave'))}</button></footer>`;
+      if (focus) {
+        const input = [...panel.querySelectorAll('[data-editor-field]')].find(
+          (node) =>
+            node.dataset.editorRow === focus.row && node.dataset.editorField === focus.field,
         );
-      hide(card.querySelector('.health-period'));
-      card.querySelector('.line-health').insertAdjacentHTML(
-        'beforeend',
-        `<label data-inline-control class="inline-slot"><span>${esc(t('inlineSlot'))}</span><select data-inline-field="slotId" aria-label="${esc(t('inlineSlot'))}">${options()
-          .map(
-            (slot) =>
-              `<option value="${esc(slot.id)}" ${slot.id === draft.slotId ? 'selected' : ''}>${esc(slot.start + '–' + slot.end)}</option>`,
-          )
-          .join('')}</select></label>`,
-      );
-      const status = card.querySelector('.line-card-status');
-      status.insertAdjacentHTML(
-        'beforeend',
-        `<div data-inline-control class="inline-issue"><label>${esc(t('inlineIssue'))}<select data-inline-preset aria-label="${esc(t('inlineQuickIssue'))}"><option value="">${esc(t('inlineQuickIssue'))}</option>${issuePresets(
-          context().config,
-        )
-          .filter((item) => item.active)
-          .map((item) => `<option value="${esc(item.id)}">${esc(issueLabel(item))}</option>`)
-          .join(
-            '',
-          )}</select><textarea data-inline-issue rows="2" maxlength="2000">${esc(draft.issue || '')}</textarea></label><small role="status" class="inline-feedback">${esc(draft.error || (draft.loading ? t('inlineLoading') : !draft.slotId ? t('inlineNoSlot') : ''))}</small></div>`,
-      );
-      card
-        .querySelectorAll('[data-inline-field], [data-inline-preset], [data-inline-issue]')
-        .forEach((node) => {
-          node.disabled = !!(draft.loading || draft.saving);
-        });
+        input?.focus({ preventScroll: true });
+        if (input && focus.start != null) input.setSelectionRange(focus.start, focus.start);
+      }
     }
+    if (!draft) restoreKey = null;
   }
   async function save() {
-    if (!draft || draft.saving || draft.loading || !draft.loaded || !draft.slotId || !canEdit())
-      return;
+    if (!draft?.loaded || draft.loading || draft.saving || draft.closing || !canEdit()) return;
     const current = draft,
-      { t } = context();
-    const inputInvalid = root.querySelector('[data-inline-actual]')?.validity.badInput;
-    const actual = current.actual === '' ? null : Number(current.actual);
-    if (
-      inputInvalid ||
-      (actual !== null && (!Number.isSafeInteger(actual) || actual < 0 || actual > 99999999)) ||
-      current.issue.length > 2000
-    ) {
+      changes = overviewChanges(current.rows),
+      { t } = getContext();
+    if (!changes.valid) {
       current.error = t('inlineInvalid');
       sync();
       return;
     }
-    const record = current.report.records.find((item) => item.rowId === current.rowId);
+    if (!changes.rows.length) {
+      await clear();
+      return;
+    }
     current.saving = true;
     current.error = '';
     sync();
+    const interval = current.choices.find((slot) => slot.key === current.selected);
     try {
-      await api('/api/entry/records/' + current.rowId, {
+      await api('/api/entry/interval', {
         method: 'PUT',
         body: JSON.stringify({
+          ...current.unit,
           date: current.date,
-          shift: current.shift,
-          configVersion: current.report.configVersion,
-          version: record?.version ?? current.report.rowVersions[current.rowId] ?? 0,
-          stationEntry: true,
-          slots: [{ id: current.slotId, actual, issue: current.issue }],
+          shift: interval.shift,
+          interval: { start: interval.start, end: interval.end },
+          configVersion: current.config.version,
+          rows: changes.rows,
+          expectedVersions: changes.rows.map((change) => ({
+            rowId: change.rowId,
+            version: current.rows.find((item) => item.row.id === change.rowId).version,
+          })),
         }),
       });
-      clear();
+      await clear();
       toast(t('inlineSaved'));
       await refresh();
     } catch (error) {
@@ -256,35 +272,33 @@ export function createOverviewInline({
     }
   }
   root.addEventListener('input', (event) => {
-    if (!draft) return;
-    if (event.target.matches('[data-inline-actual]')) draft.actual = event.target.value;
-    if (event.target.matches('[data-inline-issue]')) draft.issue = event.target.value;
+    const field = event.target.dataset.editorField;
+    if (!draft || !fields.includes(field)) return;
+    const item = draft.rows.find(
+      (item) => String(item.row.id) === event.target.dataset.editorRow,
+    );
+    if (item) {
+      item.draft[field] = event.target.value;
+      event.target.setAttribute(
+        'aria-invalid',
+        String(!parseBulkValue(field, event.target.value).valid),
+      );
+    }
   });
   root.addEventListener('change', async (event) => {
-    if (!draft) return;
-    if (event.target.matches('[data-inline-preset]')) {
-      const preset = issuePresets(context().config).find(
-        (item) => item.id === event.target.value,
-      );
-      if (preset) {
-        draft.issue = [draft.issue, issueLabel(preset)]
-          .filter(Boolean)
-          .join('\n')
-          .slice(0, 2000);
-        root.querySelector('[data-inline-issue]').value = draft.issue;
+    if (!event.target.matches('[data-editor-slot]') || !draft || draft.loading || draft.saving)
+      return;
+    const current = draft,
+      selected = event.target.value;
+    if (dirty() && !(await confirm(getContext().t('inlineLeave')))) {
+      if (draft === current) {
+        event.target.value = current.selected;
       }
-      event.target.value = '';
       return;
     }
-    const key = event.target.dataset.inlineField;
-    if (key !== 'slotId' || draft.loading || draft.saving) return;
-    if (dirty() && !(await confirm(context().t('inlineLeave')))) {
-      delete root.querySelector('[data-inline-editing]')?.dataset.inlineView;
-      sync();
-      return;
-    }
-    selectSlot(event.target.value);
-    sync();
+    if (draft !== current) return;
+    current.selected = selected;
+    await load();
   });
   return {
     sync,
@@ -294,23 +308,26 @@ export function createOverviewInline({
     get key() {
       return draft?.key;
     },
+    get focusKey() {
+      return draft?.key || restoreKey;
+    },
     async guard() {
       if (!draft) return true;
-      if (draft.saving || draft.loading) return false;
-      if (dirty() && !(await confirm(context().t('inlineLeave')))) return false;
-      clear();
+      if (draft.saving || draft.loading || draft.closing) return false;
+      if (dirty() && !(await confirm(getContext().t('inlineLeave')))) return false;
+      await clear();
       return true;
     },
     handle(event, lines) {
-      if (!event.target.closest('.line-edit-rail, [data-inline-control]')) return false;
+      if (!event.target.closest('[data-overview-edit], [data-overview-panel]')) return false;
       event.stopPropagation();
-      if (event.target.closest('[data-inline-open]')) {
+      if (event.target.closest('[data-overview-edit]')) {
         const key = event.target.closest('.line-card').dataset.monitorLine;
-        const line = lines.find((item) => (item.key || item.line) === key);
+        const line = lines.find((line) => (line.key || line.line) === key);
         if (line) void open(line);
       }
-      if (event.target.closest('[data-inline-cancel]') && !draft?.saving) clear();
-      if (event.target.closest('[data-inline-save]')) void save();
+      if (event.target.closest('[data-editor-cancel]') && !draft?.saving) clear();
+      if (event.target.closest('[data-editor-save]')) void save();
       return true;
     },
   };

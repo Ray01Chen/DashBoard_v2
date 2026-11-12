@@ -165,7 +165,7 @@ export async function auditDesign({
   const first = page.locator('#line-cards .line-card').first();
   await first.locator('[data-line-expand]').click();
   assert.equal(await first.locator('.card-expanded-details').isVisible(), true);
-  assert.equal(await first.locator('[data-card-alert-list] li').count(), 3);
+  assert.equal(await first.locator('[data-card-alert-list] li').count(), 2);
   assert.equal(new URL(page.url()).pathname, '/overview');
   await first.locator('[data-line-expand]').click();
   const before = await first.locator('[data-reason-count]').textContent();
@@ -188,7 +188,7 @@ export async function auditDesign({
     for (const fullscreen of [false, true]) {
       if (fullscreen) await page.locator('#enter-fullscreen').click();
       for (const metricScope of ['interval', 'day']) {
-        const controls = fullscreen ? '.board-actions' : '.line-dashboard-heading';
+        const controls = '#metric-scope-controls';
         await page.locator(`${controls} [data-metric-scope="${metricScope}"]`).click();
         for (const [width, height] of [
           [1920, 1080],
@@ -304,7 +304,7 @@ export async function auditDesign({
       if (fullscreen) await page.locator('#exit-fullscreen').click();
     }
   }
-  await page.locator('.line-dashboard-heading [data-metric-scope="interval"]').click();
+  await page.locator('#metric-scope-controls [data-metric-scope="interval"]').click();
   record(
     'Compact horizontal cards and adaptive fullscreen pages retain all information and Group Overview → alerts → cards → charts order across both display/metric modes, three languages and six desktop sizes',
   );
