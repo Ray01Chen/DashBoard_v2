@@ -121,6 +121,14 @@ export async function auditOverviewRefinement({
     }
   }
   async function settle() {
+    // Compare resting shared columns; a restored hover reveal intentionally
+    // offsets only the row under the pointer while its 200ms transition runs.
+    await page.mouse.move(0, 0);
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('#line-cards .line-card')].every(
+        (card) => getComputedStyle(card).transform === 'none',
+      ),
+    );
     await page.waitForFunction(() => !document.querySelector('.is-page-moving'));
     await page.evaluate(
       () =>

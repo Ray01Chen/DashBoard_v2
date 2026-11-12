@@ -18,6 +18,14 @@ export async function auditOverviewInteractions({
     return response.json();
   };
   const send = (method, url, data) => context.request[method](baseURL + url, { data });
+  async function swipeRight(card) {
+    const box = await card.locator('.line-trend').boundingBox();
+    await page.mouse.move(box.x + 30, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 90, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await card.locator('[data-overview-edit]').click();
+  }
   const waitRows = () => page.locator('[data-overview-panel] tbody tr').first().waitFor();
   const cell = (id, field) =>
     page.locator(`[data-editor-row="${id}"][data-editor-field="${field}"]`);
@@ -30,6 +38,11 @@ export async function auditOverviewInteractions({
     await page.locator('#login-submit').click();
     await page.locator('body.authenticated').waitFor();
     assert.equal(await page.locator('[data-nav-trigger]').count(), 5);
+    const initialSite = (await json(await send('get', '/api/auth/me'))).user.site;
+    assert.equal(
+      await page.locator('#site-select option:checked').innerText(),
+      initialSite.site_name,
+    );
     const management = page.locator('[data-nav-trigger="management"]');
     await management.hover();
     await page.locator('#nav-management-menu:popover-open').waitFor();
@@ -135,18 +148,33 @@ export async function auditOverviewInteractions({
       true,
     );
     assert.equal(await page.locator('#overview-operations #export').count(), 1);
-    const controls = await page
-      .locator('#overview-operations')
-      .evaluate((node) =>
-        [...node.querySelectorAll('.personal-order-open, #export, #enter-fullscreen')].map(
-          (node) => ({ top: node.getBoundingClientRect().top, key: node.id || 'order' }),
+    const edges = await page.evaluate(() => ({
+      date: document.querySelector('.date-control').getBoundingClientRect().left,
+      groups: document.querySelector('#group-tabs button').getBoundingClientRect().left,
+    }));
+    assert.ok(Math.abs(edges.date - edges.groups) <= 1, JSON.stringify(edges));
+    assert.equal(await page.locator('#site-select option:checked').innerText(), site.site_name);
+    assert.equal(await page.locator('.site-selector > span').innerText(), 'Site');
+    const controls = await page.locator('#overview-operations').evaluate((node) =>
+      [
+        ...node.querySelectorAll(
+          '.personal-order-open, .board-display-options summary, #export, #enter-fullscreen',
         ),
-      );
+      ].map((node) => ({
+        top: node.getBoundingClientRect().top,
+        height: node.getBoundingClientRect().height,
+        key: node.id || (node.tagName === 'SUMMARY' ? 'display' : 'order'),
+      })),
+    );
     assert.deepEqual(
       controls.map((item) => item.key),
-      ['order', 'export', 'enter-fullscreen'],
+      ['order', 'display', 'export', 'enter-fullscreen'],
     );
     assert.ok(controls.every((item) => Math.abs(item.top - controls[0].top) <= 1));
+    assert.ok(
+      controls.every((item) => Math.abs(item.height - controls[0].height) <= 1),
+      JSON.stringify(controls),
+    );
     await page.locator('#overview-operations .personal-order-open').click();
     await page.locator('#personal-order-panel:popover-open').waitFor();
     await page.evaluate(
@@ -165,6 +193,7 @@ export async function auditOverviewInteractions({
     );
     await page.locator('[data-order-close]').click();
     await page.reload();
+    await page.locator('#line-cards .line-card').first().waitFor();
     assert.deepEqual(await page.locator('#line-cards .production-line').allTextContents(), [
       'CD2',
       'CD1',
@@ -178,6 +207,23 @@ export async function auditOverviewInteractions({
     );
 
     const card = page.locator('#line-cards .line-card').first();
+    await page.mouse.move(2, 2);
+    assert.equal(await card.getAttribute('data-edit-revealed'), null);
+    await card.locator('.line-trend').hover();
+    await page.waitForFunction(
+      () =>
+        getComputedStyle(document.querySelector('#line-cards .line-card')).transform ===
+        'matrix(1, 0, 0, 1, 45, 0)',
+    );
+    assert.equal(
+      await card.locator('.line-edit-rail').evaluate((node) => getComputedStyle(node).opacity),
+      '1',
+    );
+    await page.mouse.move(2, 2);
+    await card.locator('[data-overview-edit]').focus();
+    assert.notEqual(await card.getAttribute('data-edit-revealed'), null);
+    await page.locator('#today').focus();
+    await page.mouse.move(2, 2);
     await card.locator('[data-line-expand]').click();
     await card.locator('.card-expanded-details:not([hidden])').waitFor();
     assert.match(await card.locator('.card-expanded-details').innerText(), /No current alerts/);
@@ -189,11 +235,21 @@ export async function auditOverviewInteractions({
         .count(),
       0,
     );
-    await card.locator('[data-overview-edit]').click();
+    await swipeRight(card);
     await waitRows();
     assert.equal(await card.locator('.card-expanded-details').isVisible(), false);
     assert.equal(await card.locator('.line-card-values input').count(), 0);
     assert.equal(await card.locator('[data-overview-panel] tbody tr').count(), 6);
+    assert.equal(await card.locator('.line-card-actions [data-overview-edit]').count(), 0);
+    assert.equal(
+      await card.locator('.overview-editor-heading .production-identity').count(),
+      0,
+    );
+    const slotEdge = await card.locator('[data-overview-panel]').evaluate((panel) => ({
+      label: panel.querySelector('label').getBoundingClientRect().left,
+      table: panel.querySelector('table').getBoundingClientRect().left,
+    }));
+    assert.ok(Math.abs(slotEdge.label - slotEdge.table) <= 1, JSON.stringify(slotEdge));
     assert.equal(
       await card
         .locator(
@@ -210,7 +266,8 @@ export async function auditOverviewInteractions({
     await page.locator('[data-editor-cancel]').click();
     await page.waitForFunction(() => !document.querySelector('[data-overview-panel]'));
     assert.equal((await report(date)).records.length, 0);
-    await card.locator('[data-overview-edit]').click();
+    assert.equal(await card.getAttribute('data-edit-revealed'), null);
+    await swipeRight(card);
     await waitRows();
     await page.locator('[data-editor-slot]').selectOption({ index: 0 });
     await waitRows();
@@ -246,11 +303,12 @@ export async function auditOverviewInteractions({
       await card.locator('.card-expanded-details').innerText(),
       /Station input note/,
     );
+    assert.equal(await card.locator('.line-card-values input').count(), 0);
     record(
-      'Read-only cards retain metrics/trends while distinct alert-only and six-station editors open below; cancel writes nothing and batch save atomically submits only modified fields with existing audit metadata',
+      '45px mouse/keyboard reveals and horizontal touch swipes preserve read-only cards and metrics/trends while distinct alert-only and six-station editors open below; cancel writes nothing and batch save atomically submits only modified fields with existing audit metadata',
     );
 
-    await card.locator('[data-overview-edit]').click();
+    await swipeRight(card);
     await waitRows();
     await cell(a, 'actual').fill('13');
     await cell(b, 'actual').fill('22');
@@ -298,7 +356,7 @@ export async function auditOverviewInteractions({
       'One changed station version rejects the entire multi-station transaction; inputs survive conflicts, slot changes require discard confirmation, zero is valid and other intervals remain untouched',
     );
 
-    await card.locator('[data-overview-edit]').click();
+    await swipeRight(card);
     await waitRows();
     await cell(a, 'actual').fill('55');
     await page.locator('#enter-fullscreen').click();
@@ -376,7 +434,68 @@ export async function auditOverviewInteractions({
       await phone.locator('#report-date').fill('2099-12-02');
       await phone.locator('#report-date').dispatchEvent('change');
       await phone.locator('[data-report-scope="night"]').click();
-      await phone.locator('[data-overview-edit]').first().tap();
+      const phoneCard = phone.locator('#line-cards .line-card').first();
+      assert.equal(await phoneCard.getAttribute('data-edit-revealed'), null);
+      await phoneCard.scrollIntoViewIfNeeded();
+      const gesture = await touch.newCDPSession(phone);
+      async function touchDrag(dx, dy, cancel = false) {
+        await phoneCard.scrollIntoViewIfNeeded();
+        // Wait for native scroll inertia to settle before sampling viewport
+        // coordinates; otherwise the next gesture may land on another row.
+        await phone.evaluate(async () => {
+          let previous = scrollY,
+            stable = 0;
+          while (stable < 3) {
+            await new Promise(requestAnimationFrame);
+            stable = scrollY === previous ? stable + 1 : 0;
+            previous = scrollY;
+          }
+        });
+        const start = await phoneCard.locator('.line-card-top').boundingBox();
+        const x = start.x + 30,
+          y = start.y + start.height / 2;
+        await gesture.send('Input.dispatchTouchEvent', {
+          type: 'touchStart',
+          touchPoints: [{ x, y }],
+        });
+        for (let step = 1; step <= 6; step++) {
+          await gesture.send('Input.dispatchTouchEvent', {
+            type: 'touchMove',
+            touchPoints: [{ x: x + (dx * step) / 6, y: y + (dy * step) / 6 }],
+          });
+          await phone.waitForTimeout(16);
+        }
+        await gesture.send('Input.dispatchTouchEvent', {
+          type: cancel ? 'touchCancel' : 'touchEnd',
+          touchPoints: [],
+        });
+        // Let Chromium finish its native touch gesture before the next tap.
+        await phone.waitForTimeout(600);
+      }
+      await touchDrag(0, -50);
+      assert.equal(
+        await phoneCard.getAttribute('data-edit-revealed'),
+        null,
+        'Vertical gestures scroll rather than edit',
+      );
+      await touchDrag(18, 0, true);
+      assert.equal(
+        await phoneCard.getAttribute('data-edit-revealed'),
+        null,
+        'Cancelled swipes restore the card',
+      );
+      await touchDrag(72, 0);
+      assert.equal(
+        new URL(phone.url()).pathname,
+        '/overview',
+        'Swipes do not open production details',
+      );
+      assert.notEqual(
+        await phoneCard.getAttribute('data-edit-revealed'),
+        null,
+        'Touch swipe reveals edit',
+      );
+      await phoneCard.locator('[data-overview-edit]').tap();
       await phone.locator('[data-overview-panel] tbody tr').first().waitFor();
       const input = phone.locator(`[data-editor-row="${a}"][data-editor-field="actual"]`);
       await input.fill('18');

@@ -330,6 +330,11 @@ export async function auditDesign({
       `Zoom ${zoom}`,
     );
     await page.locator('#line-cards .line-card').first().locator('[data-line-expand]').click();
+    await page
+      .locator('#line-cards .line-card')
+      .first()
+      .locator('[data-card-alert-list]')
+      .waitFor();
     assert.equal(
       await page
         .locator('#line-cards .line-card')
@@ -351,6 +356,11 @@ export async function auditDesign({
     await page.locator('#language-select').selectOption('en');
     await page.evaluate(() => scrollTo(0, 0));
     await page.mouse.move(0, 0);
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('#line-cards .line-card')].every(
+        (card) => getComputedStyle(card).transform === 'none',
+      ),
+    );
     await page.locator('#trend-tooltip').waitFor({ state: 'hidden' });
     const last = await page.locator('#line-cards .line-card').nth(2).boundingBox();
     await page.screenshot({
@@ -363,6 +373,11 @@ export async function auditDesign({
     await page.locator('#board-show-share').uncheck();
     await page.locator('.board-display-options summary').click();
     await page.mouse.move(0, 0);
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('#line-cards .line-card')].every(
+        (card) => getComputedStyle(card).transform === 'none',
+      ),
+    );
     await page.locator('#trend-tooltip').waitFor({ state: 'hidden' });
     await page.screenshot({
       path: path.join(root, 'docs/images/seven-line-board.png'),

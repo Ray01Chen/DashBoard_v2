@@ -94,13 +94,12 @@ export async function auditLayoutStress({ page, context, baseURL, readConfig, re
           [390, 844],
         ]) {
           await page.setViewportSize({ width, height });
-          // Responsive formatting measures the final shared grid. Let browser
-          // resize events and ResizeObserver complete before reading its frame.
-          await page.evaluate(
-            () =>
-              new Promise((resolve) =>
-                requestAnimationFrame(() => requestAnimationFrame(resolve)),
-              ),
+          // CSS adopts the new width before ResizeObserver formats its values.
+          // Verify the settled result, retaining the overflow/font checks below.
+          await page.waitForFunction(() =>
+            [...document.querySelectorAll('#line-cards .line-card-values b')].every(
+              (node) => node.scrollWidth <= node.clientWidth + 1,
+            ),
           );
           const card = page.locator('#line-cards .line-card').first();
           const metrics = await card.locator('.line-card-values').evaluate((values) => {

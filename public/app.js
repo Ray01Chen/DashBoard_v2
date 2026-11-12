@@ -348,7 +348,7 @@ function applyAccess() {
     listOrder(state.user?.sites || [], state.language, (site) => site.site_code)
       .map(
         (site) =>
-          `<option value="${site.id}">${esc(site.site_code + ' · ' + site.site_name)}</option>`,
+          `<option value="${site.id}">${esc(site.site_name || site.site_code)}</option>`,
       )
       .join('');
   $('#site-select').value = String(state.user?.site?.id || '');
@@ -379,7 +379,7 @@ function prepareSiteLogin() {
     listOrder(state.user?.sites || [], state.language, (site) => site.site_code)
       .map(
         (site) =>
-          `<option value="${site.id}">${esc(site.site_code + ' · ' + site.site_name)}</option>`,
+          `<option value="${site.id}">${esc(site.site_name || site.site_code)}</option>`,
       )
       .join('');
   $('#login-submit').hidden = choosing && !state.user.sites.length;

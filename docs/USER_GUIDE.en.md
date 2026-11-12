@@ -179,9 +179,9 @@ The risk expresses how much faster than the original planned pace is required; P
 
 ## Overview controls and multi-station editing
 
-Row one contains date, Today, Whole day / Day / Night and Interval / Daily. Row two has line/group filters on the left and List order, Export report and Fullscreen on the right. Personal orders are stored per account/site; configured station sequence remains unchanged.
+Row one contains date, Today, Whole day / Day / Night and Interval / Daily. Row two has line/group filters on the left and List order, Display options, Export report and Fullscreen on the right. Personal orders are stored per account/site; configured station sequence remains unchanged. The header Site selector shows the site name once, falling back to its code only when the name is missing.
 
-Choose **Edit** on a read-only card. A separate table opens underneath: select a time slot and edit each configured output station's Target, Actual and Issue. Date, line/model, shift scope and site come from the report. There are no quick-text or apply-to-all controls. **Save** sends only changed fields in one atomic, version-checked batch, closes and refreshes the card. **Cancel** writes nothing. Blank Actual means unreported; zero is valid.
+Hover or swipe a read-only card right to reveal **Edit** on its left; keyboard focus also reveals it. A separate table opens underneath: select a time slot at its top left and edit each configured output station's Target, Actual and Issue. Date, line/model, shift scope and site come from the report. There are no quick-text or apply-to-all controls. **Save** sends only changed fields in one atomic, version-checked batch, closes and refreshes the card. **Cancel** writes nothing. Blank Actual means unreported; zero is valid.
 
 Slot changes ask before discarding unsaved values. Failures preserve input; a version conflict rejects the whole batch. Cancel and reopen to review the latest data. Fullscreen retains drafts, pauses rotation and keeps the table's scrolling local.
 

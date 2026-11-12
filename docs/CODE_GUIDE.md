@@ -136,6 +136,7 @@ Phase 1 的 schema、API、Migration、權限與部署回復規則集中在 [MUL
 ## 個人排序與總覽多站點編輯
 
 - `personal-lists.mjs`、`public/personal-lists.js`、`list-order.js`、`personal-order-ui.js` 仍以使用者＋廠區＋清單類型保存個人順序，與 CONFIG、站點流程及生產資料分離。
+- `public/overview-swipe.js` 管理原有 45px／200ms 編輯入口位移，補上方向鎖定、Pointer capture／取消、觸控與鍵盤；不接觸填報資料。垂直手勢保留原生捲動，橫向滑動不觸發卡片細節，儲存／取消會復位。
 - `public/overview-inline.js` 沿用既有元件檔，匯出 `createOverviewEditor`；卡片數據保持唯讀，下方表格固定捕獲日期、產線／Model、設定版本，各列保存站點版本。`overviewRows` 依設定流程建立列，`overviewChanges` 只產生已修改欄位。
 - 驗證重用 `entry.js` 的 `parseBulkValue`；寫入重用 PUT `/api/entry/interval`。後端原本的 `planStationInterval`、版本檢查、單一 SQLite 交易及 site/RBAC 驗證保持不變。任何站點衝突均回滾整批。
 - `monitor-ui.js` 的一般展開只呈現已觸發的告警及該單位儲存的異常說明；沒有合成發生時間或重複顯示數據。編輯與查看互斥，全螢幕展開時聚焦目前線體並在區域內捲動，關閉後恢復分頁。

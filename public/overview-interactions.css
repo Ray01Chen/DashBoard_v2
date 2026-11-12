@@ -128,15 +128,56 @@ body.sidebar-collapsed:not(.navigation-open) #sidebar .nav-flyout .nav-item {
   align-items: center;
   gap: 4px;
 }
+/* Reuse the original reveal gutter and 45px transform without changing the
+   shared grid or moving neighboring rows. The station editor stays below it. */
+#line-dashboard :is(#line-cards, .carousel-snapshot)[data-edit-available='true'] {
+  padding-right: 45px;
+}
+#line-dashboard :is(#line-cards, .carousel-snapshot)[data-edit-available='true'] .line-card {
+  position: relative;
+  overflow: visible;
+  transition: transform 200ms ease-out;
+}
+#line-cards[data-edit-available='true'] .line-card > :not(.row-expansion) {
+  touch-action: pan-y pinch-zoom;
+}
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-card[data-edit-revealed] {
+  transform: translateX(45px);
+}
+#line-dashboard :is(#line-cards, .carousel-snapshot) .line-card[data-edit-dragging] {
+  transition: none;
+  transform: translateX(var(--edit-drag, 0px));
+}
+.line-edit-rail {
+  position: absolute;
+  left: -45px;
+  top: 0;
+  width: 45px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out;
+}
+.line-card:is([data-editor-open], .is-expanded) > .line-edit-rail {
+  height: var(--monitor-row-height);
+}
+[data-edit-revealed] > .line-edit-rail,
+[data-edit-dragging] > .line-edit-rail {
+  opacity: 1;
+  pointer-events: auto;
+}
 .overview-edit-button {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  min-height: 34px;
-  width: 40px;
-  padding: 3px;
+  gap: 3px;
+  min-height: 42px;
+  width: 42px;
+  padding: 6px 2px;
   border: 1px solid var(--ui-border);
   border-radius: 7px;
   background: var(--surface);
@@ -145,8 +186,8 @@ body.sidebar-collapsed:not(.navigation-open) #sidebar .nav-flyout .nav-item {
   cursor: pointer;
 }
 .overview-edit-button .icon {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
 }
 #line-dashboard #line-cards .line-card:is([data-editor-open], .is-expanded) {
   height: auto;
@@ -178,20 +219,10 @@ body.sidebar-collapsed:not(.navigation-open) #sidebar .nav-flyout .nav-item {
 .overview-editor-heading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 0 4px 10px;
-}
-.overview-editor-heading .production-identity {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-.overview-editor-heading .production-line {
-  font-size: 15px;
+  padding: 0 0 10px;
 }
 .overview-editor-heading label {
   display: flex;
@@ -320,6 +351,10 @@ body.fullscreen-board #line-cards .card-expanded-details {
 @media (prefers-reduced-motion: reduce) {
   .row-expansion {
     animation: none;
+  }
+  #line-dashboard :is(#line-cards, .carousel-snapshot)[data-edit-available='true'] .line-card,
+  .line-edit-rail {
+    transition: none;
   }
 }
 @media (max-width: 620px) {

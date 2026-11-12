@@ -1,10 +1,7 @@
+import { createOverviewSwipe } from './overview-swipe.js';
 import { parseBulkValue } from './entry.js';
 import { scheduleFor } from './production-schedules.js';
-import {
-  sameProduction,
-  stationHasOutput,
-  productionIdentityMarkup,
-} from './production-models.js';
+import { sameProduction, stationHasOutput } from './production-models.js';
 import { slotPresentation, closeMonitorAlerts } from './monitor-ui.js';
 
 const fields = ['target', 'actual', 'issue'];
@@ -69,6 +66,7 @@ export function createOverviewEditor({
   confirm,
 }) {
   const root = document.querySelector('#line-cards');
+  const swipe = createOverviewSwipe(root);
   let draft = null,
     serial = 0,
     restoreKey = null;
@@ -161,6 +159,7 @@ export function createOverviewEditor({
     restoreKey = draft?.key || null;
     serial++;
     draft = null;
+    swipe.reset();
     root.querySelectorAll('[data-overview-panel]').forEach((node) => node.remove());
     root
       .querySelectorAll('[data-editor-open]')
@@ -169,6 +168,7 @@ export function createOverviewEditor({
   }
   function sync() {
     const { t, esc, icon, language } = getContext();
+    swipe.sync(canEdit());
     for (const card of root.querySelectorAll('.line-card')) {
       const active = draft?.key === card.dataset.monitorLine;
       let trigger = card.querySelector('[data-overview-edit]');
@@ -177,7 +177,10 @@ export function createOverviewEditor({
         trigger.type = 'button';
         trigger.className = 'overview-edit-button';
         trigger.dataset.overviewEdit = '';
-        card.querySelector('.line-card-actions').prepend(trigger);
+        const rail = document.createElement('div');
+        rail.className = 'line-edit-rail';
+        rail.append(trigger);
+        card.prepend(rail);
       }
       if (trigger) {
         trigger.hidden = !canEdit();
@@ -185,6 +188,7 @@ export function createOverviewEditor({
         trigger.setAttribute('aria-expanded', String(active));
       }
       card.toggleAttribute('data-editor-open', active);
+      if (active) card.setAttribute('data-edit-revealed', '');
       if (!active) {
         card.querySelector('[data-overview-panel]')?.remove();
         continue;
@@ -212,7 +216,7 @@ export function createOverviewEditor({
           }
         : null;
       panel.dataset.view = view;
-      panel.innerHTML = `<header class="overview-editor-heading">${productionIdentityMarkup(draft.unit, esc, { singleLine: true })}<label>${esc(t('inlineSlot'))}<select data-editor-slot aria-label="${esc(t('inlineSlot'))}" ${draft.loading || draft.saving ? 'disabled' : ''}>${draft.choices.map((slot) => `<option value="${esc(slot.key)}" ${slot.key === draft.selected ? 'selected' : ''}>${esc(t(slot.shift) + ' · ' + slot.start + '–' + slot.end)}</option>`).join('')}</select></label></header>
+      panel.innerHTML = `<header class="overview-editor-heading"><label>${esc(t('inlineSlot'))}<select data-editor-slot aria-label="${esc(t('inlineSlot'))}" ${draft.loading || draft.saving ? 'disabled' : ''}>${draft.choices.map((slot) => `<option value="${esc(slot.key)}" ${slot.key === draft.selected ? 'selected' : ''}>${esc(t(slot.shift) + ' · ' + slot.start + '–' + slot.end)}</option>`).join('')}</select></label></header>
         <div class="overview-editor-body"><table><thead><tr><th>${esc(t('job'))} / ${esc(t('station'))}</th>${fields.map((field) => `<th>${esc(t(field))}</th>`).join('')}</tr></thead><tbody>${draft.rows.map((item) => `<tr><th scope="row"><strong>${esc(item.row.job || '—')}</strong><span>${esc(item.row.station || '—')}</span></th>${fields.map((field) => `<td>${field === 'issue' ? `<textarea rows="1" maxlength="2000"` : '<input type="text" inputmode="numeric" maxlength="12"'} data-editor-row="${item.row.id}" data-editor-field="${field}" aria-label="${esc([item.row.job, item.row.station, t(field)].join(' · '))}" ${draft.loading || draft.saving ? 'disabled' : ''}${field === 'issue' ? `>${esc(item.draft[field])}</textarea>` : ` value="${esc(item.draft[field])}">`}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
         <footer class="overview-editor-footer"><span role="status" class="overview-editor-message">${esc(draft.error || (draft.loading ? t('inlineLoading') : !draft.rows.length ? t('inlineUnavailable') : ''))}</span><button type="button" class="button" data-editor-cancel ${draft.saving ? 'disabled' : ''}>${esc(t('inlineCancel'))}</button><button type="button" class="button primary" data-editor-save ${draft.loading || draft.saving || !draft.loaded || !draft.rows.length ? 'disabled' : ''}>${esc(t(draft.saving ? 'saving' : 'inlineSave'))}</button></footer>`;
       if (focus) {

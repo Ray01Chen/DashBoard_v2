@@ -2558,31 +2558,25 @@ try {
     assert.equal(geometry.readable, true);
     assert.equal(geometry.scrollable, true);
     assert.equal(geometry.pageOverflow, false);
-    // CSS responds before ResizeObserver redraws the SVG. Assert the settled
-    // geometry, rather than occasionally comparing a new box to the old SVG.
-    await page.waitForFunction(() =>
-      [...document.querySelectorAll('#line-cards .line-trend')].every((plot) => {
+    // Read the settled SVG and its box in one browser task. A resize/config
+    // refresh between two separate requests could mix different layouts.
+    const readyPlots = await page.waitForFunction(() => {
+      const plots = [...document.querySelectorAll('#line-cards .line-trend')].map((plot) => {
         const box = plot.getBoundingClientRect(),
           view = plot.querySelector('svg')?.viewBox.baseVal;
-        return (
-          view &&
-          Math.abs(box.width - view.width) <= 1 &&
-          Math.abs(box.height - view.height) <= 1
-        );
-      }),
-    );
-    const linePlots = await page.locator('#line-cards .line-trend').evaluateAll((plots) =>
-      plots.map((plot) => {
-        const box = plot.getBoundingClientRect(),
-          view = plot.querySelector('svg').viewBox.baseVal;
         return {
           width: box.width,
           height: box.height,
           fills:
-            Math.abs(box.width - view.width) <= 1 && Math.abs(box.height - view.height) <= 1,
+            !!view &&
+            Math.abs(box.width - view.width) <= 1 &&
+            Math.abs(box.height - view.height) <= 1,
         };
-      }),
-    );
+      });
+      return plots.length && plots.every((plot) => plot.fills) ? plots : false;
+    });
+    const linePlots = await readyPlots.jsonValue();
+    await readyPlots.dispose();
     assert.ok(
       linePlots.every((plot) => plot.width >= 180 && plot.height >= 30 && plot.fills),
       JSON.stringify(linePlots),

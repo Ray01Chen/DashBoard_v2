@@ -218,7 +218,7 @@ body[data-page='overview'] .page-heading {
   display: none;
 }
 body[data-page='overview'] .filter-bar {
-  padding: 0 12px;
+  padding: 0;
   margin-bottom: 4px;
   min-height: 38px;
   background: transparent;
@@ -257,6 +257,14 @@ body[data-page='overview'] .overview-tools {
   flex-wrap: wrap;
   gap: 6px;
   margin-left: auto;
+}
+#overview-operations > .button,
+#overview-operations > .board-display-options > summary {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
 }
 #metric-scope-controls {
   margin-left: auto;

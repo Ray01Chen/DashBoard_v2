@@ -959,6 +959,7 @@ const files = {
   '/personal-lists.js': ['personal-lists.js', 'text/javascript'],
   '/personal-order-ui.js': ['personal-order-ui.js', 'text/javascript'],
   '/overview-inline.js': ['overview-inline.js', 'text/javascript'],
+  '/overview-swipe.js': ['overview-swipe.js', 'text/javascript'],
   '/interaction-messages.js': ['interaction-messages.js', 'text/javascript'],
   '/overview-interactions.css': ['overview-interactions.css', 'text/css'],
   '/navigation-flyouts.js': ['navigation-flyouts.js', 'text/javascript'],
