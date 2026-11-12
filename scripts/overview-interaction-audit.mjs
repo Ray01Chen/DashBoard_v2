@@ -27,6 +27,30 @@ export async function auditOverviewInteractions({
   };
   try {
     await login();
+    const management = page.locator('#management-nav');
+    assert.equal(await management.getAttribute('open'), null);
+    await management.locator('summary').click();
+    assert.equal(await page.locator('[data-view="sites"]').isVisible(), true);
+    await management.locator('summary').click();
+    assert.equal(await page.locator('[data-view="sites"]').isVisible(), false);
+    await page.goto(baseURL + '/administration/sites');
+    await page.locator('#management-nav[open] [data-view="sites"].active').waitFor();
+    await page.locator('[data-view="users"]').click();
+    await page.locator('#management-nav[open] [data-view="users"].active').waitFor();
+    if (screenshots)
+      await page
+        .locator('#sidebar')
+        .screenshot({ path: path.join(root, 'docs/images/sidebar-management.png') });
+    await page.locator('#collapse-sidebar').click();
+    await management.locator('summary').click();
+    assert.equal(
+      await page
+        .locator('body')
+        .evaluate((node) => node.classList.contains('sidebar-collapsed')),
+      false,
+    );
+    assert.equal(await page.locator('[data-view="users"].active').isVisible(), true);
+    await page.goto(baseURL + '/overview');
     const site = (
       await json(
         await send('post', '/api/admin/sites', {
@@ -123,6 +147,16 @@ export async function auditOverviewInteractions({
     };
     await open();
     await page.locator('[data-inline-actual]:enabled').waitFor();
+    assert.equal(
+      await card
+        .locator(
+          '[data-inline-field="date"], [data-inline-field="shift"], [data-inline-field="rowId"]',
+        )
+        .count(),
+      0,
+    );
+    assert.equal(await card.locator('.health-period').isVisible(), false);
+    assert.equal(await card.locator('[data-next-slot], .line-slot').count(), 0);
     await page.locator('[data-inline-actual]').fill('37');
     await page.locator('[data-inline-preset]').selectOption({ index: 1 });
     assert.ok((await page.locator('[data-inline-issue]').inputValue()).length > 0);
@@ -138,7 +172,7 @@ export async function auditOverviewInteractions({
     await page.locator('[data-inline-actual]').fill('37');
     await page.locator('[data-inline-issue]').fill('Equipment downtime\nOperator note');
     const chosen = await page.locator('[data-inline-field="slotId"]').inputValue();
-    const rowId = Number(await page.locator('[data-inline-field="rowId"]').inputValue());
+    const rowId = config.rows.find((row) => row.line === 'CD2').id;
     await page.locator('[data-inline-save]').click();
     await page.waitForFunction(() => !document.querySelector('[data-inline-editing]'));
     const report = await json(await send('get', `/api/records?date=${date}&shift=day`));
@@ -253,15 +287,13 @@ export async function auditOverviewInteractions({
       const phone = await touch.newPage();
       phone.on('pageerror', (error) => errors.push(error.message));
       await phone.goto(baseURL + '/overview');
+      const otherDate = '2099-12-02';
+      await phone.locator('#report-date').fill(otherDate);
+      await phone.locator('#report-date').dispatchEvent('change');
+      await phone.locator('[data-report-scope="night"]').click();
       const edit = phone.locator('[data-inline-open]').first();
       await edit.waitFor();
       await edit.tap();
-      await phone.locator('[data-inline-actual]:enabled').waitFor();
-      const otherDate = '2099-12-02';
-      await phone.locator('[data-inline-field="date"]').fill(otherDate);
-      await phone.locator('[data-inline-field="date"]').dispatchEvent('change');
-      await phone.locator('[data-inline-actual]:enabled').waitFor();
-      await phone.locator('[data-inline-field="shift"]').selectOption('night');
       await phone.locator('[data-inline-actual]:enabled').waitFor();
       await phone.locator('[data-inline-actual]').fill('18');
       await phone.route('**/api/entry/records/*', (route) => route.abort('failed'), {
@@ -283,7 +315,7 @@ export async function auditOverviewInteractions({
         0,
       );
       record(
-        'Touch entry works without hover; date/night-shift edits and retry after network failure preserve the original production date and shift',
+        'Touch entry works without hover; global date/night-shift filters provide the fixed editing context; retry preserves the original production date and shift',
       );
     } finally {
       await touch.close();

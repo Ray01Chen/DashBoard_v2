@@ -140,7 +140,7 @@ export async function auditOverviewRefinement({
           '.production-state',
           '.line-card-values',
           '.line-trend',
-          '.line-slot',
+          '.health-period',
           '.line-card-status',
         ];
         const boxes = Object.fromEntries(

@@ -107,7 +107,7 @@ const guides = {
         title: 'Accounts, language and data',
         paragraphs: [
           'Open List order in the header (or fullscreen controls). Choose a list and drag its handle or use the arrow buttons. The order saves automatically to your account and current site, survives login, and new items appear last. Other users, CONFIG station sequence and chronological slots are unchanged. If saving fails, retry or reload; do not leave before Order saved.',
-          'To edit output on Production Overview, hover a line and choose Edit on the left (always visible on touch). Select production date, shift, output station and slot. Enter Slot actual and issue quick text / notes, then Save or Cancel. Only that station and slot change; blank Actual is unreported, zero is valid. Fullscreen uses the same draft and pauses page rotation. A conflict or network error keeps your input; cancel and reopen to load the latest revision.',
+          'To edit output on Production Overview, hover a line and choose Edit on the left (always visible on touch). The date, shift and output station follow the displayed report. Select the time slot beside the status; it appears only once. Enter Slot actual and issue quick text / notes, then Save or Cancel. Only that station and slot change; blank Actual is unreported, zero is valid. Fullscreen uses the same draft and pauses page rotation. A conflict or network error keeps your input; cancel and reopen to load the latest revision.',
           'Managers configure shared presets and assignments. Members enter each station’s targets/actuals and issue notes, import and review reports; shared Settings are unavailable to members.',
           'Use the language control for English, Chinese or Thai and the theme control for your preferred colour. These browser preferences do not change another user’s view.',
           'Line/model headings omit the Model prefix. A name is split at its first hyphen: ECD16010094 appears on the first model line and (ORV3-PSU-3KW-AutoLine) on the second. Names without a hyphen use one line. The stored name and Excel identifiers are unchanged.',
@@ -222,7 +222,7 @@ const guides = {
         title: '帳號、語言及資料保存',
         paragraphs: [
           '在頁首或全螢幕控制列開啟「清單排序」，選擇清單後拖曳把手，或使用上下按鈕。順序自動存入你的帳號與目前廠區，重新登入仍保留；新增項目排最後，不影響其他人。站點配置與時段先後仍依業務設定。若儲存失敗可重試或重新載入，看到「順序已儲存」後再離開。',
-          '生產總覽可直接編輯：滑入線體後點左側「編輯」（觸控會常駐顯示），選生產日期、班別、產出站點與時段，再改實績、異常快捷文字／說明，按儲存或取消。只改該站該時段；實績空白是未回報，0 是有效回報。全螢幕沿用相同草稿，編輯時暫停換頁。版本衝突或連線失敗會保留輸入；可取消後重新開啟取得最新資料。',
+          '生產總覽可直接編輯：滑入線體後點左側「編輯」（觸控會常駐顯示），日期、班別與產出站點沿用畫面資料，只在狀態旁選一次時段，再改實績、異常快捷文字／說明，按儲存或取消。只改該站該時段；實績空白是未回報，0 是有效回報。全螢幕沿用相同草稿，編輯時暫停換頁。版本衝突或連線失敗會保留輸入；可取消後重新開啟取得最新資料。',
           'manager 管理共用預設及人員配置；member 可填每站當日目標／實績及異常、匯入與查詢，但不能修改共享 Settings。',
           '右上角可選英文、中文、泰文及配色。個人瀏覽器的偏好不會改變其他使用者的畫面。',
           '產線標題不再加 Model 字樣。型號以第一個 - 分成兩行，例如第一行 ECD16010094，第二行 (ORV3-PSU-3KW-AutoLine)；沒有 - 就顯示一行。只是顯示格式，保存名稱與 Excel 識別不變。',
@@ -339,7 +339,7 @@ const guides = {
         title: 'บัญชี ภาษา และการเก็บข้อมูล',
         paragraphs: [
           'เปิดลำดับรายการที่ส่วนหัวหรือแถบเต็มจอ เลือกรายการแล้วลากที่จับหรือใช้ลูกศร บันทึกอัตโนมัติเฉพาะบัญชีและโรงงานปัจจุบัน เข้าสู่ระบบใหม่ยังคงลำดับ รายการใหม่อยู่ท้าย ไม่กระทบผู้อื่น ลำดับสถานีและช่วงเวลายังเป็นไปตามการตั้งค่า หากบันทึกล้มเหลวให้ลองใหม่หรือโหลดใหม่',
-          'แก้ไขยอดจริงจากภาพรวมได้โดยชี้ที่สายแล้วกดแก้ไขด้านซ้าย (จอสัมผัสแสดงเสมอ) เลือกวันที่ กะ สถานี และช่วงเวลา กรอกยอดจริงและปัญหา แล้วบันทึกหรือยกเลิก เปลี่ยนเฉพาะสถานีและช่วงเวลาที่เลือก ช่องว่างคือยังไม่รายงาน 0 คือรายงานแล้ว เต็มจอใช้ร่างเดิมและหยุดสลับหน้า หากข้อมูลขัดแย้งหรือเครือข่ายล้มเหลวจะเก็บข้อความไว้ ยกเลิกแล้วเปิดใหม่เพื่อโหลดรุ่นล่าสุด',
+          'แก้ไขยอดจริงจากภาพรวมได้โดยชี้ที่สายแล้วกดแก้ไขด้านซ้าย (จอสัมผัสแสดงเสมอ) ใช้วันที่ กะ และสถานีจากรายงาน เลือกช่วงเวลาเพียงครั้งเดียวข้างสถานะ กรอกยอดจริงและปัญหา แล้วบันทึกหรือยกเลิก เปลี่ยนเฉพาะสถานีและช่วงเวลาที่เลือก ช่องว่างคือยังไม่รายงาน 0 คือรายงานแล้ว เต็มจอใช้ร่างเดิมและหยุดสลับหน้า หากข้อมูลขัดแย้งหรือเครือข่ายล้มเหลวจะเก็บข้อความไว้ ยกเลิกแล้วเปิดใหม่เพื่อโหลดรุ่นล่าสุด',
           'ผู้จัดการแก้ค่าเริ่มต้น การมอบหมายและลำดับสถานี ผู้บันทึกแก้ Target, Actual และปัญหารายสถานี ใช้กรอกทั้งสายตามช่วงและนำเข้าได้ แต่แก้ Settings ร่วมไม่ได้',
           'ส่วนหัวมีภาษาอังกฤษ จีน และไทย รวมถึงสีธีม ความชอบของเบราว์เซอร์หนึ่งไม่เปลี่ยนหน้าจอของผู้อื่น',
           'ชื่อผลิตภัณฑ์ไม่แสดงคำนำหน้า Model แบ่งที่ขีดแรก บรรทัดแรกเป็นรหัส บรรทัดที่สองเป็นข้อความส่วนที่เหลือในวงเล็บ ชื่อที่ไม่มีขีดใช้บรรทัดเดียว รหัสที่บันทึกและใน Excel ไม่เปลี่ยน',

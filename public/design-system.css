@@ -767,6 +767,46 @@ body.fullscreen-board #sidebar {
 #sidebar .nav-item:hover {
   background: var(--tint);
 }
+#sidebar .management-nav {
+  width: 100%;
+}
+#sidebar .management-nav > summary {
+  list-style: none;
+  cursor: pointer;
+}
+#sidebar .management-nav > summary::-webkit-details-marker {
+  display: none;
+}
+#sidebar .management-chevron {
+  margin-left: auto;
+  display: flex;
+}
+#sidebar .management-chevron .icon {
+  width: 15px;
+  height: 15px;
+  transition: transform 160ms ease-out;
+}
+#sidebar .management-nav[open] .management-chevron .icon {
+  transform: rotate(180deg);
+}
+#sidebar .management-nav.active > summary {
+  color: var(--primary-dark);
+  background: var(--soft);
+}
+#sidebar .management-links {
+  margin: 4px 0 4px 20px;
+  padding-left: 10px;
+  border-left: 1px solid var(--ui-border);
+}
+#sidebar .management-links .nav-item {
+  min-height: 40px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+body.sidebar-collapsed:not(.navigation-open) #sidebar .management-links,
+body.sidebar-collapsed:not(.navigation-open) #sidebar .management-chevron {
+  display: none;
+}
 #sidebar .sidebar-bottom {
   display: block;
   margin-top: auto;
@@ -978,8 +1018,8 @@ body.navigation-open #sidebar {
   display: flex;
   flex-direction: column;
   --monitor-row-height: 92px;
-  --monitor-card-columns: minmax(118px, 0.9fr) minmax(126px, 0.95fr) minmax(248px, 1.4fr)
-    minmax(130px, 1.5fr) minmax(136px, 1fr) minmax(150px, 1.4fr) 24px;
+  --monitor-card-columns: minmax(118px, 0.85fr) minmax(126px, 0.8fr) minmax(248px, 1.35fr)
+    minmax(180px, 1.6fr) minmax(220px, 1.6fr) 24px;
   gap: 6px;
   height: auto;
   max-height: none;
@@ -993,7 +1033,7 @@ body.navigation-open #sidebar {
   --card-tint: var(--surface);
   display: grid;
   grid-template-columns: var(--monitor-card-columns);
-  grid-template-areas: 'identity health metrics trend slot reason expand';
+  grid-template-areas: 'identity health metrics trend reason expand';
   grid-template-rows: auto;
   align-items: center;
   gap: 6px 8px;
@@ -1273,22 +1313,6 @@ body.navigation-open #sidebar {
   stroke: var(--primary);
   stroke-width: 2.2;
 }
-#line-dashboard :is(#line-cards, .carousel-snapshot) .line-slot {
-  grid-area: slot;
-  display: grid;
-  grid-template-rows: 18px 25px 18px;
-  justify-items: start;
-  align-items: center;
-  gap: 4px;
-  border: 0;
-  padding: 0;
-  min-width: 0;
-}
-.line-slot > small {
-  font-size: 13px;
-  line-height: 1.4;
-  color: var(--muted);
-}
 .time-pill {
   display: inline-block;
   border-radius: 14px;
@@ -1299,12 +1323,6 @@ body.navigation-open #sidebar {
   background: #eaf0f6;
   color: var(--ink);
   white-space: normal;
-}
-.line-slot .next-slot {
-  width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-status {
   grid-area: reason;
@@ -1452,7 +1470,7 @@ body.navigation-open #sidebar {
     --monitor-card-columns: 130px 136px minmax(0, 1fr) 24px;
   }
   #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card {
-    grid-template-areas: 'identity health metrics expand' 'slot reason trend expand';
+    grid-template-areas: 'identity health metrics expand' 'trend trend reason expand';
   }
   #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values {
     border: 0;
@@ -1475,21 +1493,14 @@ body.navigation-open #sidebar {
 }
 @container monitoring (max-width: 620px) {
   #line-dashboard :is(#line-cards, .carousel-snapshot) {
-    --monitor-row-height: 350px;
+    --monitor-row-height: 300px;
     --monitor-card-columns: minmax(0, 1fr) minmax(0, 1fr) 24px;
   }
   #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card {
-    grid-template-areas: 'identity health expand' 'metrics metrics metrics' 'trend trend trend' 'slot slot slot' 'reason reason reason';
+    grid-template-areas: 'identity health expand' 'metrics metrics metrics' 'trend trend trend' 'reason reason reason';
   }
   #line-dashboard :is(#line-cards, .carousel-snapshot) .line-trend {
     height: 44px;
-  }
-  #line-dashboard :is(#line-cards, .carousel-snapshot) .line-slot {
-    display: flex;
-    flex-wrap: wrap;
-  }
-  #line-dashboard :is(#line-cards, .carousel-snapshot) .line-slot .next-slot {
-    width: 100%;
   }
 }
 
@@ -1503,7 +1514,7 @@ body.navigation-open #sidebar {
 }
 @container monitoring (max-width: 351px) {
   #line-dashboard :is(#line-cards, .carousel-snapshot) {
-    --monitor-row-height: 390px;
+    --monitor-row-height: 340px;
   }
   #line-dashboard :is(#line-cards, .carousel-snapshot) .line-card-values {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1515,16 +1526,6 @@ body.navigation-open #sidebar {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-#line-dashboard :is(#line-cards, .carousel-snapshot) [data-slot-label] {
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-#line-dashboard :is(#line-cards, .carousel-snapshot) .time-pill {
-  white-space: nowrap;
-}
-
 /* Fullscreen is a viewport-sized grid. The flexible cards track is measured by
  * fitMonitorPage; controls, pager and optional charts have explicit budgets.
  * Reserving the pager track even for one page prevents capacity oscillation. */

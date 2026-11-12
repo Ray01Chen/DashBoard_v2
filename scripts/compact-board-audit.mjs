@@ -162,7 +162,7 @@ export async function auditCompactBoard({
             '.line-health',
             '.line-card-values',
             '.line-trend',
-            '.line-slot',
+            '.health-period',
             '.line-card-status',
           ];
           return {

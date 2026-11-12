@@ -2947,10 +2947,8 @@ try {
     const card = monitor.locator('#line-cards .line-card').first();
     await card.waitFor();
     assert.match(await card.locator('.signal-lamp').getAttribute('class'), /lamp-red/);
-    assert.match(
-      await card.locator('.line-card-status > small').innerText(),
-      /Break.*10:00.*11:00/,
-    );
+    assert.match(await card.locator('.production-state').innerText(), /Break/);
+    assert.equal(await card.locator('.health-period').innerText(), '10:00–11:00');
     assert.match(await card.locator('.line-card-status > span').innerText(), /Achievement 80/);
     await monitor.waitForLoadState('networkidle');
     await monitor.clock.runFor(6000);

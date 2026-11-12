@@ -181,6 +181,8 @@ The risk expresses how much faster than the original planned pace is required; P
 
 Open **List order** in the header or fullscreen controls. Choose a list, drag its handle or use the arrow buttons, and wait for **Order saved**. Orders are stored in SQLite per account and current site, survive login, and never change another user's view. New items go last; without a preference, source order is retained. Station configuration sequence and chronological slots remain business settings.
 
-On Production Overview, hover a line and choose **Edit** on its left; touch devices always show the entry. Edit Slot actual in place, choose date, shift, output station and slot, and select issue quick text or enter notes. **Save** changes only that station/slot using the existing report API; **Cancel** writes nothing. Blank Actual is unreported; zero is valid. Production-write permission is required.
+On Production Overview, hover a line and choose **Edit** on its left; touch devices always show the entry. Edit Slot actual in place, use the displayed date, shift and output station, choose the single time slot beside the status, and select issue quick text or enter notes. Cards no longer repeat the slot or show the next slot. **Save** changes only that station/slot using the existing report API; **Cancel** writes nothing. Blank Actual is unreported; zero is valid. Production-write permission is required.
 
 Editing pauses pagination. Fullscreen and refresh retain the draft; fullscreen reduces page capacity when needed. Errors retain input. A conflicting revision is rejected: cancel and reopen to load the latest report before applying an informed change. Sorting failures offer Retry and Reload.
+
+The sidebar **Management** group expands to Site management and User management. Entering a management route opens its group and highlights the current page. Only authorized items are shown.

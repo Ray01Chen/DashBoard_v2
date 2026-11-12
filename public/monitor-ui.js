@@ -11,7 +11,6 @@ import {
   rotatedReason,
   cycleReason,
   productionState,
-  productionStatusText,
   updateAlertList,
 } from './alert-display.js';
 const expanded = new Set();
@@ -166,10 +165,10 @@ export function monitorCard(line, ctx, metrics) {
     <span class="line-health"><span class="line-severity"><span class="signal-lamp lamp-${line.status}" role="img" aria-label="${esc(t('alertState_' + line.unified.severity))}"></span><span class="severity-badge severity-${line.unified.severity}">${esc(t('alertState_' + line.unified.severity))}</span></span><span class="production-state state-${period.state}">${esc(t(period.state === 'completed' ? 'slotCompleted' : period.state))}</span><small class="health-period">${esc(range(period.slot))}</small></span>
     <span class="line-card-values">${metrics}<span class="achievement-metric"><small title="${esc(t('achievementRate'))}">${esc(t('achievementRate'))}</small><b class="${rate.tone}" data-achievement title="${esc(rate.full)}">${esc(rate.text)}</b></span></span>
     <span class="line-trend"></span>
-    <span class="line-slot"><small data-slot-label>${esc(t(period.label))}</small><span class="time-pill state-${period.state}" data-slot-range>${esc(range(period.slot))}</span><small class="next-slot" data-next-slot title="${esc(period.next ? t('nextSlot') + ': ' + range(period.next) : t('noNextSlot'))}">${esc(period.next ? t('nextSlot') + ': ' + range(period.next) : t('noNextSlot'))}</small></span>
-    <div class="line-card-status"><span class="${['red', 'yellow'].includes(line.unified.severity) ? 'alert-text' : ''}" data-card-reason title="${esc(reason.full)}">${esc(reason.text)}</span><small class="card-period-summary">${esc(productionStatusText(line, t, ctx.now))}</small><div class="reason-controls" ${reason.count > 1 ? '' : 'hidden'}><button type="button" class="reason-step" data-reason-step="-1" aria-label="${esc(t('previous'))}">${icon('left')}</button><output data-reason-count aria-label="${esc(t('alertReasons'))}">${reason.index} / ${reason.count}</output><button type="button" class="reason-step" data-reason-step="1" aria-label="${esc(t('next'))}">${icon('right')}</button></div></div>
+
+    <div class="line-card-status"><span class="${['red', 'yellow'].includes(line.unified.severity) ? 'alert-text' : ''}" data-card-reason title="${esc(reason.full)}">${esc(reason.text)}</span><div class="reason-controls" ${reason.count > 1 ? '' : 'hidden'}><button type="button" class="reason-step" data-reason-step="-1" aria-label="${esc(t('previous'))}">${icon('left')}</button><output data-reason-count aria-label="${esc(t('alertReasons'))}">${reason.index} / ${reason.count}</output><button type="button" class="reason-step" data-reason-step="1" aria-label="${esc(t('next'))}">${icon('right')}</button></div></div>
     <button type="button" class="card-reason-toggle icon-button" data-line-expand aria-expanded="${open}" aria-label="${esc(t('alertDetails'))}" title="${esc(t('alertDetails'))}">${icon('down')}</button>
-    <section class="card-expanded-details" ${open ? '' : 'hidden'}><div class="expanded-slot-info"><strong>${esc(productionLabel(line))}</strong><p data-expanded-source></p><p data-expanded-period></p><p data-expanded-next></p><dl data-expanded-metrics></dl></div><div><strong>${esc(t('alertDetails'))}</strong><ul data-card-alert-list></ul></div><button type="button" class="button card-open-detail">${esc(t('openProductionDetails'))}${icon('right')}</button></section>
+    <section class="card-expanded-details" ${open ? '' : 'hidden'}><div class="expanded-slot-info"><strong>${esc(productionLabel(line))}</strong><p data-expanded-source></p><dl data-expanded-metrics></dl></div><div><strong>${esc(t('alertDetails'))}</strong><ul data-card-alert-list></ul></div><button type="button" class="button card-open-detail">${esc(t('openProductionDetails'))}${icon('right')}</button></section>
   </article>`;
 }
 export function updateMonitorCard(card, line, ctx) {
@@ -202,31 +201,15 @@ export function updateMonitorCard(card, line, ctx) {
   card.querySelector('.health-period').textContent = range(period.slot);
   setMonitorNumber(card.querySelector('[data-achievement]'), rate.value, ctx, '', '%');
   card.querySelector('[data-achievement]').className = rate.tone;
-  card.querySelector('[data-slot-label]').textContent = t(period.label);
-  card.querySelector('[data-slot-label]').title = t(period.label);
-  const time = card.querySelector('[data-slot-range]');
-  time.className = 'time-pill state-' + period.state;
-  time.textContent = range(period.slot);
-  const next = card.querySelector('[data-next-slot]');
-  next.textContent = period.next ? t('nextSlot') + ': ' + range(period.next) : t('noNextSlot');
-  next.title = next.textContent;
   const label = card.querySelector('[data-card-reason]');
   label.textContent = reason.text;
   label.title = reason.full;
   label.className = ['red', 'yellow'].includes(line.unified.severity) ? 'alert-text' : '';
-  card.querySelector('.card-period-summary').textContent = productionStatusText(
-    line,
-    t,
-    ctx.now,
-  );
   card.querySelector('.reason-controls').hidden = reason.count < 2;
   card.querySelector('[data-reason-count]').textContent = reason.index + ' / ' + reason.count;
   if (open) {
     card.querySelector('[data-expanded-source]').textContent =
       card.querySelector('.line-source').textContent;
-    card.querySelector('[data-expanded-period]').textContent =
-      t(period.label) + ': ' + range(period.slot);
-    card.querySelector('[data-expanded-next]').textContent = next.textContent;
     const fields =
       ctx.metricScope === 'day'
         ? ['dailyTarget', 'dailyActual', 'dailyGap']

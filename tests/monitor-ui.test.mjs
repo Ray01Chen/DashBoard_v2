@@ -153,7 +153,11 @@ test('horizontal cards translate all information bands, expose complete reasons 
     assert.match(html, /data-line-expand/);
     assert.match(html, /data-card-alert-list/);
     assert.match(html, /data-achievement/);
-    assert.match(html, /09:10–10:00/);
+    assert.equal((html.match(/09:00–09:10/g) || []).length, 1);
+    assert.doesNotMatch(
+      html,
+      /data-next-slot|09:10–10:00|data-expanded-period|card-period-summary/,
+    );
   }
 });
 

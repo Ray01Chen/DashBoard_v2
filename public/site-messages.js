@@ -11,9 +11,9 @@ export const siteMessages = {
     accessHelpCommon:
       '輸入帳號密碼，可勾選「記住我」保留 30 天登入；一般登入最長 8 小時。若有多個廠區且尚無有效的上次選擇，登入後會列出可進入的已啟用廠區。登入後由頂部「目前廠區」切換；先處理未儲存填報，切換會重新載入工作區。',
     accessHelpSystem:
-      '系統管理員可從「廠區管理」新增代碼、名稱並儲存，或編輯啟用狀態；停用不刪歷史。按「查看使用者」進入該廠區名冊，在「使用者管理」新增帳號，再選帳號的「廠區授權」設定廠區角色及功能。系統管理員預設可進入所有廠區，個別授權不能限制其全域角色。',
+      '展開左側「管理」，系統管理員可從「廠區管理」新增代碼、名稱並儲存，或編輯啟用狀態；停用不刪歷史。按「查看使用者」進入該廠區名冊，在「使用者管理」新增帳號，再選帳號的「廠區授權」設定廠區角色及功能。系統管理員預設可進入所有廠區，個別授權不能限制其全域角色。',
     accessHelpSiteAdmin:
-      '廠區管理員只能在「使用者管理」建立及管理目前廠區的一般使用者、調整功能或撤銷該廠區權限；不能新增廠區、指派廠區管理員或重設既有帳號的全域密碼。全域帳號設定由系統管理員處理。',
+      '展開左側「管理」，廠區管理員只能在「使用者管理」建立及管理目前廠區的一般使用者、調整功能或撤銷該廠區權限；不能新增廠區、指派廠區管理員或重設既有帳號的全域密碼。全域帳號設定由系統管理員處理。',
     accessHelpUser:
       '一般使用者只能使用被授權的功能；新使用者預設僅查看，填報、匯入及匯出需另行勾選。匯入需要同時具備填報權限。權限撤銷或廠區停用後會立即拒絕存取；請重新整理並選擇有效廠區。若其他分頁已切換廠區，舊分頁須重新載入才能繼續。',
     sites: '廠區管理',
@@ -77,9 +77,9 @@ export const siteMessages = {
     accessHelpCommon:
       'Sign in with a username and password. Remember me keeps the login for 30 days; a normal session lasts up to 8 hours. If no valid last site exists, choose an authorized active site after login. Switch using Current site in the header. Resolve unsaved reports first; switching reloads the workspace.',
     accessHelpSystem:
-      'System Admins use Site management to save a code/name or edit activation. Disabling retains history. View users opens the site roster. In User management, create an account, then edit its Site access to assign site roles and features. System Admins implicitly access all sites; site grants cannot restrict that global role.',
+      'Expand Management in the sidebar. System Admins use Site management to save a code/name or edit activation. Disabling retains history. View users opens the site roster. In User management, create an account, then edit its Site access to assign site roles and features. System Admins implicitly access all sites; site grants cannot restrict that global role.',
     accessHelpSiteAdmin:
-      'Site Admins can create and manage normal users in the current site, edit feature grants and revoke site access. They cannot create sites, assign Site Admins or reset an existing account’s global password. A System Admin manages global account settings.',
+      'Expand Management in the sidebar to open User management. Site Admins can create and manage normal users in the current site, edit feature grants and revoke site access. They cannot create sites, assign Site Admins or reset an existing account’s global password. A System Admin manages global account settings.',
     accessHelpUser:
       'Users can use only granted features. New users default to view-only; reporting, import and export require explicit grants. Import also requires reporting permission. Revoked access or a disabled site is rejected immediately. Reload and select a valid site; a tab opened before another tab switched sites must reload before continuing.',
     sites: 'Site management',
@@ -147,9 +147,9 @@ export const siteMessages = {
     accessHelpCommon:
       'เข้าสู่ระบบด้วยบัญชีและรหัสผ่าน จดจำฉันเก็บการเข้าสู่ระบบ 30 วัน ปกติไม่เกิน 8 ชั่วโมง หากโรงงานล่าสุดไม่ถูกต้องให้เลือกโรงงานที่ได้รับอนุญาตและเปิดใช้งาน เปลี่ยนโรงงานได้ที่ส่วนหัว จัดการรายงานที่ยังไม่บันทึกก่อน เพราะระบบจะโหลดพื้นที่ทำงานใหม่',
     accessHelpSystem:
-      'ผู้ดูแลระบบสร้างรหัสและชื่อในจัดการโรงงานและบันทึก ปิดใช้งานโดยไม่ลบประวัติ ดูผู้ใช้เพื่อเปิดรายชื่อโรงงาน สร้างบัญชีในจัดการผู้ใช้แล้วกำหนดบทบาทและสิทธิ์รายโรงงาน ผู้ดูแลระบบเข้าได้ทุกโรงงาน สิทธิ์รายโรงงานไม่จำกัดบทบาทระบบ',
+      'เปิดการจัดการในแถบด้านซ้าย ผู้ดูแลระบบสร้างรหัสและชื่อในจัดการโรงงานและบันทึก ปิดใช้งานโดยไม่ลบประวัติ ดูผู้ใช้เพื่อเปิดรายชื่อโรงงาน สร้างบัญชีในจัดการผู้ใช้แล้วกำหนดบทบาทและสิทธิ์รายโรงงาน ผู้ดูแลระบบเข้าได้ทุกโรงงาน สิทธิ์รายโรงงานไม่จำกัดบทบาทระบบ',
     accessHelpSiteAdmin:
-      'ผู้ดูแลโรงงานสร้างและจัดการผู้ใช้ทั่วไปของโรงงานปัจจุบัน แก้สิทธิ์และถอนสิทธิ์โรงงานได้ แต่สร้างโรงงาน แต่งตั้งผู้ดูแลโรงงานหรือเปลี่ยนรหัสผ่านส่วนกลางของบัญชีเดิมไม่ได้ ผู้ดูแลระบบจัดการบัญชีส่วนกลาง',
+      'เปิดการจัดการในแถบด้านซ้ายเพื่อเลือกจัดการผู้ใช้ ผู้ดูแลโรงงานสร้างและจัดการผู้ใช้ทั่วไปของโรงงานปัจจุบัน แก้สิทธิ์และถอนสิทธิ์โรงงานได้ แต่สร้างโรงงาน แต่งตั้งผู้ดูแลโรงงานหรือเปลี่ยนรหัสผ่านส่วนกลางของบัญชีเดิมไม่ได้ ผู้ดูแลระบบจัดการบัญชีส่วนกลาง',
     accessHelpUser:
       'ผู้ใช้ใช้ได้เฉพาะฟังก์ชันที่ได้รับสิทธิ์ บัญชีใหม่เริ่มดูอย่างเดียว การรายงาน นำเข้าและส่งออกต้องอนุญาตเพิ่ม นำเข้าต้องมีสิทธิ์รายงานด้วย ถอนสิทธิ์หรือปิดโรงงานแล้วระบบปฏิเสธทันที โปรดโหลดใหม่และเลือกโรงงานที่ใช้ได้ หากแท็บอื่นเปลี่ยนโรงงานให้โหลดแท็บเดิมใหม่ก่อนทำต่อ',
     sites: 'จัดการโรงงาน',

@@ -78,22 +78,32 @@
           data-i18n-title="settings"
           ><span data-icon="settings"></span><span class="nav-label" data-i18n="settings"></span
         ></a>
-        <a
-          href="/administration/sites"
-          class="nav-item"
-          data-view="sites"
-          data-system-only
-          data-i18n-title="sites"
-          ><span data-icon="grid"></span><span class="nav-label" data-i18n="sites"></span
-        ></a>
-        <a
-          href="/administration/users"
-          class="nav-item"
-          data-view="users"
-          data-admin-only
-          data-i18n-title="users"
-          ><span data-icon="clipboard"></span><span class="nav-label" data-i18n="users"></span
-        ></a>
+        <details id="management-nav" class="management-nav" data-admin-only>
+          <summary class="nav-item" data-i18n-title="managementNavigation">
+            <span data-icon="settings"></span
+            ><span class="nav-label" data-i18n="managementNavigation"></span
+            ><span class="management-chevron" data-icon="down"></span>
+          </summary>
+          <div class="management-links">
+            <a
+              href="/administration/sites"
+              class="nav-item"
+              data-view="sites"
+              data-system-only
+              data-i18n-title="sites"
+              ><span data-icon="grid"></span><span class="nav-label" data-i18n="sites"></span
+            ></a>
+            <a
+              href="/administration/users"
+              class="nav-item"
+              data-view="users"
+              data-admin-only
+              data-i18n-title="users"
+              ><span data-icon="clipboard"></span
+              ><span class="nav-label" data-i18n="users"></span
+            ></a>
+          </div>
+        </details>
         <a href="/guide" class="nav-item" data-view="help" data-i18n-title="help"
           ><span data-icon="info"></span><span class="nav-label" data-i18n="help"></span
         ></a>

@@ -72,7 +72,7 @@
 /* Reserve the translated row's right edge without reflowing adjacent rows.
    The left rail travels into this same 45px gutter with the row. */
 #line-dashboard #line-cards {
-  --inline-edit-height: 260px;
+  --inline-edit-height: 192px;
 }
 #line-dashboard #line-cards[data-inline-available='true'] {
   padding-right: 45px;
@@ -148,19 +148,19 @@
   padding: 7px 3px;
   font-variant-numeric: tabular-nums;
 }
-.inline-selectors {
+.inline-slot {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 5px;
 }
-.inline-selectors label,
+.inline-slot,
 .inline-issue label {
   display: grid;
   gap: 3px;
   font-size: 11px;
   color: var(--muted);
 }
-.inline-selectors :is(input, select),
+.inline-slot select,
 .inline-issue :is(select, textarea) {
   width: 100%;
   min-width: 0;
@@ -196,7 +196,7 @@ body.fullscreen-board #line-dashboard #line-cards:has([data-inline-editing]) {
 }
 @media (max-width: 750px) {
   #line-dashboard #line-cards .line-card[data-inline-editing] {
-    min-height: 600px;
+    min-height: var(--inline-edit-height);
   }
   body.fullscreen-board #line-dashboard #line-cards .line-card[data-inline-editing] {
     min-height: 0;
@@ -219,30 +219,48 @@ body.fullscreen-board #line-dashboard #line-cards .line-card[data-inline-editing
 }
 @container monitoring (max-width: 1065px) {
   #line-dashboard #line-cards {
-    --inline-edit-height: 400px;
+    --inline-edit-height: 300px;
   }
 }
 @container monitoring (max-width: 620px) {
   #line-dashboard #line-cards {
-    --inline-edit-height: 600px;
+    --inline-edit-height: 460px;
   }
 }
 
-/* Slot/status panels otherwise retain fixed read-only grid rows. Remove those
-   track heights while editing so labels and validation messages stay inside. */
-#line-dashboard #line-cards [data-inline-editing] .line-slot {
-  grid-template-rows: auto;
-  justify-items: stretch;
-  align-items: start;
-  height: auto;
+/* The same health region owns the only period readout or selector. */
+#line-dashboard #line-cards [data-inline-editing] .line-health {
+  grid-template-rows: 24px 24px auto;
 }
 #line-dashboard #line-cards [data-inline-editing] .line-card-status {
-  display: block;
+  display: grid;
   height: auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  gap: 5px 8px;
   max-height: none;
 }
-#line-dashboard #line-cards [data-inline-editing] .reason-controls {
+#line-cards [data-inline-editing] [data-card-reason] {
+  grid-column: 1;
+  grid-row: 1;
+}
+#line-cards [data-inline-editing] .reason-controls {
   position: static;
+  grid-column: 2;
+  grid-row: 1;
+}
+#line-cards [data-inline-editing] .inline-issue {
+  grid-column: 1 / -1;
+}
+.inline-feedback:empty {
+  display: none;
+}
+.inline-slot {
+  width: 100%;
+  margin-top: 3px;
+}
+.inline-issue textarea {
+  min-height: 52px;
 }
 #line-dashboard #line-cards [data-inline-editing] [data-inline-actual] {
   grid-column: 1;
@@ -255,8 +273,8 @@ body.fullscreen-board #line-dashboard #line-cards .line-card[data-inline-editing
    All rows use the same tracks at each existing container breakpoint. */
 @container monitoring (min-width: 1066px) {
   #line-dashboard #line-cards[data-inline-available='true'] {
-    --monitor-card-columns: minmax(108px, 0.9fr) minmax(118px, 0.95fr) minmax(248px, 1.4fr)
-      minmax(180px, 1.5fr) minmax(136px, 1fr) minmax(140px, 1.4fr) 24px;
+    --monitor-card-columns: minmax(118px, 0.85fr) minmax(118px, 0.8fr) minmax(248px, 1.35fr)
+      minmax(180px, 1.6fr) minmax(220px, 1.6fr) 24px;
   }
   #line-dashboard #line-cards[data-inline-available='true'] .line-card {
     column-gap: 6px;

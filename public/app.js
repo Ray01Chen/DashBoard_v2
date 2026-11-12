@@ -594,6 +594,12 @@ function updateHeadings() {
     b.classList.toggle('active', b.dataset.view === view);
     b.setAttribute('aria-current', b.dataset.view === view ? 'page' : 'false');
   });
+  const management = $('#management-nav');
+  const inManagement = isAdministration(view);
+  if (inManagement && management.dataset.activeView !== view) management.open = true;
+  management.dataset.activeView = view;
+  management.classList.toggle('active', inManagement);
+  management.querySelector('summary').setAttribute('aria-expanded', String(management.open));
   updateSettingsNavigation();
 }
 function updateSettingsNavigation() {
@@ -2373,7 +2379,7 @@ document.addEventListener('keydown', (event) => {
     overlayNavigation() &&
     document.body.classList.contains('navigation-open')
   ) {
-    const controls = [...$('#sidebar').querySelectorAll('a,button')].filter(
+    const controls = [...$('#sidebar').querySelectorAll('a,button,summary')].filter(
       (node) => node.checkVisibility() && !node.disabled,
     );
     const first = controls[0],
@@ -2385,6 +2391,20 @@ document.addEventListener('keydown', (event) => {
       event.preventDefault();
       first.focus();
     }
+  }
+});
+$('#management-nav').addEventListener('toggle', (event) => {
+  event.currentTarget
+    .querySelector('summary')
+    .setAttribute('aria-expanded', String(event.currentTarget.open));
+});
+$('#management-nav > summary').addEventListener('click', (event) => {
+  if (state.collapsed && !overlayNavigation()) {
+    event.preventDefault();
+    state.collapsed = false;
+    stored('bp-collapsed', 'false');
+    $('#management-nav').open = true;
+    applyCollapse();
   }
 });
 $('#open-settings').onclick = (event) => {

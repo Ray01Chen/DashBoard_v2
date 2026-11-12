@@ -210,6 +210,7 @@ export async function auditSiteManagement({
     await report.locator('#login-submit').click();
     await report.locator('body.authenticated').waitFor();
     assert.equal(await report.locator('[data-view="settings"]').isVisible(), false);
+    assert.equal(await report.locator('#management-nav').isVisible(), false);
     assert.equal(await report.locator('[data-view="users"]').isVisible(), false);
     assert.equal(await report.locator('[data-view="entry"]').isVisible(), false);
     assert.equal(await report.locator('#export').isVisible(), false);
@@ -229,6 +230,7 @@ export async function auditSiteManagement({
     assert.equal(cookie.httpOnly, true);
     assert.equal(cookie.sameSite, 'Strict');
     await switchSite(report, 1);
+    await report.locator('#management-nav > summary').click();
     assert.equal(await report.locator('[data-view="users"]').isVisible(), true);
     assert.equal(await report.locator('[data-view="settings"]').isVisible(), true);
     assert.equal(await report.locator('[data-view="sites"]').isVisible(), false);

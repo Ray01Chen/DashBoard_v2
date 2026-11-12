@@ -183,23 +183,15 @@ export function createOverviewInline({
           'beforeend',
           `<input data-inline-control data-inline-actual type="number" inputmode="numeric" min="0" max="99999999" step="1" aria-label="${esc(t('inlineActual'))}" value="${esc(draft.actual || '')}" ${draft.loading || draft.saving ? 'disabled' : ''}>`,
         );
-      const area = card.querySelector('.line-slot');
-      [...area.children].forEach(hide);
-      area.insertAdjacentHTML(
+      hide(card.querySelector('.health-period'));
+      card.querySelector('.line-health').insertAdjacentHTML(
         'beforeend',
-        `<div data-inline-control class="inline-selectors"><label>${esc(t('inlineDate'))}<input type="date" data-inline-field="date" value="${esc(draft.date)}"></label><label>${esc(t('inlineShift'))}<select data-inline-field="shift">${['day', 'night'].map((shift) => `<option value="${shift}" ${shift === draft.shift ? 'selected' : ''}>${esc(t(shift))}</option>`).join('')}</select></label><label>${esc(t('inlineStation'))}<select data-inline-field="rowId">${rows()
-          .map(
-            (row) =>
-              `<option value="${row.id}" ${row.id === draft.rowId ? 'selected' : ''}>${esc([row.job, row.station].filter(Boolean).join(' / '))}</option>`,
-          )
-          .join(
-            '',
-          )}</select></label><label>${esc(t('inlineSlot'))}<select data-inline-field="slotId">${options()
+        `<label data-inline-control class="inline-slot"><span>${esc(t('inlineSlot'))}</span><select data-inline-field="slotId" aria-label="${esc(t('inlineSlot'))}">${options()
           .map(
             (slot) =>
               `<option value="${esc(slot.id)}" ${slot.id === draft.slotId ? 'selected' : ''}>${esc(slot.start + '–' + slot.end)}</option>`,
           )
-          .join('')}</select></label></div>`,
+          .join('')}</select></label>`,
       );
       const status = card.querySelector('.line-card-status');
       status.insertAdjacentHTML(
@@ -211,7 +203,7 @@ export function createOverviewInline({
           .map((item) => `<option value="${esc(item.id)}">${esc(issueLabel(item))}</option>`)
           .join(
             '',
-          )}</select><textarea data-inline-issue rows="2" maxlength="2000">${esc(draft.issue || '')}</textarea></label><small role="status" class="inline-feedback">${esc(draft.error || t(draft.loading ? 'inlineLoading' : !draft.slotId ? 'inlineNoSlot' : 'inlineScope'))}</small></div>`,
+          )}</select><textarea data-inline-issue rows="2" maxlength="2000">${esc(draft.issue || '')}</textarea></label><small role="status" class="inline-feedback">${esc(draft.error || (draft.loading ? t('inlineLoading') : !draft.slotId ? t('inlineNoSlot') : ''))}</small></div>`,
       );
       card
         .querySelectorAll('[data-inline-field], [data-inline-preset], [data-inline-issue]')
@@ -285,17 +277,14 @@ export function createOverviewInline({
       return;
     }
     const key = event.target.dataset.inlineField;
-    if (!key || draft.loading || draft.saving) return;
+    if (key !== 'slotId' || draft.loading || draft.saving) return;
     if (dirty() && !(await confirm(context().t('inlineLeave')))) {
       delete root.querySelector('[data-inline-editing]')?.dataset.inlineView;
       sync();
       return;
     }
-    draft[key] = key === 'rowId' ? Number(event.target.value) : event.target.value;
-    if (key === 'slotId') {
-      selectSlot(draft.slotId);
-      sync();
-    } else await load();
+    selectSlot(event.target.value);
+    sync();
   });
   return {
     sync,
