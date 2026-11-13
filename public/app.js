@@ -1,6 +1,6 @@
 import { createNavigationFlyouts } from './navigation-flyouts.js';
 import { createPersonalOrderUI } from './personal-order-ui.js';
-import { createOverviewEditor } from './overview-inline.js';
+import { createOverviewEditor, mergeOverviewReset } from './overview-inline.js';
 import { createSiteManagementUI } from './site-management.js';
 import { boardDisplayPreferences } from './board-display.js';
 import { cancelMonitorPageMotion } from './monitor-carousel.js';
@@ -197,6 +197,48 @@ const overviewEditor = createOverviewEditor({
   redraw: () => renderChart(),
   toast,
   confirm: (text) => confirmText(t('inlineEdit'), text, t('discard'), t('cancel')),
+  confirmReset: () =>
+    confirmText(
+      t('inlineRestore'),
+      t('inlineRestoreDescription'),
+      t('inlineRestoreConfirm'),
+      t('inlineCancel'),
+    ),
+  onReset: (result, { date, shift }) => {
+    if (state.date !== date) return;
+    // Supersede polling started before the reset. Its old response must not
+    // repaint cleared actuals while the fresh read is in flight.
+    state.sequence++;
+    state.refreshing = false;
+    const scope = reportScope();
+    for (const saved of result.records) {
+      if (scope === shift || scope === 'all') {
+        state.records.set(
+          saved.rowId,
+          scope === 'all'
+            ? mergeOverviewReset(
+                state.records.get(saved.rowId) || state.defaults[saved.rowId],
+                saved,
+                shift,
+              )
+            : saved,
+        );
+        state.rowVersions[saved.rowId] = state.records.get(saved.rowId).version;
+        if (saved.activity) state.activity[saved.rowId] = saved.activity;
+      }
+      if (state.dailyReport) {
+        const index = state.dailyReport.records.findIndex(
+          (record) => record.rowId === saved.rowId,
+        );
+        const previous =
+          state.dailyReport.records[index] || state.dailyReport.defaults[saved.rowId];
+        const combined = mergeOverviewReset(previous, saved, shift);
+        if (index < 0) state.dailyReport.records.push(combined);
+        else state.dailyReport.records[index] = combined;
+      }
+    }
+    render();
+  },
 });
 let savedBoardDisplay;
 try {

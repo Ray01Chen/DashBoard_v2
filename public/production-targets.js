@@ -1,4 +1,4 @@
-import { scheduleFor } from './production-schedules.js';
+import { scheduleFor, isArchivedProductionDate } from './production-schedules.js';
 import { DEFAULT_MODEL, unitFor } from './production-models.js';
 const minutes = (time) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
 
@@ -45,6 +45,25 @@ export function allocateDailyTarget(config, dailyTarget, line) {
   const ranked = [...allocated].sort((a, b) => b.remainder - a.remainder || a.index - b.index);
   for (let index = 0; index < remaining; index++) ranked[index].target++;
   return allocated;
+}
+
+/** Restore with the same daily allocation as batch entry. Archived reports use
+ * their captured plan; a later CONFIG must never supply a historical target. */
+export function reportDefaultTarget(config, row, date, shift, interval, record, defaults) {
+  const slots = isArchivedProductionDate(config, row.line, date)
+    ? record?.defaultsSnapshot?.productionDay?.[shift]?.slots ||
+      record?.defaultsSnapshot?.slots ||
+      (record ? record.slots : defaults?.slots) ||
+      []
+    : allocateDailyTarget(
+        config,
+        lineDailyTarget(config, row.line, row.model),
+        row.line,
+      ).filter((slot) => slot.shift === shift);
+  return (
+    slots.find((slot) => slot.start === interval.start && slot.end === interval.end)?.target ??
+    null
+  );
 }
 
 /** A plan is a pace derived from the preset, not a machine capacity limit.

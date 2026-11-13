@@ -12,9 +12,27 @@ export async function auditActualCompletion({
   record,
   errors,
 }) {
+  screenshots ||= process.argv.includes('--restoration-screenshots');
   const context = await browser.newContext({ viewport: { width: 1600, height: 900 } });
   const page = await context.newPage();
   page.on('pageerror', (error) => errors.push(error.message));
+  if (screenshots)
+    await page.route('**/__completion-capture.css', (route) =>
+      route.fulfill({
+        contentType: 'text/css',
+        body: '.topbar, #toast { visibility: hidden !important; }',
+      }),
+    );
+  async function capture(selector, file) {
+    // The app permits same-origin styles only; an inline screenshot style is
+    // blocked by CSP and would leave the sticky header covering the selector.
+    const style = await page.addStyleTag({ url: baseURL + '/__completion-capture.css' });
+    try {
+      await page.locator(selector).screenshot({ path: path.join(root, file) });
+    } finally {
+      await style.evaluate((node) => node.remove());
+    }
+  }
   const json = async (response, status = 200) => {
     assert.equal(response.status(), status, await response.text());
     return response.json();
@@ -123,22 +141,17 @@ export async function auditActualCompletion({
     assert.equal(day.records.length, 6);
     for (const row of day.records) {
       assert.equal(row.slots.find((slot) => slot.id === first.id).actual, 0);
-      assert.equal(row.slots.find((slot) => slot.id === first.id).actualAutoFilled, true);
+      assert.equal(row.slots.find((slot) => slot.id === first.id).actualAutoFilled, undefined);
       assert.equal(
         row.slots.find((slot) => slot.id === second.id).actual,
         row.rowId === rows[0].id ? 20 : 0,
       );
     }
     assert.equal((await report('2099-12-14', 'night')).records.length, 0);
-    assert.equal(
-      await page.locator('[data-entry-field="actual"][data-actual-auto-filled="true"]').count(),
-      11,
-    );
+    assert.equal(await page.locator('[data-actual-auto-filled], .auto-zero-note').count(), 0);
     if (screenshots) {
       await page.setViewportSize({ width: 1600, height: 1440 });
-      await page.locator('.entry-unified').screenshot({
-        path: path.join(root, 'docs/images/actual-completion.png'),
-      });
+      await capture('.entry-unified', 'docs/images/actual-completion.png');
       await page.setViewportSize({ width: 1600, height: 900 });
     }
     await page.reload();
@@ -155,7 +168,7 @@ export async function auditActualCompletion({
       undefined,
     );
     record(
-      'Explicit entry Save fills all missing station actuals back through the last human production interval, persists zeros after reload, excludes breaks/later shifts/other units and confirms a typed zero without confirming untouched automatic zeros',
+      'Explicit entry Save fills all missing station actuals back through the last reported production interval, persists zeros after reload, excludes breaks/later shifts/other units and treats all zeros as completed reports',
     );
 
     await date('2099-12-15');
@@ -187,14 +200,22 @@ export async function auditActualCompletion({
     await page.locator('[data-report-scope="night"]').click();
     const card = page.locator('#line-cards .line-card').first();
     const open = async () => {
-      await card.locator('.line-trend').hover();
-      await card.locator('[data-overview-edit]').click();
+      // Pointer/swipe animation is covered by overview-interaction-audit.
+      // Keyboard activation keeps this data audit independent of hover flyouts.
+      await card.locator('[data-overview-edit]').focus();
+      await card.locator('[data-overview-edit]').press('Enter');
       await page.locator('[data-overview-panel] tbody tr').first().waitFor();
     };
     await open();
     await page
       .locator(`[data-editor-row="${rows[0].id}"][data-editor-field="actual"]`)
       .fill('12');
+    await page
+      .locator(`[data-editor-row="${rows[0].id}"][data-editor-field="target"]`)
+      .fill('999');
+    await page
+      .locator(`[data-editor-row="${rows[0].id}"][data-editor-field="issue"]`)
+      .fill('Keep issue');
     await page.locator('[data-editor-cancel]').click();
     await page.waitForFunction(() => !document.querySelector('[data-overview-panel]'));
     assert.equal((await report('2099-12-16', 'night')).records.length, 0);
@@ -203,16 +224,179 @@ export async function auditActualCompletion({
     await page
       .locator(`[data-editor-row="${rows[0].id}"][data-editor-field="actual"]`)
       .fill('12');
+    await page
+      .locator(`[data-editor-row="${rows[0].id}"][data-editor-field="target"]`)
+      .fill('999');
+    await page
+      .locator(`[data-editor-row="${rows[0].id}"][data-editor-field="issue"]`)
+      .fill('Keep issue');
+    await page
+      .locator(`[data-editor-row="${rows.at(-1).id}"][data-editor-field="actual"]`)
+      .fill('8');
     await page.locator('[data-editor-save]').click();
     await page.waitForFunction(() => !document.querySelector('[data-overview-panel]'));
     const night = (await report('2099-12-16', 'night')).records;
     assert.equal(night.length, 6);
-    assert.equal(night.filter((row) => row.slots[0].actualAutoFilled).length, 5);
+    assert.equal(night.filter((row) => row.slots[0].actual === 0).length, 4);
     assert.equal((await report('2099-12-16')).records.length, 0);
     await page.locator('#metric-scope-controls [data-metric-scope="day"]').click();
-    assert.equal(await card.locator('[data-metric="dailyActual"] b').innerText(), '0');
+    assert.equal(await card.locator('[data-metric="dailyActual"] b').innerText(), '8');
     record(
-      'Overview station-table Save fills only the chosen overnight interval, refreshes displayed daily output and preserves the separate human/automatic state; Cancel writes neither numbers nor zeros',
+      'Overview station-table Save fills only the chosen overnight interval, refreshes displayed daily output and treats zero as reported; Cancel writes neither numbers nor zeros',
+    );
+
+    const cell = (row, field) =>
+      page.locator(`[data-editor-row="${row.id}"][data-editor-field="${field}"]`);
+    await page.mouse.move(0, 0);
+    await open();
+    await cell(rows[0], 'actual').fill('888');
+    await cell(rows[0], 'issue').fill('Unsaved issue');
+    await page.locator('[data-editor-restore]').click();
+    await page.locator('#confirm-dialog[open]').waitFor();
+    assert.match(await page.locator('#confirm-description').innerText(), /saved immediately/);
+    assert.equal(await page.locator('[data-editor-save]').isDisabled(), true);
+    await page.locator('#confirm-no').click();
+    await page.locator('[data-editor-restore]:enabled').waitFor();
+    assert.equal(await cell(rows[0], 'actual').inputValue(), '888');
+    assert.equal(await cell(rows[0], 'issue').inputValue(), 'Unsaved issue');
+    assert.deepEqual((await report('2099-12-16', 'night')).records, night);
+    await page.route('**/api/entry/interval/reset', (route) => route.abort('failed'), {
+      times: 1,
+    });
+    await page.locator('[data-editor-restore]').click();
+    await page.locator('#confirm-yes').click();
+    await page.locator('[data-editor-restore]:enabled').waitFor();
+    assert.equal(await cell(rows[0], 'actual').inputValue(), '888');
+    assert.ok(await page.locator('.overview-editor-message').innerText());
+    assert.deepEqual((await report('2099-12-16', 'night')).records, night);
+    // Hold an old polling response across the committed reset. Its stale
+    // quantities must never repaint the refreshed table or card statistics.
+    let releaseOld;
+    let pollingStarted;
+    const pendingPoll = new Promise((resolve) => {
+      pollingStarted = resolve;
+    });
+    await page.route(
+      '**/api/records?*',
+      async (route) => {
+        const response = await route.fetch();
+        await new Promise((resolve) => {
+          releaseOld = resolve;
+          pollingStarted();
+        });
+        await route.fulfill({ response });
+      },
+      { times: 1 },
+    );
+    await page.locator('#refresh-now').click();
+    await pendingPoll;
+    const resetRequest = page.waitForRequest((request) =>
+      request.url().endsWith('/api/entry/interval/reset'),
+    );
+    await page.locator('[data-editor-restore]').click();
+    await page.locator('#confirm-yes').click();
+    const resetPayload = (await resetRequest).postDataJSON();
+    assert.equal(resetPayload.completeActuals, undefined);
+    assert.equal(resetPayload.rows, undefined);
+    assert.equal(resetPayload.values, undefined);
+    assert.equal(resetPayload.expectedVersions.length, rows.length);
+    await page.locator('[data-editor-restore]:enabled').waitFor();
+    releaseOld();
+    await page.waitForTimeout(250);
+    assert.notEqual(await card.locator('[data-metric="dailyActual"] b').innerText(), '8');
+    assert.equal(
+      await page.locator('[data-overview-panel]').count(),
+      1,
+      'Reset updates the open editor without another Save',
+    );
+    for (const row of rows) {
+      assert.equal(await cell(row, 'actual').inputValue(), '');
+      assert.equal(
+        await cell(row, 'target').inputValue(),
+        String((await report('2099-12-16', 'night')).defaults[row.id].slots[0].target),
+      );
+    }
+    assert.equal(await cell(rows[0], 'issue').inputValue(), 'Keep issue');
+    const restored = (await report('2099-12-16', 'night')).records;
+    assert.ok(restored.every((record) => record.slots[0].actual === null));
+    assert.deepEqual(
+      restored.map((record) => record.slots[0].issue),
+      night.map((record) => record.slots[0].issue),
+    );
+    const geometry = await page.locator('[data-overview-panel]').evaluate((panel) => {
+      const restore = panel.querySelector('[data-editor-restore]').getBoundingClientRect();
+      const cancel = panel.querySelector('[data-editor-cancel]').getBoundingClientRect();
+      const save = panel.querySelector('[data-editor-save]').getBoundingClientRect();
+      const height = parseFloat(
+        getComputedStyle(panel).getPropertyValue('--ui-control-height'),
+      );
+      return {
+        ordered: restore.right < cancel.left && cancel.right < save.left,
+        aligned: restore.top === cancel.top && cancel.top === save.top,
+        borders: [...panel.querySelectorAll('input,textarea,select')].every(
+          (node) => getComputedStyle(node).borderTopStyle === 'solid',
+        ),
+        heights: [...panel.querySelectorAll('input,textarea,select')].every(
+          (node) => node.getBoundingClientRect().height === height,
+        ),
+        background: getComputedStyle(panel.querySelector('input')).backgroundColor,
+        cardBackground: getComputedStyle(panel.closest('.line-card')).backgroundImage,
+      };
+    });
+    assert.equal(
+      geometry.ordered && geometry.aligned && geometry.borders && geometry.heights,
+      true,
+      JSON.stringify(geometry),
+    );
+    assert.ok(geometry.cardBackground.includes(geometry.background), JSON.stringify(geometry));
+    if (screenshots)
+      await capture('[data-overview-panel]', 'docs/images/overview-restore-defaults.png');
+    await page.emulateMedia({ colorScheme: 'dark' });
+    assert.equal(
+      await cell(rows[0], 'actual').evaluate((node) => getComputedStyle(node).backgroundColor),
+      geometry.background,
+      'OS preference must not darken only the editor',
+    );
+    // An actual dark theme supplies shared tokens for both the card and editor.
+    await page.route('**/__reset-theme-test.css', (route) =>
+      route.fulfill({
+        contentType: 'text/css',
+        body: '[data-theme] { --surface: #192735; --canvas: #203142; --ink: #e4edf5; --muted: #afbfce; --soft: #20364b; --ui-border: #43596d; --line: #344759; color-scheme: dark; }',
+      }),
+    );
+    const theme = await page.addStyleTag({ url: baseURL + '/__reset-theme-test.css' });
+    await page.waitForFunction(
+      () =>
+        getComputedStyle(document.querySelector('[data-editor-field="actual"]'))
+          .backgroundColor === 'rgb(25, 39, 53)',
+    );
+    assert.equal(
+      await card.evaluate((node) =>
+        getComputedStyle(node).backgroundImage.includes('rgb(25, 39, 53)'),
+      ),
+      true,
+    );
+    if (screenshots)
+      await capture('[data-overview-panel]', '.runtime/overview-restore-dark.png');
+    await theme.evaluate((node) => node.remove());
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.waitForTimeout(700);
+    assert.deepEqual(
+      (await report('2099-12-16', 'night')).records,
+      restored,
+      'Old drafts never autosave after reset',
+    );
+    await page.reload();
+    await date('2099-12-16');
+    await page.locator('[data-report-scope="night"]').click();
+    await open();
+    for (const row of rows) assert.equal(await cell(row, 'actual').inputValue(), '');
+    assert.equal(await cell(rows[0], 'issue').inputValue(), 'Keep issue');
+    assert.equal((await report('2099-12-16')).records.length, 0);
+    await page.locator('[data-editor-cancel]').click();
+    await page.waitForFunction(() => !document.querySelector('[data-overview-panel]'));
+    record(
+      'Independent reset confirms and commits immediately without Save, derives Targets on the server, clears Actuals to NULL, preserves saved Issue and other shifts, replaces stale drafts, retries network failures and persists after reload; editor and cards share light/dark theme tokens',
     );
 
     await navigateView(page, 'entry');
@@ -248,7 +432,7 @@ export async function auditActualCompletion({
     );
     for (const language of ['zh', 'en', 'th']) {
       await page.locator('#language-select').selectOption(language);
-      assert.equal(await page.locator('.entry-bulk-dialog .auto-zero-note').count(), 4);
+      assert.equal(await page.locator('.entry-bulk-dialog .auto-zero-note').count(), 0);
       assert.doesNotMatch(
         await page.locator('.entry-bulk-dialog').innerText(),
         /autoFilledZero|autoZeroShort/,
@@ -256,7 +440,7 @@ export async function auditActualCompletion({
     }
     await page.locator('[data-entry-action="bulk-close"]').click();
     record(
-      'Batch explicit Save fills selected-interval blanks only; closing and autosaving do not fill peers, existing numeric values survive, manual zero confirms one station and provenance labels translate in all three languages',
+      'Batch explicit Save fills selected-interval blanks only; closing and autosaving do not fill peers, existing numeric values survive, all zeros are reported without provenance labels in all three languages',
     );
   } finally {
     await context.close();

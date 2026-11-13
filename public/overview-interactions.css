@@ -212,8 +212,15 @@ body.sidebar-collapsed:not(.navigation-open) #sidebar .nav-flyout .nav-item {
 }
 .overview-editor {
   border-top: 1px solid var(--ui-border);
-  padding-top: 12px;
+  padding-top: 14px;
   margin-top: 4px;
+  color: var(--ink);
+  color-scheme: inherit;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--soft) 28%, var(--surface)),
+    var(--surface) 72px
+  );
   cursor: default;
 }
 .overview-editor-heading {
@@ -229,17 +236,35 @@ body.sidebar-collapsed:not(.navigation-open) #sidebar .nav-flyout .nav-item {
   align-items: center;
   gap: 8px;
   font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.overview-editor-heading select,
+body .overview-editor-body input,
+body .overview-editor-body textarea {
+  height: var(--ui-control-height);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease;
 }
 .overview-editor-heading select {
   min-width: 190px;
-  min-height: 34px;
-  padding: 5px 8px;
+  padding: 6px 10px;
+  font-weight: 500;
 }
 .overview-editor-body {
   overflow: auto;
-  max-height: 360px;
+  max-height: 390px;
   border: 1px solid var(--ui-border);
-  border-radius: 8px;
+  border-radius: var(--ui-radius-sm);
+  background: var(--surface);
+  box-shadow: var(--ui-shadow);
 }
 .overview-editor-body table {
   width: 100%;
@@ -257,16 +282,18 @@ body.sidebar-collapsed:not(.navigation-open) #sidebar .nav-flyout .nav-item {
 .overview-editor-body thead th {
   position: sticky;
   top: 0;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 85%, var(--soft));
   z-index: 1;
   font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
 }
 .overview-editor-body th:first-child {
-  width: 23%;
+  width: 22%;
 }
 .overview-editor-body th:nth-child(2),
 .overview-editor-body th:nth-child(3) {
-  width: 17%;
+  width: 16%;
 }
 .overview-editor-body tbody th {
   font-size: 12px;
@@ -274,35 +301,84 @@ body.sidebar-collapsed:not(.navigation-open) #sidebar .nav-flyout .nav-item {
 }
 .overview-editor-body tbody th strong,
 .overview-editor-body tbody th span {
-  display: inline;
-  margin-right: 6px;
+  display: block;
+  overflow-wrap: anywhere;
+}
+.overview-editor-body tbody th strong {
+  font-size: 13px;
+  color: var(--ink);
+  font-weight: 600;
+}
+.overview-editor-body tbody th span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.overview-editor-body tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.overview-editor-body tbody tr:hover {
+  background: color-mix(in srgb, var(--soft) 25%, var(--surface));
 }
 .overview-editor-body input,
 .overview-editor-body textarea {
   width: 100%;
   min-width: 0;
-  min-height: 34px;
-  padding: 6px 8px;
+  min-height: var(--ui-control-height);
+  padding: 5px 9px;
   font-size: 14px;
   font-variant-numeric: tabular-nums;
+  line-height: 22px;
 }
-.overview-editor-body textarea {
+body .overview-editor-body textarea {
   resize: vertical;
   max-height: 110px;
 }
-.overview-editor-body [aria-invalid='true'] {
+body .overview-editor-body input {
+  text-align: right;
+}
+body .overview-editor :is(input, textarea, select):hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--primary) 50%, var(--ui-border));
+}
+body .overview-editor :is(input, textarea, select):focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+body .overview-editor :is(input, textarea, select):disabled {
+  background: var(--canvas);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+body .overview-editor-body [aria-invalid='true'] {
   border-color: var(--critical);
 }
 .overview-editor-footer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0 2px;
+}
+.overview-editor-actions {
   display: flex;
   justify-content: flex-end;
-  align-items: center;
-  flex-wrap: wrap;
   gap: 8px;
-  padding: 10px 2px 2px;
+}
+body .overview-editor-footer .button {
+  min-height: var(--ui-control-height);
+  padding: 7px 12px;
+}
+body .overview-editor-footer .overview-editor-restore {
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+}
+body .overview-editor-footer .button.primary {
+  box-shadow: 0 2px 5px color-mix(in srgb, var(--primary-dark) 18%, transparent);
 }
 .overview-editor-message {
-  margin-right: auto;
+  grid-column: 1 / -1;
   color: var(--critical);
   font-size: 12px;
   overflow-wrap: anywhere;

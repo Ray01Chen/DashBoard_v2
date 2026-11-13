@@ -85,8 +85,6 @@ const messages = {
     saveMine: 'Save my changed cells',
     latest: 'Latest saved data',
     mine: 'Your changes',
-    autoZeroShort: 'Auto 0',
-    autoFilledZero: 'Auto 0 · not manually reported',
     completeEmptyScope: 'Choose a single interval or edit an interval before saving.',
     saveNow: 'Save now',
     restoreDefaults: 'Restore defaults',
@@ -204,8 +202,6 @@ const messages = {
     saveMine: '儲存我修改的欄位',
     latest: '最新已儲存資料',
     mine: '我的修改',
-    autoZeroShort: '自動 0',
-    autoFilledZero: '自動補 0・尚未人工回報',
     completeEmptyScope: '請選擇單一時段，或先編輯要填報的時段。',
     saveNow: '立即儲存',
     restoreDefaults: '恢復預設',
@@ -321,8 +317,6 @@ const messages = {
     saveMine: 'บันทึกเฉพาะช่องที่ฉันแก้ไข',
     latest: 'ข้อมูลที่บันทึกล่าสุด',
     mine: 'การแก้ไขของคุณ',
-    autoZeroShort: '0 อัตโนมัติ',
-    autoFilledZero: 'เติม 0 อัตโนมัติ · ยังไม่ได้รายงานด้วยตนเอง',
     completeEmptyScope: 'เลือกช่วงเวลาเดียวหรือแก้ไขช่วงเวลาก่อนบันทึก',
     saveNow: 'บันทึกตอนนี้',
     restoreDefaults: 'คืนค่าเริ่มต้น',
@@ -396,9 +390,6 @@ export function entryChanges(baseline, draft) {
     for (const field of ['target', 'actual', 'issue']) {
       if (
         slotValue(slot, field) !== slotValue(originals.get(slot.id), field) ||
-        (field === 'actual' &&
-          originals.get(slot.id)?.actualAutoFilled === true &&
-          slot.actualAutoFilled === false) ||
         (['actual', 'target'].includes(field) &&
           slot[field === 'actual' ? 'syncActual' : 'syncTarget'] &&
           !originals.get(slot.id)?.[field === 'actual' ? 'syncActual' : 'syncTarget'])
@@ -419,7 +410,6 @@ export function mergeEntryChanges(record, changes) {
     for (const field of ['target', 'actual', 'issue']) {
       if (Object.hasOwn(change, field)) {
         slot[field] = change[field];
-        if (field === 'actual') slot.actualAutoFilled = false;
       }
     }
     slots.set(slot.id, slot);
@@ -1296,22 +1286,8 @@ export function createEntryController({
       if (!entry) continue;
       const field = input.dataset.entryField || 'issue';
       const latest = entry.latest.slots.find((slot) => slot.id === input.dataset.slotId);
-      if (field === 'actual') {
-        const label = input.closest('label')?.querySelector('[data-auto-zero-label]');
-        if (label) {
-          label.textContent = latest?.actualAutoFilled ? text('autoZeroShort') : '';
-          label.title = latest?.actualAutoFilled ? text('autoFilledZero') : '';
-        }
-        input.dataset.actualAutoFilled = String(latest?.actualAutoFilled === true);
-        if (latest?.actualAutoFilled) input.title = text('autoFilledZero');
-        else if (input.title === text('autoFilledZero')) input.removeAttribute('title');
-      }
       const baseline = entry.baseline.slots.find((slot) => slot.id === input.dataset.slotId);
-      const changed =
-        slotValue(latest, field) !== slotValue(baseline, field) ||
-        (field === 'actual' &&
-          baseline?.actualAutoFilled &&
-          latest?.actualAutoFilled === false);
+      const changed = slotValue(latest, field) !== slotValue(baseline, field);
       input.dataset.cellState = invalid.has(`${entry.key}|${input.dataset.slotId}|${field}`)
         ? 'invalid'
         : changed
@@ -1449,11 +1425,7 @@ export function createEntryController({
       for (const field of bulkFields) {
         const parsed = parseBulkValue(field, item.draft[field]);
         if (!parsed.valid) valid = false;
-        else if (
-          parsed.value !== slotValue(item.slot, field) ||
-          (field === 'actual' && item.slot?.actualAutoFilled && item.actualTouched)
-        )
-          values[field] = parsed.value;
+        else if (parsed.value !== slotValue(item.slot, field)) values[field] = parsed.value;
       }
       return Object.keys(values).length ? [{ rowId: item.row.id, values }] : [];
     });
@@ -1474,7 +1446,7 @@ export function createEntryController({
   function renderBulkRows() {
     const editor = bulkEditor;
     bulkDialog.querySelector('[data-bulk-preview]').innerHTML = editor.rows.length
-      ? `<table><thead><tr><th>${esc(text('job'))} / ${esc(text('station'))}</th>${bulkFields.map((field) => `<th>${esc(text(field))}</th>`).join('')}</tr></thead><tbody>${editor.rows.map((item) => `<tr data-bulk-row="${esc(item.row.id)}"><th scope="row"><strong>${esc(item.row.station || '—')}</strong><small>${esc(item.row.job || '—')}${item.slot?.actualAutoFilled ? `<span class="auto-zero-note" title="${esc(text('autoFilledZero'))}">${esc(text('autoZeroShort'))}</span>` : ''}</small></th>${bulkFields.map((field) => `<td><input type="text" ${field === 'issue' ? '' : 'inputmode="numeric"'} autocomplete="off" maxlength="${field === 'issue' ? 2000 : 12}" data-bulk-cell="${field}" data-bulk-row-id="${esc(item.row.id)}" aria-label="${esc((item.row.station || item.row.job || '') + ' · ' + text(field))}" title="${esc(item.draft[field])}" value="${esc(item.draft[field])}"></td>`).join('')}</tr>`).join('')}</tbody></table>`
+      ? `<table><thead><tr><th>${esc(text('job'))} / ${esc(text('station'))}</th>${bulkFields.map((field) => `<th>${esc(text(field))}</th>`).join('')}</tr></thead><tbody>${editor.rows.map((item) => `<tr data-bulk-row="${esc(item.row.id)}"><th scope="row"><strong>${esc(item.row.station || '—')}</strong><small>${esc(item.row.job || '—')}</small></th>${bulkFields.map((field) => `<td><input type="text" ${field === 'issue' ? '' : 'inputmode="numeric"'} autocomplete="off" maxlength="${field === 'issue' ? 2000 : 12}" data-bulk-cell="${field}" data-bulk-row-id="${esc(item.row.id)}" aria-label="${esc((item.row.station || item.row.job || '') + ' · ' + text(field))}" title="${esc(item.draft[field])}" value="${esc(item.draft[field])}"></td>`).join('')}</tr>`).join('')}</tbody></table>`
       : '';
   }
 
@@ -1556,9 +1528,6 @@ export function createEntryController({
     const request = ++bulkRequest;
     // A refreshed baseline retains only cells changed in this dialog, allowing
     // concurrent edits to untouched fields (including issues) to survive.
-    const touched = new Map(
-      (editor.rows || []).map((item) => [item.row.id, item.actualTouched]),
-    );
     const drafts = new Map(
       (editor.rows || []).map((item) => [
         item.row.id,
@@ -1566,11 +1535,7 @@ export function createEntryController({
           bulkFields
             .filter((field) => {
               const parsed = parseBulkValue(field, item.draft[field]);
-              return (
-                !parsed.valid ||
-                parsed.value !== slotValue(item.slot, field) ||
-                (field === 'actual' && item.slot?.actualAutoFilled && item.actualTouched)
-              );
+              return !parsed.valid || parsed.value !== slotValue(item.slot, field);
             })
             .map((field) => [field, item.draft[field]]),
         ),
@@ -1642,7 +1607,6 @@ export function createEntryController({
             row,
             slot,
             defaultTarget: defaultSlot?.target ?? null,
-            actualTouched: touched.get(row.id) || false,
             version: saved.get(row.id)?.version ?? data.rowVersions?.[row.id] ?? 0,
             draft: {
               target: String(slot?.target ?? ''),
@@ -1690,7 +1654,6 @@ export function createEntryController({
       if (!field && input.value.trim() === '') continue;
       for (const row of editor.rows) {
         row.draft[input.dataset.bulkField] = input.value.trim();
-        if (input.dataset.bulkField === 'actual') row.actualTouched = true;
       }
       input.value = '';
     }
@@ -1767,7 +1730,6 @@ export function createEntryController({
             (slot) => slot.start === editor.interval.start && slot.end === editor.interval.end,
           );
           row.version = record.version;
-          row.actualTouched = false;
           row.draft = {
             target: String(row.slot.target ?? ''),
             actual: String(row.slot.actual ?? ''),
@@ -1845,7 +1807,6 @@ export function createEntryController({
       }
     for (const edit of edits) {
       editor.rows[edit.index].draft[edit.field] = edit.value;
-      if (edit.field === 'actual') editor.rows[edit.index].actualTouched = true;
     }
     bulkDialog.querySelector('[data-bulk-error]').textContent = '';
     renderBulkRows();
@@ -2286,7 +2247,6 @@ export function createEntryController({
                     return (
                       '<label><span>' +
                       esc(text(field)) +
-                      (field === 'actual' ? '<small data-auto-zero-label></small>' : '') +
                       '</span><input type="text" inputmode="numeric" autocomplete="off" maxlength="12"' +
                       attributes +
                       ' value="' +
@@ -2833,7 +2793,6 @@ export function createEntryController({
       input.removeAttribute('aria-invalid');
       input.removeAttribute('title');
       slot[input.dataset.entryField] = parsed.value;
-      if (input.dataset.entryField === 'actual') slot.actualAutoFilled = false;
     } else {
       slot.issue = input.value;
       if (issueEditor?.key === key) issueEditor.limitReached = false;
@@ -2892,7 +2851,6 @@ export function createEntryController({
       if (!drafts.has(edit.rowKey)) drafts.set(edit.rowKey, copy(entry.latest));
       const slot = drafts.get(edit.rowKey).slots.find((slot) => slot.id === edit.slotId);
       slot[edit.field] = edit.value;
-      if (edit.field === 'actual') slot.actualAutoFilled = false;
       noteCompletion(entry, slot);
     }
     // No DOM/queue/invalid mutation occurs until the entire destination rectangle is checked.
@@ -3182,7 +3140,6 @@ export function createEntryController({
       );
       if (row) {
         row.draft[input.dataset.bulkCell] = input.value;
-        if (input.dataset.bulkCell === 'actual') row.actualTouched = true;
       }
     }
     updateBulkControls();

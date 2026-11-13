@@ -146,10 +146,11 @@ Phase 1 的 schema、API、Migration、權限與部署回復規則集中在 [MUL
 
 ## 儲存時補 0 與回報來源
 
-- `actual-completion.mjs` 共用純計畫器：以交易內最新記錄與有效班表找需要填報的站點。`throughLatest` 以人工 Actual（含手動 0）求各單位最後時段，再展開生產日的前段；自動 0、休息及後段不作截止依據。歷史跨午夜以已捕獲的生產日時間基準排序。
-- PUT `/api/entry/complete` 接受 `date`、`configVersion`、`scopes`（原區間列修補與預期版本）及可選 `throughLatest: [{line, model, shifts}]`。既有 PUT `/api/entry/interval` 只有 `completeActuals: true` 才走同一計畫器。未帶旗標的批次、逐站自動儲存、匯入與恢復預設保留原語意。
+- `actual-completion.mjs` 共用純計畫器：以交易內最新記錄與有效班表找需要填報的站點。`throughLatest` 以有效 Actual（含所有數值 0）求各單位最後時段，再展開所選範圍的前段；沒有實績不補，休息及截止之後不補。歷史跨午夜以已捕獲的生產日時間基準排序。
+- PUT `/api/entry/complete` 接受 `date`、`configVersion`、`scopes`（原區間列修補與預期版本）及可選 `throughLatest: [{line, model, shifts}]`。既有 PUT `/api/entry/interval` 只有 `completeActuals: true` 才走同一計畫器。未帶旗標的批次、逐站自動儲存與匯入不補 0；總覽重設另走獨立 API。
 - 後端先驗全部修補與版本，再依站點／班別合併，一個 SQLite 交易一次寫入。未修改的其他使用者實績由最新快照保留；明確清空的實績在補值範圍內成為自動 0。`records` 為實際變更，`currentRecords` 同時刷新未修改的最新站點資料。
-- 沿用 slots JSON，新增可選 `actualAutoFilled: true`，不新增 SQL 欄位或重寫歷史。旗標由伺服器控制，客戶端不能偽造。未改實績的修補保留來源，明確輸入 Actual（含相同的 0）才轉人工；沒有旗標的舊數字維持人工回報語意。
-- `actualWasReported` 供現有監控／告警及補值截止共用。數字與報表可顯示自動 0，人工完整性仍為未回報；門檻、燈號輪播與時間規則不變。
+- 不寫入補值來源標記；舊 JSON 的來源標記被忽略，不需重寫歷史或新增 SQL 欄位，Actual 及其他生產資料保留。
+- 監控及告警依 Actual 有效數值判定（0 算已回報）；彙總仍要求所有參與站點都有實績。其他門檻、燈號輪播與時間規則不變。
 - `entry.js` 顯式儲存會暫停所涉逐站佇列、等待已送出的請求結束，讓未送出修補與補值同時交易；失敗保留草稿並阻止未確認修補自動重試。批次關閉／切換時段的原自動儲存不帶補值旗標。總覽取消不寫入。
+- 總覽重設使用獨立 PUT `/api/entry/interval/reset` 與 `planStationReset`，不呼叫補值計畫器。客戶端只送選定生產範圍與所有有效站點的 `expectedVersions`，不送草稿欄位；伺服器透過 `reportDefaultTarget` 計算當前／歷史目標，寫入 Actual NULL 並省略 Issue。所有版本驗證與寫入在同一交易；未登入、跨廠區、撤權、休息與版本衝突均拒絕。確認後直接儲存，失敗保留輸入，成功用回傳資料替換 baseline/draft，更新單班及整日投影並排除重設前的背景查詢回應。一般儲存仍獨立補 0。
 - 驗證：`tests/actual-completion.test.mjs`、多廠區整合測試與 `scripts/actual-completion-audit.mjs`。測試一律使用隔離 SQLite。

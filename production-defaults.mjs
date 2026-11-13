@@ -266,7 +266,6 @@ export function resolveEntryData(
         ...(Object.hasOwn(slot, 'actual')
           ? {
               actual: slot.actual,
-              actualAutoFilled: slot.actualAutoFilled === true,
               lineShared: data.sharedLineActual === true,
             }
           : {}),

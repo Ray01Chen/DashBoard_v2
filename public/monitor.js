@@ -1,4 +1,3 @@
-import { actualWasReported } from './production-models.js';
 import { plannedProduction, lineDailyTarget } from './production-targets.js';
 import { alertConfig, evaluateAlerts } from './alerts.js';
 import {
@@ -355,7 +354,7 @@ export function buildLineMonitor(
           actuals.length ===
             (sharedOutput && values.some((value) => value.lineShared) ? 1 : rows.length) &&
           actuals.length > 0 &&
-          actuals.every(actualWasReported),
+          actuals.every((value) => Number.isFinite(value.actual)),
       };
     });
     const metrics = overviewMetrics(series, now);

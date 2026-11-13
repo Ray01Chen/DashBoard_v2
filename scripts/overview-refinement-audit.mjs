@@ -192,7 +192,14 @@ export async function auditOverviewRefinement({
         for (const dimension of [
           'x',
           'y',
-          ...(['.line-severity', '.severity-badge', '.production-state'].includes(key)
+          // Text labels have intrinsic widths (even same-length line names can
+          // differ by font). Compare their alignment, not their text width.
+          ...([
+            '.production-line',
+            '.line-severity',
+            '.severity-badge',
+            '.production-state',
+          ].includes(key)
             ? []
             : ['width']),
         ])

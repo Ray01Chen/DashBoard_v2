@@ -1,4 +1,3 @@
-import { actualWasReported } from './production-models.js';
 /** Pure alert evaluation. Missing values remain unknown; forecast time starts
  * at the last contiguous confirmed interval, not at the wall clock. This avoids
  * pretending that production awaiting a report was zero. */
@@ -68,7 +67,9 @@ export function evaluateAlerts({
   const completed = ended
     .filter((slot) => configured.has(slot.id))
     .map((slot) =>
-      slot.reported === false || !actualWasReported(slot) ? { ...slot, actual: null } : slot,
+      slot.reported === false || !Number.isFinite(slot.actual)
+        ? { ...slot, actual: null }
+        : slot,
     );
   const reporting = alertConfig({ unified: { reporting: settings.reporting } }).reporting;
   const missing = completed.filter((slot) => slot.actual == null);

@@ -297,7 +297,7 @@ export async function auditOverviewInteractions({
     assert.equal(saved.records.length, 6);
     assert.equal(
       saved.records.filter(
-        (record) => record.slots.find((slot) => slot.start === '08:00')?.actualAutoFilled,
+        (record) => record.slots.find((slot) => slot.start === '08:00')?.actual === 0,
       ).length,
       4,
     );
@@ -423,7 +423,7 @@ export async function auditOverviewInteractions({
       };
     });
     assert.deepEqual(panelGeometry, { footerInside: true, belowCard: true });
-    if (screenshots)
+    if (screenshots || process.argv.includes('--restoration-screenshots'))
       await page.screenshot({ path: path.join(root, 'docs/images/overview-inline-edit.png') });
     await page.locator('[data-editor-cancel]').click();
     await page.waitForFunction(() => !document.querySelector('[data-overview-panel]'));

@@ -1,10 +1,23 @@
 import { createOverviewSwipe } from './overview-swipe.js';
 import { parseBulkValue } from './entry.js';
-import { scheduleFor } from './production-schedules.js';
+import { reportSchedule } from './production-schedules.js';
 import { sameProduction, stationHasOutput } from './production-models.js';
 import { slotPresentation, closeMonitorAlerts } from './monitor-ui.js';
 
 const fields = ['target', 'actual', 'issue'];
+/** Update a whole-day projection without dropping the opposite shift. */
+export function mergeOverviewReset(previous, saved, shift) {
+  return {
+    ...previous,
+    ...saved,
+    version: Math.max(previous?.version || 0, saved.version),
+    slots: ['day', 'night'].flatMap((part) =>
+      part === shift
+        ? saved.slots.map((slot) => ({ ...slot, shift }))
+        : (previous?.slots || []).filter((slot) => slot.shift === part),
+    ),
+  };
+}
 /** Compare normalized values, so unchanged blanks, zero and multiline notes
  * never become destructive patches. The existing batch API validates again. */
 export function overviewChanges(rows) {
@@ -16,8 +29,7 @@ export function overviewChanges(rows) {
       if (!parsed.valid) valid = false;
       else if (
         parsed.value !==
-          (field === 'issue' ? item.slot?.issue || '' : (item.slot?.[field] ?? null)) ||
-        (field === 'actual' && item.slot?.actualAutoFilled && item.actualTouched)
+        (field === 'issue' ? item.slot?.issue || '' : (item.slot?.[field] ?? null))
       )
         values[field] = parsed.value;
     }
@@ -25,11 +37,23 @@ export function overviewChanges(rows) {
   });
   return { valid, rows: changes };
 }
-export function overviewRows(config, report, unit, interval) {
+export function overviewRows(config, report, unit, interval, date) {
   const saved = new Map(report.records.map((record) => [record.rowId, record]));
   return config.rows
     .filter(
-      (row) => row.active && !row.deleted && stationHasOutput(row) && sameProduction(row, unit),
+      (row) =>
+        row.active &&
+        !row.deleted &&
+        stationHasOutput(row) &&
+        sameProduction(saved.get(row.id)?.rowSnapshot || row, unit) &&
+        (!date ||
+          reportSchedule(
+            config,
+            unit.line,
+            interval.shift,
+            date,
+            saved.get(row.id)?.slots || report.defaults[row.id]?.slots || [],
+          ).some((slot) => slot.start === interval.start && slot.end === interval.end)),
     )
     .map((row) => {
       const record = saved.get(row.id),
@@ -65,6 +89,8 @@ export function createOverviewEditor({
   redraw,
   toast,
   confirm,
+  confirmReset,
+  onReset,
 }) {
   const root = document.querySelector('#line-cards');
   const swipe = createOverviewSwipe(root);
@@ -83,15 +109,62 @@ export function createOverviewEditor({
     current.error = '';
     sync();
     try {
-      const selected = current.choices.find((slot) => slot.key === current.selected);
-      if (!selected) throw new Error(getContext().t('inlineNoSlot'));
-      const report = await api(
-        `/api/records?${new URLSearchParams({ date: current.date, shift: selected.shift })}`,
+      const reports = await Promise.all(
+        current.shifts.map(async (shift) => [
+          shift,
+          await api(`/api/records?${new URLSearchParams({ date: current.date, shift })}`),
+        ]),
       );
       if (draft !== current || generation !== serial) return;
-      if (report.configVersion !== current.config.version)
+      if (reports.some(([, report]) => report.configVersion !== current.config.version))
         throw new Error(getContext().t('configChanged'));
-      current.rows = overviewRows(current.config, report, current.unit, selected);
+      current.choices = reports.flatMap(([shift, report]) => {
+        const saved = new Map(report.records.map((record) => [record.rowId, record]));
+        const slots = current.config.rows
+          .filter(
+            (row) =>
+              row.active &&
+              !row.deleted &&
+              stationHasOutput(row) &&
+              sameProduction(saved.get(row.id)?.rowSnapshot || row, current.unit),
+          )
+          .flatMap((row) =>
+            reportSchedule(
+              current.config,
+              current.unit.line,
+              shift,
+              current.date,
+              saved.get(row.id)?.slots || report.defaults[row.id]?.slots || [],
+            ),
+          );
+        return [
+          ...new Map(
+            slots.map((slot) => [
+              JSON.stringify([shift, slot.start, slot.end]),
+              {
+                ...slot,
+                shift,
+                key: JSON.stringify([shift, slot.start, slot.end]),
+              },
+            ]),
+          ).values(),
+        ];
+      });
+      const selected =
+        current.choices.find((slot) => slot.key === current.selected) ||
+        current.choices.find(
+          (slot) => slot.start === current.period?.start && slot.end === current.period?.end,
+        ) ||
+        current.choices[0];
+      if (!selected) throw new Error(getContext().t('inlineNoSlot'));
+      current.selected = selected.key;
+      current.rows = overviewRows(
+        current.config,
+        Object.fromEntries(reports)[selected.shift],
+        current.unit,
+        selected,
+        current.date,
+      );
       current.loaded = true;
     } catch (error) {
       if (draft === current) current.error = error.message;
@@ -111,30 +184,16 @@ export function createOverviewEditor({
     const ctx = getContext();
     closeMonitorAlerts();
     const shifts = ctx.shift === 'all' ? ['day', 'night'] : [ctx.shift];
-    const choices = shifts.flatMap((shift) =>
-      scheduleFor(ctx.config, line.line, shift)
-        .filter((slot) => slot.kind === 'production')
-        .map((slot) => ({
-          ...slot,
-          shift,
-          key: JSON.stringify([shift, slot.start, slot.end]),
-        })),
-    );
-    if (!choices.length) {
-      toast(ctx.t('inlineNoSlot'));
-      return;
-    }
     const period = slotPresentation(line, ctx).slot;
-    const selected =
-      choices.find((slot) => slot.start === period?.start && slot.end === period?.end) ||
-      choices[0];
     draft = {
       key: line.key || line.line,
       date: ctx.date,
       unit: { line: line.line, model: line.model },
       config: structuredClone(ctx.config),
-      choices,
-      selected: selected.key,
+      choices: [],
+      shifts,
+      period,
+      selected: null,
       rows: [],
       loading: true,
     };
@@ -206,6 +265,7 @@ export function createOverviewEditor({
         draft.loading,
         draft.saving,
         draft.error,
+        draft.resetting,
         language,
       ]);
       if (panel.dataset.view === view) continue;
@@ -217,9 +277,9 @@ export function createOverviewEditor({
           }
         : null;
       panel.dataset.view = view;
-      panel.innerHTML = `<header class="overview-editor-heading"><label>${esc(t('inlineSlot'))}<select data-editor-slot aria-label="${esc(t('inlineSlot'))}" ${draft.loading || draft.saving ? 'disabled' : ''}>${draft.choices.map((slot) => `<option value="${esc(slot.key)}" ${slot.key === draft.selected ? 'selected' : ''}>${esc(t(slot.shift) + ' · ' + slot.start + '–' + slot.end)}</option>`).join('')}</select></label></header>
-        <div class="overview-editor-body"><table><thead><tr><th>${esc(t('job'))} / ${esc(t('station'))}</th>${fields.map((field) => `<th>${esc(t(field))}</th>`).join('')}</tr></thead><tbody>${draft.rows.map((item) => `<tr><th scope="row"><strong>${esc(item.row.job || '—')}</strong><span>${esc(item.row.station || '—')}</span>${item.slot?.actualAutoFilled ? `<small class="auto-zero-note" title="${esc(t('autoFilledZero'))}">${esc(t('autoZeroShort'))}</small>` : ''}</th>${fields.map((field) => `<td>${field === 'issue' ? `<textarea rows="1" maxlength="2000"` : '<input type="text" inputmode="numeric" maxlength="12"'} data-editor-row="${item.row.id}" data-editor-field="${field}" aria-label="${esc([item.row.job, item.row.station, t(field)].join(' · '))}" ${draft.loading || draft.saving ? 'disabled' : ''}${field === 'issue' ? `>${esc(item.draft[field])}</textarea>` : ` value="${esc(item.draft[field])}">`}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
-        <footer class="overview-editor-footer"><span role="status" class="overview-editor-message">${esc(draft.error || (draft.loading ? t('inlineLoading') : !draft.rows.length ? t('inlineUnavailable') : ''))}</span><button type="button" class="button" data-editor-cancel ${draft.saving ? 'disabled' : ''}>${esc(t('inlineCancel'))}</button><button type="button" class="button primary" data-editor-save ${draft.loading || draft.saving || !draft.loaded || !draft.rows.length ? 'disabled' : ''}>${esc(t(draft.saving ? 'saving' : 'inlineSave'))}</button></footer>`;
+      panel.innerHTML = `<header class="overview-editor-heading"><label>${esc(t('inlineSlot'))}<select data-editor-slot aria-label="${esc(t('inlineSlot'))}" ${draft.loading || draft.saving || draft.resetting ? 'disabled' : ''}>${draft.choices.map((slot) => `<option value="${esc(slot.key)}" ${slot.key === draft.selected ? 'selected' : ''}>${esc(t(slot.shift) + ' · ' + slot.start + '–' + slot.end)}</option>`).join('')}</select></label></header>
+        <div class="overview-editor-body"><table><thead><tr><th>${esc(t('job'))} / ${esc(t('station'))}</th>${fields.map((field) => `<th>${esc(t(field))}</th>`).join('')}</tr></thead><tbody>${draft.rows.map((item) => `<tr><th scope="row"><strong>${esc(item.row.station || '—')}</strong><span>${esc(item.row.job || '—')}</span></th>${fields.map((field) => `<td>${field === 'issue' ? `<textarea rows="1" maxlength="2000"` : '<input type="text" inputmode="numeric" maxlength="12"'} data-editor-row="${item.row.id}" data-editor-field="${field}" aria-label="${esc([item.row.job, item.row.station, t(field)].join(' · '))}" ${draft.loading || draft.saving || draft.resetting ? 'disabled' : ''}${field === 'issue' ? `>${esc(item.draft[field])}</textarea>` : ` value="${esc(item.draft[field])}">`}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+        <footer class="overview-editor-footer"><button type="button" class="button overview-editor-restore" data-editor-restore ${draft.loading || draft.saving || draft.resetting || !draft.loaded || !draft.rows.length ? 'disabled' : ''}>${esc(t(draft.resetting ? 'inlineResetting' : 'inlineRestore'))}</button><div class="overview-editor-actions"><button type="button" class="button" data-editor-cancel ${draft.saving || draft.resetting ? 'disabled' : ''}>${esc(t('inlineCancel'))}</button><button type="button" class="button primary" data-editor-save ${draft.loading || draft.saving || draft.resetting || !draft.loaded || !draft.rows.length ? 'disabled' : ''}>${esc(t(draft.saving ? 'saving' : 'inlineSave'))}</button></div><span role="status" class="overview-editor-message">${esc(draft.error || (draft.loading ? t('inlineLoading') : !draft.rows.length ? t('inlineUnavailable') : ''))}</span></footer>`;
       if (focus) {
         const input = [...panel.querySelectorAll('[data-editor-field]')].find(
           (node) =>
@@ -232,7 +292,15 @@ export function createOverviewEditor({
     if (!draft) restoreKey = null;
   }
   async function save() {
-    if (!draft?.loaded || draft.loading || draft.saving || draft.closing || !canEdit()) return;
+    if (
+      !draft?.loaded ||
+      draft.loading ||
+      draft.saving ||
+      draft.resetting ||
+      draft.closing ||
+      !canEdit()
+    )
+      return;
     const current = draft,
       changes = overviewChanges(current.rows),
       { t } = getContext();
@@ -273,15 +341,77 @@ export function createOverviewEditor({
       }
     }
   }
+  async function reset() {
+    if (
+      !draft?.loaded ||
+      draft.loading ||
+      draft.saving ||
+      draft.resetting ||
+      draft.closing ||
+      !canEdit()
+    )
+      return;
+    const current = draft;
+    const interval = current.choices.find((slot) => slot.key === current.selected);
+    current.resetting = true;
+    current.error = '';
+    sync();
+    try {
+      if (!(await confirmReset()) || draft !== current || !canEdit()) return;
+      const result = await api('/api/entry/interval/reset', {
+        method: 'PUT',
+        body: JSON.stringify({
+          ...current.unit,
+          date: current.date,
+          shift: interval.shift,
+          interval: { start: interval.start, end: interval.end },
+          configVersion: current.config.version,
+          expectedVersions: current.rows.map((item) => ({
+            rowId: item.row.id,
+            version: item.version,
+          })),
+        }),
+      });
+      if (draft !== current) return;
+      // Replace both the baseline and draft immediately with committed records.
+      // No draft fields or autosave callbacks participate in a reset.
+      current.rows = overviewRows(
+        current.config,
+        {
+          records: result.records,
+          defaults: {},
+          rowVersions: {},
+        },
+        current.unit,
+        interval,
+        current.date,
+      );
+      root.querySelector('[data-overview-panel]')?.removeAttribute('data-view');
+      onReset(result, { date: current.date, shift: interval.shift });
+      sync();
+      toast(getContext().t('inlineRestored'));
+      try {
+        await refresh();
+      } catch {
+        current.error = getContext().t('inlineResetRefreshFailed');
+      }
+    } catch (error) {
+      if (draft === current) current.error = error.message;
+    } finally {
+      if (draft === current) {
+        current.resetting = false;
+        sync();
+      }
+    }
+  }
   root.addEventListener('input', (event) => {
     const field = event.target.dataset.editorField;
-    if (!draft || !fields.includes(field)) return;
+    if (!draft || draft.resetting || draft.saving || !fields.includes(field)) return;
     const item = draft.rows.find(
       (item) => String(item.row.id) === event.target.dataset.editorRow,
     );
     if (item) {
       item.draft[field] = event.target.value;
-      if (field === 'actual') item.actualTouched = true;
       event.target.setAttribute(
         'aria-invalid',
         String(!parseBulkValue(field, event.target.value).valid),
@@ -289,7 +419,13 @@ export function createOverviewEditor({
     }
   });
   root.addEventListener('change', async (event) => {
-    if (!event.target.matches('[data-editor-slot]') || !draft || draft.loading || draft.saving)
+    if (
+      !event.target.matches('[data-editor-slot]') ||
+      !draft ||
+      draft.loading ||
+      draft.saving ||
+      draft.resetting
+    )
       return;
     const current = draft,
       selected = event.target.value;
@@ -316,7 +452,7 @@ export function createOverviewEditor({
     },
     async guard() {
       if (!draft) return true;
-      if (draft.saving || draft.loading || draft.closing) return false;
+      if (draft.saving || draft.loading || draft.resetting || draft.closing) return false;
       if (dirty() && !(await confirm(getContext().t('inlineLeave')))) return false;
       await clear();
       return true;
@@ -329,7 +465,9 @@ export function createOverviewEditor({
         const line = lines.find((line) => (line.key || line.line) === key);
         if (line) void open(line);
       }
-      if (event.target.closest('[data-editor-cancel]') && !draft?.saving) clear();
+      if (event.target.closest('[data-editor-cancel]') && !draft?.saving && !draft?.resetting)
+        clear();
+      if (event.target.closest('[data-editor-restore]')) void reset();
       if (event.target.closest('[data-editor-save]')) void save();
       return true;
     },

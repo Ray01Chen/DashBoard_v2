@@ -1,8 +1,4 @@
-import {
-  actualWasReported,
-  sameProduction,
-  stationHasOutput,
-} from './public/production-models.js';
+import { sameProduction, stationHasOutput } from './public/production-models.js';
 import { intervalWindow } from './public/monitor.js';
 import {
   reportSchedule,
@@ -35,8 +31,8 @@ const scopeKey = (scope) =>
     scope.interval?.end,
   ]);
 
-/** The latest *human* actual anchors a production-day prefix. Automatic zeros
- * cannot extend that prefix themselves, and breaks never become report slots.
+/** The latest numeric actual (including zero) anchors a production-day prefix.
+ * Breaks never become report slots.
  * Pending numeric edits overlay the same transaction's fresh database snapshot. */
 function expandThroughLatest(data, config, reports, fail) {
   const units = data.throughLatest || [];
@@ -117,13 +113,13 @@ function expandThroughLatest(data, config, reports, fail) {
             (value) => value.start === slot.start && value.end === slot.end,
           );
           const pending = editsByScope.get(scopeKey(scope))?.get(row.id);
-          const manual =
+          const reported =
             pending && Object.hasOwn(pending, 'actual')
               ? typeof pending.actual === 'number' &&
                 Number.isSafeInteger(pending.actual) &&
                 pending.actual >= 0
-              : actualWasReported(previous);
-          if (manual) cutoff = Math.max(cutoff ?? -Infinity, window.endAt);
+              : Number.isSafeInteger(previous?.actual) && previous.actual >= 0;
+          if (reported) cutoff = Math.max(cutoff ?? -Infinity, window.endAt);
         }
       }
     }
@@ -156,6 +152,7 @@ function expandThroughLatest(data, config, reports, fail) {
  * Grouping by station/shift lets multiple intervals commit one revision each. */
 export function planActualCompletion(data, config, reports, fail) {
   const { date } = data;
+  if (data.operation != null) fail(400, 'errSlotData');
   if (
     !Array.isArray(data.scopes) ||
     data.scopes.length > 4096 ||
@@ -174,7 +171,7 @@ export function planActualCompletion(data, config, reports, fail) {
         shift,
         version,
         slots: new Map(),
-        autoFilled: new Set(),
+        autoFilledCount: 0,
       });
     return patches.get(key);
   };
@@ -252,14 +249,14 @@ export function planActualCompletion(data, config, reports, fail) {
       // becomes an automatic zero, while untouched current quantities survive.
       const missing = Object.hasOwn(values, 'actual')
         ? values.actual === null
-        : previous?.actual == null;
+        : !Number.isFinite(previous?.actual);
       const auto = scope.fillMissing && row.active && !row.deleted && missing;
       if (auto) values.actual = 0;
       if (!Object.keys(values).length) continue;
       const patch = patchFor(row, scope.shift, version);
       patch.preserveSchedule = isArchivedProductionDate(config, scope.line, date);
       patch.slots.set(interval.id, { id: interval.id, ...values });
-      if (auto) patch.autoFilled.add(interval.id);
+      if (auto) patch.autoFilledCount++;
     }
     if (!eligible) fail(400, 'errSlotData');
   }

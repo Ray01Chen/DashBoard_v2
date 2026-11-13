@@ -129,6 +129,10 @@ async function configure(base, cookie, line) {
 }
 
 test('multi-site RBAC enforces session ownership, per-site roles, feature grants and revocation', async (t) => {
+  // Close the inspection connection before start() removes its SQLite files.
+  // Windows keeps the WAL locked while this connection is open.
+  let db;
+  t.after(() => db?.close());
   const { base, dbPath } = await start(t),
     admin = await login(base);
   assert.equal(admin.user.systemRole, 'system_admin');
@@ -290,6 +294,19 @@ test('multi-site RBAC enforces session ownership, per-site roles, feature grants
     403,
   );
   await result(
+    await request(base, a.cookie, 'PUT', '/api/entry/interval/reset', {
+      site_id: siteB.id,
+      date: '2099-05-01',
+      shift: 'day',
+      line: 'LINE-B',
+      model: 'Default',
+      configVersion: configA.version,
+      interval: { start: '08:00', end: '09:00' },
+      expectedVersions: [],
+    }),
+    403,
+  );
+  await result(
     await request(base, a.cookie, 'POST', '/api/auth/site', { siteId: siteB.id }),
     403,
   );
@@ -300,8 +317,7 @@ test('multi-site RBAC enforces session ownership, per-site roles, feature grants
   assert.equal(reportA.records.length, 1);
   assert.equal(reportA.records[0].slots[0].actual, 25);
   assert.doesNotMatch(JSON.stringify(reportA), /B only|LINE-B/);
-  const db = new DatabaseSync(dbPath);
-  t.after(() => db.close());
+  db = new DatabaseSync(dbPath);
   assert.equal(db.prepare('PRAGMA foreign_key_check').all().length, 0);
   // Same account is an admin in A and a normal user in B.
   localUser = (
@@ -377,6 +393,7 @@ test('multi-site RBAC enforces session ownership, per-site roles, feature grants
     403,
   );
   await result(await request(base, a.cookie, 'PUT', '/api/entry/complete', {}), 403);
+  await result(await request(base, a.cookie, 'PUT', '/api/entry/interval/reset', {}), 403);
   await result(await request(base, a.cookie, 'POST', '/api/import/preview', {}), 403);
   await result(
     await request(base, admin.cookie, 'DELETE', `/api/admin/users/${userA.id}/sites/1`, {}),

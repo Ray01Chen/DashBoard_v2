@@ -1,12 +1,37 @@
+# 2026-11-13 實績 0 統一語意、總覽立即重設與主題一致性
+
+- 一般明確儲存才補 0。整日／單班以選定範圍最後一個有效實績（含所有數值 0）為截止，沒有實績就不補；單時段、批次與總覽只補所選時段。補值不改 Target、Issue、休息、截止之後或其他生產單位。
+- 移除來源判斷與標籤；舊 `actualAutoFilled` 資料仍可讀取但完全忽略。0 是已完成填報，不需再次確認；未回報警報、歷史及匯出依 Actual 數值處理，其他門檻保留。沒有資料庫 Migration 或新增套件。
+- 總覽「恢復預設」先確認，確定後直接 PUT `/api/entry/interval/reset` 寫入資料庫，不需再儲存。獨立計畫器以既有日目標分配與歷史快照計算 Target，Actual 全部為 NULL，Issue 不送出也不修改。所有有效站點版本在交易內驗證；任一失敗整批回滾並保留輸入。成功取代舊 draft/baseline，更新卡片與整日統計並排除過時背景回應；一般儲存繼續補 0。
+- 時段靠左，恢復預設在底部左側，取消／儲存在右側。沿用系統 34px 控制項、細緻實線框、圓角、柔和容器陰影、數值對齊與互動狀態；編輯區完全繼承設備卡片的主題變數，移除區域 OS 深色偏好規則；淺色系統不會出現整片深色容器，深色主題變數可同步作用於卡片與編輯區。保留原右滑與警報獨立展開。
+- `npm run check`：292 項測試、86 個 JavaScript 語法檢查、ESLint、Prettier、repository audit 全部通過。新增歷史目標／跨午夜、舊來源標記與空字串、沒有截止點、立即重設／確認取消／重試／持久化、並行版本衝突整批回滾、其他設備及權限測試。測試使用隔離 SQLite，未更動正式資料庫。
+- `npm run test:browser -- --restoration-screenshots`：77 組 Chromium 流程全部通過，含三語五主題、桌面／平板／手機、全螢幕、右滑動畫、獨立警報展開，以及立即重設的確認取消、網路失敗重試、重新整理保留 NULL／Issue，以及 OS 深色偏好不改變淺色編輯區、共享深色主題變數；另以延後回傳舊查詢的測試確認卡片統計及空白實績不被覆蓋。Firefox／Safari 未實測。截圖另以同源測試樣式隱藏固定頁首，避免遮住時段選擇器；不更改產品 CSP。
+- 修正 Windows 驗證清理：先關閉測試用 SQLite 檢查連線，再刪除暫存 WAL；瀏覽器幾何測試對固有寬度的產線文字只比較位置，繼續檢查共享網格及數值區寬度，避免字型造成誤判。
+
+修改檔案與用途：
+
+| 用途 | 檔案 |
+| --- | --- |
+| 補 0、版本與交易寫入 | [actual-completion.mjs](../actual-completion.mjs)、[server.mjs](../server.mjs)、[production-defaults.mjs](../production-defaults.mjs)、[line-production.mjs](../line-production.mjs) |
+| 實績及警報判斷 | [production-models.js](../public/production-models.js)、[alerts.js](../public/alerts.js)、[monitor.js](../public/monitor.js) |
+| 填報及來源機制清理 | [entry.js](../public/entry.js)、[entry.css](../public/entry.css) |
+| 總覽恢復、預設目標與視覺 | [overview-inline.js](../public/overview-inline.js)、[production-targets.js](../public/production-targets.js)、[overview-interactions.css](../public/overview-interactions.css)、[interaction-messages.js](../public/interaction-messages.js)、[app.js](../public/app.js) |
+| 單元與 API 整合驗證 | [actual-completion.test.mjs](../tests/actual-completion.test.mjs)、[overview-editor.test.mjs](../tests/overview-editor.test.mjs)、[multi-site.test.mjs](../tests/multi-site.test.mjs) |
+| Chromium 實際操作與版面驗證 | [actual-completion-audit.mjs](../scripts/actual-completion-audit.mjs)、[overview-interaction-audit.mjs](../scripts/overview-interaction-audit.mjs)、[overview-refinement-audit.mjs](../scripts/overview-refinement-audit.mjs) |
+| 操作教學與工程說明 | [help.js](../public/help.js)、[中文指南](./USER_GUIDE.md)、[英文指南](./USER_GUIDE.en.md)、[填報員指南](./MEMBER_GUIDE.md)、[程式指南](./CODE_GUIDE.md)、本驗證紀錄 |
+| 操作截圖 | [補 0](./images/actual-completion.png)、[總覽編輯](./images/overview-inline-edit.png)、[立即恢復預設](./images/overview-restore-defaults.png) |
+
+---
+
 # 2026-11-12 明確儲存時補齊空白實績
 
 - 生產填報、同時段批次填寫及總覽多站點編輯共用後端補值流程；只有明確按儲存才補 0，自動儲存、關閉、取消、Excel 匯入及警報計時不觸發補值。
-- 整日／整班以本次範圍最後一個人工實績時段為截止點，向前補齊需要填報站點；人工 0 可作截止點，自動 0 不會延伸範圍。沒有人工實績則不自動補值。單一時段、批次視窗與總覽編輯只補所選時段。
-- 自動 0 儲存在原 slot JSON 並標記 `actualAutoFilled: true`，介面三語標示來源；仍不算人工回報，不解除未回報告警，不加入已確認產量預測。再次手動填 0 才確認該站點，未碰觸的自動 0 保留來源。
+- 整日／整班以本次範圍最後一個有實績的時段為截止點，向前補齊需要填報站點；任何數值 0 都可作截止點。整個範圍沒有實績則不自動補值。單一時段、批次視窗與總覽編輯只補所選時段。
+- 所有已儲存數值 0 都視為正常已回報，不需要人工確認，不顯示來源標籤。忽略舊來源標記；不新增資料庫欄位或刪除歷史 Actual。
 - 補值採交易內最新資料與版本驗證：保留其他使用者已存的有效值，僅更新修改欄位與缺少的實績，不自動修改目標／異常。多時段同一站點合併一次寫入，任一衝突或驗證失敗整批回滾；前端保留草稿並阻止失敗後的自動重送。
 - 新增 API `PUT /api/entry/complete`；既有 `PUT /api/entry/interval` 以 `completeActuals: true` 明確啟用。沿用 Session 廠區、`production.write` 權限、CONFIG 版本及 scoped SQL；其他廠區參數、撤權及未登入均拒絕。沒有新增 SQL schema、依賴或背景工作。
 - 回填歷史跨午夜班別沿用當天保存的生產日起點與時段，不因新 CONFIG 插入不相關時段；休息、非產出／停用站點、後續時段及其他產線／機種不自動補值。
-- 驗證：`npm run check` 的 287 項測試、86 個 JS 語法檢查、ESLint／Prettier；完整 Chromium 76 組流程，含三個填報入口、失敗重試、刷新後來源保留、人工 0 確認、三語五主題及既有填報／匯入／報表／告警／多廠區回歸。全部使用隔離 SQLite，未修改正式資料。
+- 驗證方式：`npm run check`（完整測試、語法、ESLint／Prettier）及 `npm run test:browser`（完整 Chromium 流程），含三個填報入口、失敗重試、刷新後數值保留、零實績已完成填報、三語五主題及既有填報／匯入／報表／告警／多廠區回歸。全部使用隔離 SQLite，未修改正式資料。
 - 同步更新站內三語教學、中英使用手冊、填報員與工程師說明。專案沒有 TypeScript／Build 指令；Firefox／Safari 尚未實測。部署新版後需重新啟動 Node.js 服務載入新 API。
 
 ---

@@ -1,5 +1,10 @@
 import { validateStationValues } from './actual-completion.mjs';
-import { scheduleFor } from './public/production-schedules.js';
+import {
+  scheduleFor,
+  reportSchedule,
+  isArchivedProductionDate,
+} from './public/production-schedules.js';
+import { reportDefaultTarget } from './public/production-targets.js';
 import { sameProduction, unitFor, stationHasOutput } from './public/production-models.js';
 /**
  * Match a production interval by its captured boundaries. IDs may change when
@@ -7,6 +12,75 @@ import { sameProduction, unitFor, stationHasOutput } from './public/production-m
  */
 export function matchingInterval(slots, interval) {
   return slots.find((slot) => slot.start === interval.start && slot.end === interval.end);
+}
+
+/** Reset is independent of completion: derive targets on the server, always
+ * clear actuals and omit issues. Validate every eligible station before writes. */
+export function planStationReset(data, config, report, fail) {
+  if (
+    typeof data.line !== 'string' ||
+    typeof data.model !== 'string' ||
+    !data.interval ||
+    typeof data.interval.start !== 'string' ||
+    typeof data.interval.end !== 'string' ||
+    ['rows', 'values', 'completeActuals', 'throughLatest', 'operation'].some((key) =>
+      Object.hasOwn(data, key),
+    )
+  )
+    fail(400, 'errSlotData');
+  const saved = new Map(report.records.map((record) => [record.rowId, record]));
+  const eligible = config.rows.flatMap((row) => {
+    const record = saved.get(row.id);
+    if (
+      !row.active ||
+      row.deleted ||
+      !stationHasOutput(row) ||
+      !sameProduction(record?.rowSnapshot || row, data)
+    )
+      return [];
+    const defaults = report.defaults[row.id];
+    const interval = matchingInterval(
+      reportSchedule(
+        config,
+        data.line,
+        data.shift,
+        data.date,
+        record?.slots || defaults?.slots || [],
+      ),
+      data.interval,
+    );
+    return interval ? [{ row, record, defaults, interval }] : [];
+  });
+  if (!eligible.length) fail(400, 'errSlotData');
+  if (!Array.isArray(data.expectedVersions) || data.expectedVersions.length !== eligible.length)
+    fail(409, 'errConflict');
+  const expected = new Map(data.expectedVersions.map((item) => [item?.rowId, item?.version]));
+  if (expected.size !== eligible.length) fail(409, 'errConflict');
+  return eligible.map(({ row, record, defaults, interval }) => {
+    const version = record?.version ?? report.rowVersions[row.id] ?? 0;
+    if (!Number.isSafeInteger(expected.get(row.id)) || expected.get(row.id) !== version)
+      fail(409, 'errConflict');
+    return {
+      rowId: row.id,
+      version,
+      preserveSchedule: isArchivedProductionDate(config, data.line, data.date),
+      slots: [
+        {
+          id: interval.id,
+          target: reportDefaultTarget(
+            config,
+            record?.rowSnapshot || row,
+            data.date,
+            data.shift,
+            interval,
+            record,
+            defaults,
+          ),
+          actual: null,
+        },
+      ],
+    };
+  });
 }
 
 /** Explicit interval fill is a one-time atomic replacement, not shared state.

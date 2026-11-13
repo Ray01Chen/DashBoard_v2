@@ -6,29 +6,29 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
 import { createServer } from 'node:net';
+import { DatabaseSync } from 'node:sqlite';
 import { createTestClient, testAuthEnv } from './test-auth.mjs';
 import { buildLineMonitor } from '../public/monitor.js';
 import { alertConfig, evaluateAlerts } from '../public/alerts.js';
 import { entryChanges, mergeEntryChanges } from '../public/entry.js';
-import { overviewChanges } from '../public/overview-inline.js';
+import { overviewChanges, overviewRows } from '../public/overview-inline.js';
 
-test('automatic zero remains distinct until the same zero is explicitly typed', () => {
+test('every numeric zero is reported and legacy provenance has no effect', () => {
   const slot = { id: 'p', actual: 0, actualAutoFilled: true };
   const base = { slots: [slot] };
   assert.deepEqual(entryChanges(base, structuredClone(base)), []);
   const draft = mergeEntryChanges(base, [{ id: 'p', actual: 0 }]);
-  assert.deepEqual(entryChanges(base, draft), [{ id: 'p', actual: 0 }]);
+  assert.deepEqual(entryChanges(base, draft), []);
   assert.equal(base.slots[0].actualAutoFilled, true);
   assert.deepEqual(
     overviewChanges([
       {
         row: { id: 1 },
         slot,
-        actualTouched: true,
         draft: { target: '', actual: '0', issue: '' },
       },
     ]).rows,
-    [{ rowId: 1, values: { actual: 0 } }],
+    [],
   );
   const window = { id: 'p', startAt: 0, endAt: 3600000 };
   const settings = alertConfig({}).reporting;
@@ -45,7 +45,7 @@ test('automatic zero remains distinct until the same zero is explicitly typed', 
   };
   assert.equal(
     evaluateAlerts(input).results.find((item) => item.id === 'reporting').severity,
-    'red',
+    'green',
   );
   input.series[0].actualAutoFilled = false;
   assert.equal(
@@ -54,7 +54,7 @@ test('automatic zero remains distinct until the same zero is explicitly typed', 
   );
 });
 
-test('complete-station saves use latest site data, server provenance and one atomic transaction', async (t) => {
+test('complete-station saves use latest site data and one atomic transaction', async (t) => {
   const folder = await mkdtemp(path.join(tmpdir(), 'bp-auto-zero-'));
   const socket = createServer().listen(0, '127.0.0.1');
   await once(socket, 'listening');
@@ -211,7 +211,7 @@ test('complete-station saves use latest site data, server provenance and one ato
           const record = saved.records.find((record) => record.rowId === rows[i].id),
             slot = record.slots.find((slot) => slot.id === first.id);
           assert.equal(slot.actual, values[i] ?? 0);
-          assert.equal(slot.actualAutoFilled === true, values[i] === null);
+          assert.equal(slot.actualAutoFilled, undefined);
           assert.equal(
             slot.target,
             before.defaults[rows[i].id].slots.find((slot) => slot.id === first.id).target,
@@ -264,12 +264,12 @@ test('complete-station saves use latest site data, server provenance and one ato
         assert.equal(
           (await report(date)).records.find((record) => record.rowId === rows[1].id).slots[0]
             .actualAutoFilled,
-          true,
+          undefined,
         );
       },
     );
     await t.test(
-      'manual zero confirms only that station, and clients cannot spoof automatic provenance',
+      'saved zeros complete reports without confirmation and legacy flags are ignored',
       async () => {
         const date = '2099-12-03';
         await json(await complete(date, [scope()]));
@@ -279,7 +279,7 @@ test('complete-station saves use latest site data, server provenance and one ato
           (unit) => unit.line === 'ZERO-A' && unit.model === 'MODEL-A',
         );
         assert.equal(monitor.series.find((slot) => slot.id === first.id).actual, 0);
-        assert.equal(monitor.series.find((slot) => slot.id === first.id).reported, false);
+        assert.equal(monitor.series.find((slot) => slot.id === first.id).reported, true);
         await json(
           await write(date, rows[5], auto.version, [
             { id: first.id, actual: 0, actualAutoFilled: true },
@@ -297,6 +297,68 @@ test('complete-station saves use latest site data, server provenance and one ato
       },
     );
     await t.test(
+      'legacy persisted zeros anchor completion, reports and export without migration',
+      async () => {
+        const date = '2099-12-26';
+        const overnight = config.schedules.night[0];
+        await json(
+          await write(date, rows[0], 0, [{ id: overnight.id, actual: 0 }], { shift: 'night' }),
+        );
+        await json(
+          await write(date, rows[1], 0, [{ id: overnight.id, actual: null }], {
+            shift: 'night',
+          }),
+        );
+        const db = new DatabaseSync(path.join(folder, 'db.sqlite'));
+        try {
+          const raw = db
+            .prepare(
+              'SELECT slots FROM production_records WHERE date=? AND shift=? AND row_id=?',
+            )
+            .get(date, 'night', rows[0].id);
+          const slots = JSON.parse(raw.slots).map((slot) =>
+            slot.id === overnight.id ? { ...slot, actualAutoFilled: true } : slot,
+          );
+          db.prepare(
+            'UPDATE production_records SET slots=? WHERE date=? AND shift=? AND row_id=?',
+          ).run(JSON.stringify(slots), date, 'night', rows[0].id);
+          const blank = db
+            .prepare(
+              'SELECT slots FROM production_records WHERE date=? AND shift=? AND row_id=?',
+            )
+            .get(date, 'night', rows[1].id);
+          const blankSlots = JSON.parse(blank.slots).map((slot) =>
+            slot.id === overnight.id ? { ...slot, actual: '' } : slot,
+          );
+          db.prepare(
+            'UPDATE production_records SET slots=? WHERE date=? AND shift=? AND row_id=?',
+          ).run(JSON.stringify(blankSlots), date, 'night', rows[1].id);
+        } finally {
+          db.close();
+        }
+        const result = await json(
+          await complete(
+            date,
+            [],
+            [{ line: 'ZERO-A', model: 'MODEL-A', shifts: ['day', 'night'] }],
+          ),
+        );
+        assert.equal(result.autoFilledCount, 17);
+        const night = await report(date, 'night');
+        const monitor = buildLineMonitor(config, night.records, date, 'night').find(
+          (unit) => unit.line === 'ZERO-A' && unit.model === 'MODEL-A',
+        );
+        assert.equal(monitor.series[0].reported, true);
+        assert.equal(monitor.series[0].actual, 0);
+        const exported = await member(`${base}/api/export?date=${date}&shift=night&lang=en`);
+        assert.equal(exported.status, 200);
+        assert.doesNotMatch(
+          await exported.text(),
+          /actualAutoFilled|Auto 0|not manually reported/,
+        );
+      },
+    );
+    await t.test(
       'explicit clearing is completed as automatic zero without touching valid peers',
       async () => {
         const date = '2099-12-18';
@@ -307,7 +369,7 @@ test('complete-station saves use latest site data, server provenance and one ato
         assert.equal(saved.find((row) => row.rowId === rows[0].id).slots[0].actual, 0);
         assert.equal(
           saved.find((row) => row.rowId === rows[0].id).slots[0].actualAutoFilled,
-          true,
+          undefined,
         );
         assert.equal(saved.find((row) => row.rowId === rows[1].id).slots[0].actual, 21);
         assert.equal(saved.find((row) => row.rowId === rows[1].id).version, b.version);
@@ -363,12 +425,12 @@ test('complete-station saves use latest site data, server provenance and one ato
           9,
         );
         assert.equal(night.records.length, 6);
-        assert.ok(night.records.every((record) => record.slots[0].actualAutoFilled));
+        assert.ok(night.records.every((record) => record.slots[0].actual === 0));
         assert.equal((await report('2099-12-06')).records.length, 0);
       },
     );
     await t.test(
-      'whole-day completion fills every earlier production period through the last human actual, never later periods or auto-zero anchors',
+      'whole-day completion fills through the last numeric actual including zeros, never later periods',
       async () => {
         const date = '2099-12-08',
           through = [{ line: 'ZERO-A', model: 'MODEL-A', shifts: ['day', 'night'] }];
@@ -380,7 +442,7 @@ test('complete-station saves use latest site data, server provenance and one ato
         assert.equal(day.records.length, 6);
         assert.ok(
           day.records.every(
-            (record) => record.slots.find((slot) => slot.id === first.id).actualAutoFilled,
+            (record) => record.slots.find((slot) => slot.id === first.id).actual === 0,
           ),
         );
         assert.equal(
@@ -451,7 +513,7 @@ test('complete-station saves use latest site data, server provenance and one ato
       },
     );
     await t.test(
-      'targets and notes without a human actual do not create a completion prefix',
+      'targets and notes without any actual do not create a completion prefix',
       async () => {
         const date = '2099-12-12';
         const result = await json(
@@ -534,6 +596,119 @@ test('complete-station saves use latest site data, server provenance and one ato
       },
     );
     await t.test(
+      'independent reset derives defaults, clears all actuals and persists without completion',
+      async () => {
+        const date = '2099-12-24';
+        const otherRow = config.rows.find((row) => row.model === 'MODEL-B');
+        await json(
+          await write(date, otherRow, 0, [{ id: first.id, actual: 77, issue: 'Other device' }]),
+        );
+        await json(
+          await complete(date, [
+            scope([[rows[0], { target: 999, actual: 23, issue: 'Keep this issue' }]]),
+          ]),
+        );
+        await json(await complete(date, [scope([[rows[0], { actual: 8 }, 1]], second)]));
+        const before = await report(date);
+        const draft = overviewRows(
+          config,
+          before,
+          { line: 'ZERO-A', model: 'MODEL-A' },
+          { ...first, shift: 'day' },
+          date,
+        );
+        const restoring = {
+          date,
+          configVersion: config.version,
+          line: 'ZERO-A',
+          model: 'MODEL-A',
+          shift: 'day',
+          interval: { start: first.start, end: first.end },
+          expectedVersions: draft.map((item) => ({
+            rowId: item.row.id,
+            version: item.version,
+          })),
+        };
+        const result = await json(await request('/api/entry/interval/reset', restoring));
+        assert.equal(result.autoFilledCount, undefined);
+        const reloaded = await report(date);
+        for (const item of draft) {
+          const after = reloaded.records.find((record) => record.rowId === item.row.id);
+          const previous = before.records.find((record) => record.rowId === item.row.id);
+          assert.equal(after.slots[0].actual, null);
+          assert.equal(after.slots[0].target, before.defaults[item.row.id].slots[0].target);
+          assert.equal(after.slots[0].issue, previous.slots[0].issue);
+          assert.deepEqual(after.slots[1], previous.slots[1]);
+        }
+        assert.equal((await report(date, 'night')).records.length, 0);
+        assert.deepEqual(
+          reloaded.records.find((record) => record.rowId === otherRow.id),
+          before.records.find((record) => record.rowId === otherRow.id),
+        );
+        assert.deepEqual((await report(date)).records, reloaded.records);
+        const resetMonitor = buildLineMonitor(config, reloaded.records, date, 'day').find(
+          (unit) => unit.line === 'ZERO-A' && unit.model === 'MODEL-A',
+        );
+        assert.equal(resetMonitor.series[0].actual, null);
+        assert.equal(resetMonitor.series[0].reported, false);
+        const resetAlerts = evaluateAlerts({
+          series: resetMonitor.series,
+          windows: resetMonitor.series,
+          now: resetMonitor.series[0].endAt + 120 * 60000,
+          settings: {
+            performance: { enabled: false },
+            completion: { enabled: false },
+            reporting: { enabled: true, graceMinutes: 10, redAfterMinutes: 40 },
+          },
+        });
+        assert.equal(
+          resetAlerts.results.find((item) => item.id === 'reporting').severity,
+          'red',
+        );
+        // Stale restoration rejects the entire batch and preserves all data.
+        await json(await request('/api/entry/interval/reset', restoring), 409);
+        assert.deepEqual((await report(date)).records, reloaded.records);
+        await json(
+          await request('/api/entry/interval/reset', {
+            ...restoring,
+            expectedVersions: restoring.expectedVersions.slice(1),
+          }),
+          409,
+        );
+        assert.deepEqual((await report(date)).records, reloaded.records);
+        const peer = rows.at(-1);
+        const freshRestoring = {
+          ...restoring,
+          expectedVersions: rows.map((row) => ({
+            rowId: row.id,
+            version: reloaded.records.find((record) => record.rowId === row.id).version,
+          })),
+        };
+        await json(
+          await write(date, peer, freshRestoring.expectedVersions.at(-1).version, [
+            { id: first.id, actual: 55 },
+          ]),
+        );
+        const concurrent = await report(date);
+        await json(await request('/api/entry/interval/reset', freshRestoring), 409);
+        assert.deepEqual((await report(date)).records, concurrent.records);
+        // A subsequent ordinary Save resumes completion for just this interval.
+        await json(
+          await request('/api/entry/interval', {
+            date,
+            configVersion: config.version,
+            ...scope(),
+            completeActuals: true,
+          }),
+        );
+        assert.ok(
+          (await report(date)).records
+            .filter((record) => record.rowId !== otherRow.id)
+            .every((record) => record.slots[0].actual === (record.rowId === peer.id ? 55 : 0)),
+        );
+      },
+    );
+    await t.test(
       'historical post-midnight prefixes retain the captured production-day anchor after CONFIG is replaced',
       async () => {
         const date = '2020-12-01';
@@ -559,15 +734,55 @@ test('complete-station saves use latest site data, server provenance and one ato
         );
         const day = (await report(date)).records.find((record) => record.rowId === rows[0].id);
         assert.ok(day);
-        assert.ok(day.slots.every((slot) => slot.actual === 0 && slot.actualAutoFilled));
+        assert.ok(day.slots.every((slot) => slot.actual === 0));
         const night = (await report(date, 'night')).records.find(
           (record) => record.rowId === rows[0].id,
         );
-        assert.equal(night.slots[0].actualAutoFilled, true);
+        assert.equal(night.slots[0].actual, 0);
         assert.equal(
           night.slots.find((slot) => slot.id === overnight.id).actualAutoFilled,
           undefined,
         );
+        const historical = await report(date, 'night');
+        const draft = overviewRows(
+          config,
+          historical,
+          { line: 'ZERO-A', model: 'MODEL-A' },
+          { ...overnight, shift: 'night' },
+          date,
+        );
+        assert.equal(draft.length, 1);
+        const originalTarget = night.defaultsSnapshot.productionDay.night.slots.find(
+          (slot) => slot.id === overnight.id,
+        ).target;
+        const dayBefore = (await report(date)).records;
+        await json(
+          await request('/api/entry/interval/reset', {
+            date,
+            configVersion: config.version,
+            line: 'ZERO-A',
+            model: 'MODEL-A',
+            shift: 'night',
+            interval: { start: overnight.start, end: overnight.end },
+            expectedVersions: draft.map((item) => ({
+              rowId: item.row.id,
+              version: item.version,
+            })),
+          }),
+        );
+        const restored = (await report(date, 'night')).records;
+        assert.ok(
+          restored.every(
+            (record) => record.slots.find((slot) => slot.id === overnight.id)?.actual == null,
+          ),
+        );
+        assert.equal(
+          restored
+            .find((record) => record.rowId === rows[0].id)
+            .slots.find((slot) => slot.id === overnight.id).target,
+          originalTarget,
+        );
+        assert.deepEqual((await report(date)).records, dayBefore);
       },
     );
   } finally {
